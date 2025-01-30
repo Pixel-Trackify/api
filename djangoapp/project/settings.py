@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 import os
 from pathlib import Path
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -40,8 +41,25 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    'django.contrib.sites',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'dj_rest_auth',
+    'dj_rest_auth.registration',
+    
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
+    'rest_framework',
+    'rest_framework.authtoken',
+    
     'accounts',
+    'authentication',
 ]
+
+SITE_ID = 1
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -51,6 +69,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
 ]
 
 ROOT_URLCONF = 'project.urls'
@@ -89,6 +108,17 @@ DATABASES = {
 }
 
 
+AUTHENTICATION_BACKENDS = [
+    
+    # Needed to login by username in Django admin, regardless of `allauth`
+    'django.contrib.auth.backends.ModelBackend',
+
+    # `allauth` specific authentication methods, such as login by email
+    'allauth.account.auth_backends.AuthenticationBackend',
+    
+]
+
+
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
 
@@ -111,9 +141,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'pt-br'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/Sao_Paulo'
 
 USE_I18N = True
 
@@ -129,3 +159,101 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'security_file': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': os.path.join('auth.log'),  # Caminho absoluto
+            'when': 'midnight',
+            'backupCount': 7,
+            'formatter': 'verbose',
+            'encoding': 'utf-8',
+        },
+        'console': {  # Novo handler para debug no terminal
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'accounts.views': {
+            # Incluído console para debug
+            'handlers': ['security_file', 'console'],
+            'level': 'DEBUG',  # Alterado para DEBUG para capturar logs de depuração
+            'propagate': True,  # Propaga logs para outros handlers se necessário
+        },
+    },
+}
+
+# Configurando o modelo customizado de usuário
+AUTH_USER_MODEL = 'accounts.Usuario'
+
+REST_FRAMEWORK = {
+    # Classes de autenticação (apenas para autenticação)
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+
+
+    # Backends de filtro (para filtragem, busca e ordenação)
+    'DEFAULT_FILTER_BACKENDS': (
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ),
+}
+
+# Configurações do JWT
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'ALGORITHM': 'HS256',                           
+    'SIGNING_KEY': os.getenv('SECRET_KEY', 'change-me'),
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "USER_ID_FIELD": "id",
+    "USER_ID_CLAIM": "user_id",
+}
+
+
+# Security: Login Attempts and Account Lockout
+'''MAX_LOGIN_ATTEMPTS = int(os.environ.get(
+    "MAX_LOGIN_ATTEMPTS", 'change-me'))  
+LOCKOUT_DURATION = timedelta(minutes=int(
+    os.environ.get("LOCKOUT_DURATION_MINUTES", 'change-me')))
+'''
+'''
+MAX_LOGIN_ATTEMPTS = int(os.environ.get(
+    "MAX_LOGIN_ATTEMPTS", 3))  # Default: 3 tentativas
+LOCKOUT_DURATION = timedelta(minutes=int(os.environ.get(
+    "LOCKOUT_DURATION_MINUTES", 5)))  # Default: 5 minutos'''
+
+'''MAX_LOGIN_ATTEMPTS = 3  # Nome da constante deve ser MAIÚSCULO
+LOCKOUT_DURATION = timedelta(minutes=15)  # Duração do bloqueio'''
+
+
+# Configuração do Django Allauth
+
+
+ACCOUNT_AUTHENTICATION_METHOD = 'email'  # "email" para login com email, "username" para usuário
+ACCOUNT_EMAIL_REQUIRED = True  # O email é obrigatório
+ACCOUNT_USERNAME_REQUIRED = False  # Desativa username padrão do Django
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None  # Define que não há campo de username
+ACCOUNT_EMAIL_VERIFICATION = 'none'  # "optional", "mandatory" ou "none"
+ACCOUNT_LOGIN_ATTEMPTS_LIMIT = 5  # Número máximo de tentativas antes do bloqueio
+ACCOUNT_LOGIN_ATTEMPTS_TIMEOUT = 300  # Tempo de bloqueio em segundos (5 min)
+ACCOUNT_ADAPTER = 'allauth.account.adapter.DefaultAccountAdapter'

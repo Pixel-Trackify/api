@@ -1,12 +1,13 @@
 from django.contrib import admin
-from django.urls import path
-from accounts.views import account_create_list_view, account_detail_view
+from django.urls import path, include
+
 
 
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('accounts/', account_create_list_view, name='account-create-list'),
-    path('accounts/<int:pk>', account_detail_view, name='account-detail-view'),
+    path('api/v1/', include('accounts.urls')),
+    path('api/v1/', include('authentication.urls')),
+    path('auth/', include('allauth.urls')),
    
 ]
