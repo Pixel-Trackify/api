@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   djangoapp:
     container_name: djangoapp
@@ -13,10 +11,35 @@ services:
       - ./dotenv_files/.env
     depends_on:
       - psql
+    networks:
+      - djangoapp_network
+      
+  django-command-runner:
+    container_name: django-command-runner
+    build:
+      context: .
+    volumes:
+      - ./djangoapp:/djangoapp
+    env_file:
+      - ./dotenv_files/.env
+    depends_on:
+      - psql
+    networks:
+      - djangoapp_network
+    entrypoint: ["entrypoint.sh"]
+
   psql:
     container_name: psql
     image: postgres:13-alpine
+    ports:
+      - "5432:5432"
     volumes:
       - ./data/postgres/data:/var/lib/postgresql/data/
     env_file:
       - ./dotenv_files/.env
+    networks:
+      - djangoapp_network
+
+networks:
+  djangoapp_network:
+    driver: bridge
