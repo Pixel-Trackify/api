@@ -1,14 +1,16 @@
 
 from rest_framework.views import APIView
+from django.http import Http404
 from django.core.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, IsAuthenticatedOrReadOnly
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import RegisterSerializer, LoginSerializer
+from .serializers import RegisterSerializer, LoginSerializer, UserUpdateSerializer
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.exceptions import NotFound
 from rest_framework import generics
 import logging
 from .models import Usuario
@@ -50,58 +52,47 @@ class GetUsersView(generics.ListAPIView):
 class AccountRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     """
     View para detalhar, atualizar ou excluir a conta do usuário.
-    Permite buscar o usuário pelo ID na URL.
+    Requer autenticação para edição e só permite que o dono da conta edite.
     """
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [
+        IsAuthenticated]  # Exige autenticação para todas as ações exceto GET?
     queryset = Usuario.objects.all()
-    serializer_class = RegisterSerializer
+    serializer_class = UserUpdateSerializer # Serializador específico para atualização
 
     def get_object(self):
-        """
-        Sobrescreve o método para buscar o usuário pelo ID fornecido na URL.
-        """
-        user_id = self.kwargs.get("pk")  # Obtém o ID da URL
+        """Busca o usuário pelo ID na URL e verifica permissões."""
+        user_id = self.kwargs.get("pk")
         try:
-            return Usuario.objects.get(id=user_id)
+            user = Usuario.objects.get(id=user_id)
         except Usuario.DoesNotExist:
-            raise ValidationError({"error": "Usuário não encontrado."})
+            raise NotFound(detail="Usuário não encontrado.",
+                           code="not_found")  # HTTP 404
+
+        # Verifica se o usuário autenticado é o dono do recurso
+        if self.request.user != user:
+            raise NotFound(detail="Usuário não encontrado.") # Esconde a existência do recurso para não donos
+
+        return user
 
     def update(self, request, *args, **kwargs):
-        """
-        Lida com PUT para atualização completa ou PATCH para atualização parcial.
-        """
+        """Atualização parcial (PATCH) ou total (PUT) usando o serializer."""
         user = self.get_object()
-        data = request.data
+        serializer = self.get_serializer(
+            instance=user, data=request.data, partial=bool(request.method == 'PATCH'))
+        serializer.is_valid(raise_exception=True)
 
-        allowed_fields = ['name', 'email', 'password']  # Campos permitidos
-        updated_fields = {}
-
-        for field in allowed_fields:
-            if field in data:
-                updated_fields[field] = data[field]
-
-        if not updated_fields:
-            return Response(
-                {"error": "Nenhum campo válido foi fornecido para atualização."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # Atualiza os campos fornecidos
-        for field, value in updated_fields.items():
-            if field == 'password':  # Trate o password separadamente
-                user.set_password(value)
-            else:
-                setattr(user, field, value)
-
-        user.save()
+        # Salva alterações (incluindo tratamento de password pelo serializer)
+        serializer.save()
 
         return Response(
             {
                 "message": "Usuário atualizado com sucesso.",
-                "updated_fields": updated_fields,
+                "data": serializer.data,
             },
-            status=status.HTTP_200_OK,
+            status=status.HTTP_200_OK
         )
+
+
 
 
 class FilterUsersView(generics.ListAPIView):

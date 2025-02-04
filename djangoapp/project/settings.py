@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
+
 import os
 from pathlib import Path
 from datetime import timedelta
@@ -257,3 +258,18 @@ ACCOUNT_EMAIL_VERIFICATION = 'none'  # "optional", "mandatory" ou "none"
 ACCOUNT_LOGIN_ATTEMPTS_LIMIT = 5  # Número máximo de tentativas antes do bloqueio
 ACCOUNT_LOGIN_ATTEMPTS_TIMEOUT = 300  # Tempo de bloqueio em segundos (5 min)
 ACCOUNT_ADAPTER = 'allauth.account.adapter.DefaultAccountAdapter'
+
+
+
+
+
+# Configurações de validação de senha
+PASSWORD_MIN = int(os.getenv('PASSWORD_MIN', 8))
+PASSWORD_MAX = int(os.getenv('PASSWORD_MAX', default=30))
+PASSWORD_BLOCK_COMMON = bool(os.getenv('PASSWORD_BLOCK_COMMON', default=True))
+PASSWORD_COMMON_LIST = str(
+    os.getenv('PASSWORD_COMMON_LIST', default='common_passwords.txt'))
+PASSWORD_REQUIRE_UPPERCASE = bool(os.getenv(
+    'PASSWORD_REQUIRE_UPPERCASE', default=True))
+PASSWORD_REQUIRE_SPECIAL_CHAR = bool(os.getenv(
+    'PASSWORD_REQUIRE_SPECIAL_CHAR', default=True))

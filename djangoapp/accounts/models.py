@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.utils import timezone
 from datetime import timedelta
+from django.db import transaction
+
 
 
 class UsuarioManager(BaseUserManager):
@@ -35,6 +37,8 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)  # Necessário para admin
 
     objects = UsuarioManager()
+
+
 
     USERNAME_FIELD = "email"  # Mudança para compatibilidade com django-allauth
     REQUIRED_FIELDS = ["cpf", "name"]
