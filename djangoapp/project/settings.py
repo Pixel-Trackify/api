@@ -231,20 +231,6 @@ SIMPLE_JWT = {
 }
 
 
-# Security: Login Attempts and Account Lockout
-'''MAX_LOGIN_ATTEMPTS = int(os.environ.get(
-    "MAX_LOGIN_ATTEMPTS", 'change-me'))  
-LOCKOUT_DURATION = timedelta(minutes=int(
-    os.environ.get("LOCKOUT_DURATION_MINUTES", 'change-me')))
-'''
-'''
-MAX_LOGIN_ATTEMPTS = int(os.environ.get(
-    "MAX_LOGIN_ATTEMPTS", 3))  # Default: 3 tentativas
-LOCKOUT_DURATION = timedelta(minutes=int(os.environ.get(
-    "LOCKOUT_DURATION_MINUTES", 5)))  # Default: 5 minutos'''
-
-'''MAX_LOGIN_ATTEMPTS = 3  # Nome da constante deve ser MAIÚSCULO
-LOCKOUT_DURATION = timedelta(minutes=15)  # Duração do bloqueio'''
 
 
 # Configuração do Django Allauth

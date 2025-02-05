@@ -26,11 +26,3 @@ class UsuarioAdmin(UserAdmin):
 
 
 
-'''from django.contrib import admin
-from accounts.models import Usuario
-# Register your models here.
-
-
-@admin.register(Usuario)
-class AccountAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'email', 'cpf', 'password')'''
