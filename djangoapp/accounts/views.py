@@ -44,7 +44,7 @@ class StandardResultsSetPagination(PageNumberPagination):
 
 class GetUsersView(generics.ListAPIView):
     permission_classes = [IsAdminUser] # Apenas administradores podem listar usuários
-    queryset = Usuario.objects.all()
+    queryset = Usuario.objects.all().order_by("id")
     serializer_class = RegisterSerializer
     pagination_class = StandardResultsSetPagination # Usando a paginação personalizada
 
@@ -56,7 +56,7 @@ class AccountRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     """
     permission_classes = [
         IsAuthenticated]  # Exige autenticação para todas as ações exceto GET?
-    queryset = Usuario.objects.all()
+    queryset = Usuario.objects.all().order_by("id")
     serializer_class = UserUpdateSerializer # Serializador específico para atualização
 
     def get_object(self):
@@ -102,7 +102,7 @@ class FilterUsersView(generics.ListAPIView):
     - Paginada para lidar com grandes quantidades de dados.
     """
     permission_classes = [IsAuthenticated]
-    queryset = Usuario.objects.all()
+    queryset = Usuario.objects.all().order_by("id")
     serializer_class = RegisterSerializer
     pagination_class = StandardResultsSetPagination
 
