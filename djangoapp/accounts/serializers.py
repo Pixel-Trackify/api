@@ -96,6 +96,47 @@ class RegisterSerializer(serializers.ModelSerializer):
 
         return email
 
+    def validate_cpf(self, cpf):
+        """
+        Valida se o CPF informado é válido.
+        """
+        if not self.validar_cpf(cpf):
+            raise serializers.ValidationError("CPF inválido.")
+        return cpf
+
+    
+    @staticmethod
+    def validar_cpf(cpf):
+        # Remove todos os caracteres não numéricos
+        cpf = re.sub(r'\D', '', cpf)
+
+        # Verifica se tem 11 dígitos ou se todos são iguais
+        if len(cpf) != 11 or cpf == cpf[0] * 11:
+            return False
+
+        # Cálculo do primeiro dígito verificador
+        soma = 0
+        multiplicador = 10
+        for digito in cpf[:9]:
+            soma += int(digito) * multiplicador
+            multiplicador -= 1
+        resto = (soma * 10) % 11
+        digito_1 = resto if resto < 10 else 0
+
+        # Cálculo do segundo dígito verificador
+        soma = 0
+        multiplicador = 11
+        for digito in cpf[:10]:
+            soma += int(digito) * multiplicador
+            multiplicador -= 1
+        resto = (soma * 10) % 11
+        digito_2 = resto if resto < 10 else 0
+
+        # Valida os dígitos verificadores
+        return cpf[-2:] == f"{digito_1}{digito_2}"
+
+
+
 
 class PasswordValidator:
     """
@@ -203,7 +244,7 @@ class LoginSerializer(serializers.Serializer):
             user.increment_login_attempts()  # Registra tentativa falha
             raise serializers.ValidationError("Credenciais inválidas.")
 
-        # 🔥 Limpa todos os dados de bloqueio se a senha estiver correta
+        # Limpa todos os dados de bloqueio se a senha estiver correta
         user.reset_login_attempts()
 
         # Atualiza a instância do banco para refletir os dados atualizados
