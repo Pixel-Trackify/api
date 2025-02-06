@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, IsAuthenticatedOrReadOnly
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import RegisterSerializer, LoginSerializer, UserUpdateSerializer
+from .serializers import RegisterSerializer, LoginSerializer, UserUpdateSerializer, UpdateUserPlanSerializer
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
@@ -188,3 +188,25 @@ class LogoutView(APIView):
                 {"error": "Ocorreu um erro durante o logout."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class UpdateUserPlanView(generics.UpdateAPIView):
+    """Permite que o usuário autenticado altere seu plano"""
+    serializer_class = UpdateUserPlanSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user  # Retorna o usuário autenticado
+
+
+class UserPlanView(APIView):
+    """Retorna o plano do usuário autenticado"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        subscription = request.user.subscriptions.filter(
+            is_active=True).first()
+        if not subscription:
+            return Response({"message": "Nenhum plano ativo encontrado."}, status=404)
+
+        plan_data = PlanSerializer(subscription.plan).data

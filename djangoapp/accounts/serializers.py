@@ -6,10 +6,13 @@ from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 from accounts.models import Usuario
 from django.conf import settings
+from plans.models import Plan, UserSubscription
+from django.utils import timezone
+from datetime import timedelta
 
 
 
-class RegisterSerializer(serializers.ModelSerializer):
+'''class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     confirm_password = serializers.CharField(write_only=True, required=True)
 
@@ -41,7 +44,51 @@ class RegisterSerializer(serializers.ModelSerializer):
         Remove o campo 'confirm_password' antes de criar o usuário.
         """
         validated_data.pop('confirm_password')
-        return Usuario.objects.create_user(**validated_data)
+        return Usuario.objects.create_user(**validated_data)'''
+
+
+class RegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+    confirm_password = serializers.CharField(write_only=True, required=True)
+    plan_id = serializers.IntegerField(
+        write_only=True, required=False)  # Novo campo opcional
+
+    class Meta:
+        model = Usuario
+        fields = ['id', 'email', 'cpf', 'name', 'password',
+                  'confirm_password', 'date_joined', 'plan_id']
+        read_only_fields = ['date_joined']
+
+    def validate(self, data):
+        if data['password'] != data['confirm_password']:
+            raise serializers.ValidationError(
+                {"password": "As senhas não coincidem."})
+
+        # Valida se o plano existe, se fornecido
+        plan_id = data.get('plan_id')
+        if plan_id and not Plan.objects.filter(id=plan_id).exists():
+            raise serializers.ValidationError(
+                {"plan_id": "Plano não encontrado."})
+
+        return data
+
+    def create(self, validated_data):
+        # Remove o campo extra antes de criar o usuário
+        validated_data.pop('confirm_password')
+        # Obtém o ID do plano se fornecido
+        plan_id = validated_data.pop('plan_id', None)
+
+        user = Usuario.objects.create_user(**validated_data)
+
+        # Se o usuário escolheu um plano, cria a assinatura
+        if plan_id:
+            plan = Plan.objects.get(id=plan_id)
+            UserSubscription.objects.create(user=user, plan=plan, end_date=timezone.now(
+            ) + timedelta(days=30))  # Exemplo: plano dura 30 dias
+
+        return user
+
+
 
     def validate_db(self, attrs):
         """
@@ -253,3 +300,23 @@ class LoginSerializer(serializers.Serializer):
         attrs["user"] = user
         return attrs
 
+
+class UpdateUserPlanSerializer(serializers.Serializer):
+    plan_id = serializers.IntegerField(write_only=True)
+
+    def validate_plan_id(self, plan_id):
+        if not Plan.objects.filter(id=plan_id).exists():
+            raise serializers.ValidationError("Plano não encontrado.")
+        return plan_id
+
+    def update(self, instance, validated_data):
+        plan = Plan.objects.get(id=validated_data['plan_id'])
+
+        # Atualiza ou cria uma assinatura para o usuário
+        subscription, created = UserSubscription.objects.update_or_create(
+            user=instance,
+            defaults={'plan': plan, 'start_date': timezone.now(
+            ), 'end_date': timezone.now() + timedelta(days=30), 'is_active': True}
+        )
+
+        return instance

@@ -20,6 +20,8 @@ class UsuarioAdmin(UserAdmin):
     )
 
     # Removendo a opção de adicionar usuário pelo Django Admin
+    
+    
     def has_add_permission(self, request):
         return False
 
