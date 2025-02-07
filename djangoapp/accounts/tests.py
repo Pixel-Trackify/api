@@ -10,7 +10,7 @@ User = get_user_model()
 
 class AuthenticationTests(APITestCase):
     def create_user(self, email, cpf, password, is_admin=False):
-        """Função auxiliar para criar usuários de forma reutilizável."""
+        """Cria um usuário e trata exceções."""
         try:
             user_data = {
                 "email": email,
@@ -31,15 +31,17 @@ class AuthenticationTests(APITestCase):
             self.fail(f"Erro ao criar usuário: {str(e)}")
 
     def authenticate_admin(self):
-        """Autentica o admin e armazena o token."""
+        """Autentica um admin e define o token de autorização."""
         try:
             login_url = reverse("login")
             login_data = {"identifier": self.admin_user.email,
                           "password": "Admin@123"}
             response = self.client.post(login_url, login_data, format="json")
 
-            if response.status_code != status.HTTP_200_OK or "access" not in response.data:
-                self.fail(f"Falha ao autenticar admin: {response.data}")
+            self.assertEqual(response.status_code, status.HTTP_200_OK,
+                             f"Erro no login: {response.data}")
+            self.assertIn("access", response.data,
+                          "Token de acesso não retornado.")
 
             self.admin_token = response.data["access"]
             self.client.credentials(
@@ -48,7 +50,7 @@ class AuthenticationTests(APITestCase):
             self.fail(f"Erro na autenticação do admin: {str(e)}")
 
     def setUp(self):
-        """Criação de usuários e autenticação do admin."""
+        """Configuração inicial do ambiente de testes."""
         try:
             self.user = self.create_user(
                 "test@example.com", "97359116040", "Senha@123")
@@ -59,21 +61,17 @@ class AuthenticationTests(APITestCase):
             self.fail(f"Erro no setup dos testes: {str(e)}")
 
     def execute_request(self, method, url, data=None, expected_status=None):
-        """Executa requisições e valida status de resposta."""
-        response = getattr(self.client, method)(url, data, format="json")
-
+        """Executa requisições e verifica a resposta."""
         try:
+            response = getattr(self.client, method)(url, data, format="json")
             expected_status = expected_status or [status.HTTP_200_OK]
             if not isinstance(expected_status, list):
                 expected_status = [expected_status]
             self.assertIn(response.status_code, expected_status,
                           f"Erro na requisição: {response.data}")
-        except AssertionError as e:
+        except Exception as e:
             self.fail(f"Erro ao executar requisição {method.upper()} {url}: {str(e)}")
-
         return response
-
-        
 
     def test_register_user(self):
         """Testa o registro de um novo usuário."""
@@ -84,14 +82,16 @@ class AuthenticationTests(APITestCase):
             "confirm_password": "Newpassword1!",
             "name": "New User",
         }
-        self.execute_request("post", reverse("account-create-list"), data, status.HTTP_201_CREATED)
+        self.execute_request("post", reverse(
+            "account-create-list"), data, status.HTTP_201_CREATED)
         self.assertEqual(User.objects.count(), 3,
                          "Usuário não foi criado corretamente.")
 
     def test_login_user(self):
         """Testa login com credenciais válidas."""
         data = {"identifier": self.user.email, "password": "Senha@123"}
-        response = self.execute_request("post", reverse("login"), data, status.HTTP_200_OK)
+        response = self.execute_request(
+            "post", reverse("login"), data, status.HTTP_200_OK)
         self.assertIn("access", response.data,
                       "Token de acesso não retornado.")
 
@@ -99,16 +99,16 @@ class AuthenticationTests(APITestCase):
         """Testa o logout de um usuário autenticado."""
         refresh = RefreshToken.for_user(self.user)
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {str(refresh.access_token)}')
-        response = self.execute_request("post", reverse("logout"), {"refresh": str(refresh)}, expected_status=[200, 205])
+        response = self.execute_request("post", reverse(
+            "logout"), {"refresh": str(refresh)}, expected_status=[200, 205])
         self.assertEqual(response.data.get(
             "message"), "Logout realizado com sucesso!", "Mensagem de logout incorreta.")
-
 
     def test_list_users_admin_only(self):
         """Verifica que apenas admins podem listar usuários."""
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {str(RefreshToken.for_user(self.user).access_token)}')
-        self.execute_request("get", reverse("user-list"), expected_status=status.HTTP_403_FORBIDDEN)
-
+        self.execute_request("get", reverse("user-list"),
+                             expected_status=status.HTTP_403_FORBIDDEN)
         self.client.credentials(
             HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
         self.execute_request("get", reverse("user-list"),
@@ -132,6 +132,7 @@ class AuthenticationTests(APITestCase):
         """Testa a filtragem de usuários na listagem (apenas admin)."""
         self.client.credentials(
             HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
-        response = self.execute_request("get", reverse("filter-users") + "?search=test", expected_status=status.HTTP_200_OK)
+        response = self.execute_request("get", reverse(
+            "filter-users") + "?search=test", expected_status=status.HTTP_200_OK)
         self.assertGreaterEqual(len(response.data.get(
             "results", [])), 1, "Nenhum usuário encontrado na filtragem.")
