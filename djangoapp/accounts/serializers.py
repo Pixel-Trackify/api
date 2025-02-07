@@ -12,41 +12,6 @@ from datetime import timedelta
 
 
 
-'''class RegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
-    confirm_password = serializers.CharField(write_only=True, required=True)
-
-    class Meta:
-        model = Usuario
-        fields = ['id', 'email', 'cpf', 'name',
-                  'password', 'confirm_password', 'date_joined']
-        read_only_fields = ['date_joined']
-
-    def validate(self, data):
-            # Valida se as senhas coincidem
-        if data['password'] != data['confirm_password']:
-            raise serializers.ValidationError(
-                {"password": "As senhas não coincidem."})
-
-        # Valida senha com as regras definidas no PasswordValidator
-        password_validator = PasswordValidator()
-        try:
-            password_validator(data['password'])
-        except ValidationError as e:
-            raise serializers.ValidationError({"password": e.messages})
-
-        # Valida se CPF e email já existem no banco
-        self.validate_db(data)
-
-        return data
-    def create(self, validated_data):
-        """
-        Remove o campo 'confirm_password' antes de criar o usuário.
-        """
-        validated_data.pop('confirm_password')
-        return Usuario.objects.create_user(**validated_data)'''
-
-
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     confirm_password = serializers.CharField(write_only=True, required=True)
