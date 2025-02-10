@@ -3,13 +3,18 @@ from . import views
 
 
 urlpatterns = [
-    path('login/', views.LoginView.as_view(), name='login'),
-    path('logout/', views.LogoutView.as_view(), name='logout'),
-    path('accounts/', views.RegisterView.as_view(), name='account-create-list'),
-    path('users/', views.GetUsersView.as_view(), name='user-list'),
-    path('update-plan/', views.UpdateUserPlanView.as_view(), name='update-plan'),
-    path('my-plan/', views.UserPlanView.as_view(), name='my-plan'),
-    path('accounts/<int:pk>', views.AccountRetrieveUpdateDestroyView.as_view(), name='account-detail-view'),
-    path('filter-users/', views.FilterUsersView.as_view(), name='filter-users'),
+    path('auth/login/', views.LoginView.as_view(), name='login'),
+    path('auth/logout/', views.LogoutView.as_view(), name='logout'),
+    path('auth/register-accounts/', views.RegisterView.as_view(),
+         name='account-create-list'),
+    path('auth/users/', views.GetUsersView.as_view(), name='user-list'),
+    path('auth/profile/', views.UserProfileView.as_view(), name='profile'),
+    path('auth/change-password/',
+         views.ChangePasswordView.as_view(), name='change_password'),
+    path('auth/update-plan/', views.UpdateUserPlanView.as_view(), name='update-plan'),
+    path('auth/my-plan/', views.UserPlanView.as_view(), name='my-plan'),
+    path('auth/accounts/<int:pk>',
+         views.AccountRetrieveUpdateDestroyView.as_view(), name='account-detail-view'),
+    path('auth/filter-users/', views.FilterUsersView.as_view(), name='filter-users'),
 
 ]

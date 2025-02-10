@@ -70,7 +70,8 @@ class AuthenticationTests(APITestCase):
             self.assertIn(response.status_code, expected_status,
                           f"Erro na requisição: {response.data}")
         except Exception as e:
-            self.fail(f"Erro ao executar requisição {method.upper()} {url}: {str(e)}")
+            self.fail(
+                f"Erro ao executar requisição {method.upper()} {url}: {str(e)}")
         return response
 
     def test_register_user(self):
@@ -98,7 +99,8 @@ class AuthenticationTests(APITestCase):
     def test_logout_user(self):
         """Testa o logout de um usuário autenticado."""
         refresh = RefreshToken.for_user(self.user)
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {str(refresh.access_token)}')
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f'Bearer {str(refresh.access_token)}')
         response = self.execute_request("post", reverse(
             "logout"), {"refresh": str(refresh)}, expected_status=[200, 205])
         self.assertEqual(response.data.get(
@@ -106,7 +108,8 @@ class AuthenticationTests(APITestCase):
 
     def test_list_users_admin_only(self):
         """Verifica que apenas admins podem listar usuários."""
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {str(RefreshToken.for_user(self.user).access_token)}')
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f'Bearer {str(RefreshToken.for_user(self.user).access_token)}')
         self.execute_request("get", reverse("user-list"),
                              expected_status=status.HTTP_403_FORBIDDEN)
         self.client.credentials(
@@ -137,15 +140,15 @@ class AuthenticationTests(APITestCase):
         self.assertGreaterEqual(len(response.data.get(
             "results", [])), 1, "Nenhum usuário encontrado na filtragem.")
 
+        def test_login_attempts(self):
+            """Testa o bloqueio de login após múltiplas tentativas falhas."""
+        login_url = reverse("login")
+        login_data = {"identifier": self.user.email, "password": "SenhaErrada"}
 
-def test_login_attempts(self):
-    login_url = reverse("login")
-    ogin_data = {"identifier": self.user.email, "password": "SenhaErrada"}
-
-           # Fazer 5 tentativas de login com senha errada
-    for _ in range(5):
-        response = self.client.post(login_url, login_data, format="json")
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        # Fazer 5 tentativas de login com senha errada
+        for _ in range(5):
+            response = self.client.post(login_url, login_data, format="json")
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         # Verificar se o usuário está bloqueado
         self.user.refresh_from_db()
@@ -169,11 +172,78 @@ def test_login_attempts(self):
 
         # Verificar se o bloqueio foi resetado
         self.user.refresh_from_db()
-        self.assertFalse(self.user.is_locked(
-        ), "Usuário não foi desbloqueado após login bem-sucedido.")
+        self.assertFalse(self.user.is_locked(),
+                         "Usuário não foi desbloqueado após login bem-sucedido.")
         self.assertEqual(self.user.login_attempts, 0,
                          "Tentativas de login não foram resetadas após login bem-sucedido.")
 
+    def test_view_profile(self):
+        """Testa a visualização do perfil do usuário autenticado."""
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f'Bearer {str(RefreshToken.for_user(self.user).access_token)}')
+        response = self.execute_request("get", reverse(
+            "profile"), expected_status=status.HTTP_200_OK)
+        self.assertEqual(response.data['email'], self.user.email)
+        self.assertEqual(response.data['name'], self.user.name)
+        self.assertEqual(response.data['cpf'], self.user.cpf)
 
+    def test_update_profile(self):
+        """Testa a atualização do perfil do usuário autenticado."""
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f'Bearer {str(RefreshToken.for_user(self.user).access_token)}')
+        response = self.execute_request("put", reverse("profile"), {
+            'name': 'Updated User',
+            'email': 'updated@example.com'
+        }, expected_status=status.HTTP_200_OK)
+        self.assertEqual(response.data['name'], 'Updated User')
+        self.assertEqual(response.data['email'], 'updated@example.com')
 
-    
+    def test_change_password(self):
+        """Testa a mudança de senha do usuário autenticado."""
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f'Bearer {str(RefreshToken.for_user(self.user).access_token)}')
+        response = self.execute_request("post", reverse("change_password"), {
+            'old_password': 'Senha@123',
+            'new_password': 'NewPassword123!',
+            'confirm_new_password': 'NewPassword123!'
+        }, expected_status=status.HTTP_200_OK)
+        self.assertEqual(response.data['message'],
+                         'Senha alterada com sucesso.')
+
+    def test_change_password_with_invalid_old_password(self):
+        """Testa a mudança de senha com uma senha antiga inválida."""
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f'Bearer {str(RefreshToken.for_user(self.user).access_token)}')
+        response = self.execute_request("post", reverse("change_password"), {
+            'old_password': 'WrongPassword123!',
+            'new_password': 'NewPassword123!',
+            'confirm_new_password': 'NewPassword123!'
+        }, expected_status=status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['old_password']
+                         [0], 'Senha antiga incorreta.')
+
+    def test_change_password_with_mismatched_new_passwords(self):
+        """Testa a mudança de senha com senhas novas que não coincidem."""
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f'Bearer {str(RefreshToken.for_user(self.user).access_token)}')
+        response = self.execute_request("post", reverse("change_password"), {
+            'old_password': 'Senha@123',
+            'new_password': 'NewPassword123!',
+            'confirm_new_password': 'DifferentPassword123!'
+        }, expected_status=status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data['confirm_new_password'][0], 'As senhas não coincidem.')
+
+    def test_change_password_with_weak_new_password(self):
+        """Testa a mudança de senha com uma senha nova fraca."""
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f'Bearer {str(RefreshToken.for_user(self.user).access_token)}')
+        response = self.execute_request("post", reverse("change_password"), {
+            'old_password': 'Senha@123',
+            'new_password': 'weakpassword',
+            'confirm_new_password': 'weakpassword'
+        }, expected_status=status.HTTP_400_BAD_REQUEST)
+        self.assertIn('A senha deve conter pelo menos 1 letra maiúscula.',
+                      response.data['new_password'][0])
+        self.assertIn('A senha deve conter pelo menos 1 caractere especial.',
+                      response.data['new_password'][0])

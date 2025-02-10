@@ -1,5 +1,6 @@
 import socket
 import re
+from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth import authenticate, get_user_model
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
@@ -294,4 +295,39 @@ class UpdateUserPlanSerializer(serializers.Serializer):
         return instance
 
 
+class UserProfileSerializer(serializers.ModelSerializer):
+    """
+    Serializer para visualizar e atualizar o perfil do usuário.
+    """
+    class Meta:
+        model = User
+        fields = ['name', 'email', 'cpf']
 
+
+class ChangePasswordSerializer(serializers.Serializer):
+    """
+    Serializer para alterar a senha do usuário.
+    """
+    old_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(
+        write_only=True, validators=[validate_password])
+    confirm_new_password = serializers.CharField(write_only=True)
+
+    def validate_old_password(self, value):
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("Senha antiga incorreta.")
+        return value
+
+    def validate(self, data):
+        new_password = data.get('new_password')
+        confirm_new_password = data.get('confirm_new_password')
+
+        if new_password != confirm_new_password:
+            raise serializers.ValidationError(
+                {"confirm_new_password": "As senhas não coincidem."})
+
+        password_validator = PasswordValidator()
+        password_validator(new_password)
+
+        return data
