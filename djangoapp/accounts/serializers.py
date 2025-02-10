@@ -4,6 +4,7 @@ from django.contrib.auth import authenticate, get_user_model
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from accounts.models import Usuario
 from django.conf import settings
 from plans.models import Plan, UserSubscription
@@ -246,21 +247,27 @@ class LoginSerializer(serializers.Serializer):
         except User.DoesNotExist:
             raise serializers.ValidationError("Credenciais inválidas.")
 
-        # Verificar se está bloqueado
-        if user.is_locked():
-            raise serializers.ValidationError(
-                "Muitas tentativas. Tente mais tarde.")
+       
 
-        # Verificar senha
-        if not user.check_password(password):
-            user.increment_login_attempts()  # Registra tentativa falha
+        # Sempre verifica a senha, mesmo que o usuário esteja bloqueado
+        correct_password = user.check_password(password)
+
+        if correct_password:
+            # Se a senha estiver correta, resetamos o bloqueio e as tentativas
+            user.reset_login_attempts()
+        else:
+            # Se a senha estiver errada e o usuário já estiver bloqueado, mantém o bloqueio
+            if user.is_locked():
+                raise serializers.ValidationError(
+                    "Muitas tentativas. Tente novamente mais tarde.")
+
+            # Incrementa as tentativas e bloqueia se necessário
+            user.increment_login_attempts()
             raise serializers.ValidationError("Credenciais inválidas.")
 
-        # Limpa todos os dados de bloqueio se a senha estiver correta
-        user.reset_login_attempts()
+        attrs["user"] = user
+        return attrs
 
-        # Atualiza a instância do banco para refletir os dados atualizados
-        user.refresh_from_db()
 
         attrs["user"] = user
         return attrs
@@ -285,3 +292,6 @@ class UpdateUserPlanSerializer(serializers.Serializer):
         )
 
         return instance
+
+
+
