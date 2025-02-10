@@ -1,6 +1,6 @@
 # API de Autenticação e Gerenciamento de Usuários Django
 
-Este projeto é uma API baseada em Django para autenticação e gerenciamento de usuários, com autenticação JWT, registro de usuários, login, logout e capacidades de filtragem de usuários.
+Este projeto é uma API baseada em Django para autenticação e gerenciamento de usuários, com autenticação JWT, registro de usuários, login, logout, gerenciamento de planos e capacidades de filtragem de usuários.
 
 ## Funcionalidades
 
@@ -8,6 +8,7 @@ Este projeto é uma API baseada em Django para autenticação e gerenciamento de
 - Autenticação baseada em JWT (login e logout)
 - Filtragem, busca e ordenação de usuários
 - Modelo de usuário personalizado com rastreamento de tentativas de login e bloqueio de conta
+- Gerenciamento de planos de usuários
 - Interface administrativa para gerenciamento de usuários
 
 ## Requisitos
@@ -41,18 +42,29 @@ Este projeto é uma API baseada em Django para autenticação e gerenciamento de
 
 ### Autenticação
 
-- `POST /api/v1/authentication/token/`: Obter par de tokens JWT
-- `POST /api/v1/authentication/token/refresh/`: Atualizar token JWT
-- `POST /api/v1/authentication/token/verify/`: Verificar token JWT
+- `POST /authentication/token/`: Obter par de tokens JWT
+- `POST /authentication/token/refresh/`: Atualizar token JWT
+- `POST /authentication/token/verify/`: Verificar token JWT
 
 ### Gerenciamento de Usuários
 
-- `POST /api/v1/accounts/`: Registrar um novo usuário
-- `GET /api/v1/users/`: Listar todos os usuários (somente admin)
-- `GET /api/v1/accounts/<int:pk>`: Recuperar, atualizar ou excluir uma conta de usuário
-- `POST /api/v1/login/`: Login do usuário
-- `POST /api/v1/logout/`: Logout do usuário
-- `GET /api/v1/filter-users/`: Filtrar, buscar e ordenar usuários
+- `POST /auth/login/`: Login do usuário
+- `POST /auth/logout/`: Logout do usuário
+- `POST /auth/register-accounts/`: Registrar um novo usuário
+- `GET /auth/users/`: Listar todos os usuários (somente admin)
+- `GET /auth/profile/`: Visualizar perfil do usuário autenticado
+- `PUT /auth/profile/`: Atualizar perfil do usuário autenticado
+- `POST /auth/change-password/`: Alterar senha do usuário autenticado
+- `POST /auth/update-plan/`: Atualizar plano do usuário
+- `GET /auth/my-plan/`: Visualizar plano do usuário autenticado
+- `GET /auth/accounts/<int:pk>`: Recuperar, atualizar ou excluir uma conta de usuário
+- `GET /auth/filter-users/`: Filtrar, buscar e ordenar usuários
+
+### Gerenciamento de Planos
+
+- `GET /plans/`: Listar todos os planos
+- `POST /plans/`: Criar um novo plano (somente admin)
+- `GET /plans/<int:pk>`: Recuperar, atualizar ou excluir um plano (somente admin)
 
 ## Executando Testes
 
