@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from django.utils import timezone
 from datetime import timedelta
 from django.db import transaction
+from django.contrib.auth import get_user_model
 
 
 
@@ -48,12 +49,14 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
 
     def is_locked(self):
         """Verifica se o usuário está temporariamente bloqueado"""
-        return self.locked_until and timezone.now() < self.locked_until
+        if self.locked_until and self.locked_until > timezone.now():
+            return True
+        return False
 
     def increment_login_attempts(self):
         """Aumenta as tentativas de login e bloqueia o usuário se ultrapassar o limite"""
         self.login_attempts += 1
-        if self.login_attempts >= 5:  # Bloqueia após 5 tentativas erradas
+        if self.login_attempts >= 5 and self.locked_until is None:  # Bloqueia após 5 tentativas erradas
             self.locked_until = timezone.now() + timedelta(minutes=5)  # Bloqueio de 5 min
         self.save()
 
@@ -64,7 +67,19 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
         self.save()
 
 
+User = get_user_model()
 
+
+class LoginLog(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    ip_address = models.GenericIPAddressField()
+    device = models.CharField(max_length=255)
+    browser = models.CharField(max_length=255)
+    login_time = models.DateTimeField(auto_now_add=True)
+    token = models.CharField(max_length=255)
+
+    def __str__(self):
+        return f"LoginLog(user={self.user.email}, ip_address={self.ip_address}, device={self.device}, browser={self.browser}, login_time={self.login_time})"
 
 
 

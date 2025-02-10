@@ -136,3 +136,44 @@ class AuthenticationTests(APITestCase):
             "filter-users") + "?search=test", expected_status=status.HTTP_200_OK)
         self.assertGreaterEqual(len(response.data.get(
             "results", [])), 1, "Nenhum usuário encontrado na filtragem.")
+
+
+def test_login_attempts(self):
+    login_url = reverse("login")
+    ogin_data = {"identifier": self.user.email, "password": "SenhaErrada"}
+
+           # Fazer 5 tentativas de login com senha errada
+    for _ in range(5):
+        response = self.client.post(login_url, login_data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Verificar se o usuário está bloqueado
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.is_locked(),
+                        "Usuário não foi bloqueado após 5 tentativas falhas.")
+
+        # Tentar fazer login com a senha correta enquanto bloqueado
+        login_data["password"] = "Senha@123"
+        response = self.client.post(login_url, login_data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST,
+                         "Usuário conseguiu fazer login enquanto bloqueado.")
+
+        # Simular a passagem do tempo para desbloquear o usuário
+        self.user.locked_until = timezone.now() - timedelta(minutes=1)
+        self.user.save()
+
+        # Tentar fazer login com a senha correta após o desbloqueio
+        response = self.client.post(login_url, login_data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK,
+                         f"Erro no login: {response.data}")
+
+        # Verificar se o bloqueio foi resetado
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.is_locked(
+        ), "Usuário não foi desbloqueado após login bem-sucedido.")
+        self.assertEqual(self.user.login_attempts, 0,
+                         "Tentativas de login não foram resetadas após login bem-sucedido.")
+
+
+
+    

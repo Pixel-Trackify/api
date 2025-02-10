@@ -6,15 +6,19 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, IsAuthenticatedOrReadOnly
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import RegisterSerializer, LoginSerializer, UserUpdateSerializer, UpdateUserPlanSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView
+from .serializers import RegisterSerializer, LoginSerializer, UserUpdateSerializer, UpdateUserPlanSerializer, LoginSerializer
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.exceptions import NotFound
 from rest_framework import generics
 import logging
-from .models import Usuario
+from .models import Usuario, LoginLog
 from .filters import UsuarioFilter
+import user_agents
+from django.utils import timezone
+
 
 
 class RegisterView(APIView):
@@ -117,8 +121,52 @@ class FilterUsersView(generics.ListAPIView):
 logger = logging.getLogger('accounts')  # Logger para a aplicação de accounts
 
 
-
 class LoginView(APIView):
+    def post(self, request, *args, **kwargs):
+        serializer = LoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = serializer.validated_data["user"]
+
+        # Verificar se o usuário está ativo
+        if not user.is_active:
+            return Response({"error": "Conta inativa ou bloqueada"}, status=status.HTTP_403_FORBIDDEN)
+
+        # Verificar se o e-mail está confirmado (se necessário)
+        '''email_address = user.emailaddress_set.filter(email=user.email).first()
+        if not email_address or not email_address.verified:
+            return Response({"error": "Email não verificado"}, status=status.HTTP_400_BAD_REQUEST)'''
+
+        # Gerar tokens JWT
+        refresh = RefreshToken.for_user(user)
+
+        # Registrar o log de login
+        ip_address = request.META.get('REMOTE_ADDR')
+        user_agent_string = request.META.get('HTTP_USER_AGENT', '')
+        user_agent = user_agents.parse(user_agent_string)
+        device = f"{user_agent.device.family} {user_agent.device.brand} {user_agent.device.model}"
+        browser = f"{user_agent.browser.family} {user_agent.browser.version_string}"
+        token = str(refresh.access_token)
+
+        LoginLog.objects.create(
+            user=user,
+            ip_address=ip_address,
+            device=device,
+            browser=browser,
+            login_time=timezone.now(),
+            token=token
+        )
+
+        logger.info(f"Usuário {user.email} logado com sucesso.")
+
+        return Response({
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
+        }, status=status.HTTP_200_OK)
+
+
+
+'''class LoginView(APIView):
     def post(self, request, *args, **kwargs):
         
         serializer = LoginSerializer(data=request.data)
@@ -143,7 +191,7 @@ class LoginView(APIView):
         return Response({
             "refresh": str(refresh),
             "access": str(refresh.access_token),
-        }, status=status.HTTP_200_OK)
+        }, status=status.HTTP_200_OK)'''
 
 
 
@@ -210,3 +258,5 @@ class UserPlanView(APIView):
             return Response({"message": "Nenhum plano ativo encontrado."}, status=404)
 
         plan_data = PlanSerializer(subscription.plan).data
+
+
