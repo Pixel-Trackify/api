@@ -25,8 +25,7 @@ class Plan(models.Model):
     )
     is_current = models.BooleanField(
         default=False,
-        verbose_name="active-plan"
-    )  # Indica se é o plano atual (destaque)
+        verbose_name="active-plan")  # Indica se é o plano atual (destaque)
     description = models.TextField(
         blank=True,
         verbose_name="description-adm"

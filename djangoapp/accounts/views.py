@@ -245,13 +245,17 @@ class LogoutView(APIView):
             )
 
 
-class UpdateUserPlanView(generics.UpdateAPIView):
-    """Permite que o usuário autenticado altere seu plano"""
-    serializer_class = UpdateUserPlanSerializer
+class UpdateUserPlanView(APIView):
+    """
+    Endpoint para atualizar o plano do usuário autenticado.
+    """
     permission_classes = [IsAuthenticated]
 
-    def get_object(self):
-        return self.request.user  # Retorna o usuário autenticado
+    def post(self, request, *args, **kwargs):
+        serializer = UpdateUserPlanSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.update(request.user, serializer.validated_data)
+        return Response({"message": "Plano atualizado com sucesso."}, status=status.HTTP_200_OK)
 
 
 class UserPlanView(APIView):

@@ -4,6 +4,7 @@ from django.utils import timezone
 from datetime import timedelta
 from django.db import transaction
 from django.contrib.auth import get_user_model
+from plans.models import Plan
 import uuid
 
 
@@ -29,6 +30,7 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     cpf = models.CharField(max_length=11, unique=True)
     date_joined = models.DateTimeField(auto_now_add=True)
+    account_type = models.ForeignKey(Plan, on_delete=models.SET_NULL, null=True, blank=True)
 
     # Controle de tentativas de login
     login_attempts = models.PositiveIntegerField( default=0)  # Campo para tentativas

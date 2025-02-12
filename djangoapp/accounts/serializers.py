@@ -301,7 +301,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = User
-        fields = ['name', 'email', 'cpf']
+        fields = ['uid', 'name', 'email', 'cpf', 'account_type', 'date_joined', 'is_active', 'is_staff']
 
 
 class ChangePasswordSerializer(serializers.Serializer):
