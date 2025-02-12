@@ -4,7 +4,7 @@ from django.utils import timezone
 from datetime import timedelta
 from django.db import transaction
 from django.contrib.auth import get_user_model
-
+import uuid
 
 
 class UsuarioManager(BaseUserManager):
@@ -24,6 +24,7 @@ class UsuarioManager(BaseUserManager):
 
 
 class Usuario(AbstractBaseUser, PermissionsMixin):
+    uid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=150)
     email = models.EmailField(unique=True)
     cpf = models.CharField(max_length=11, unique=True)
@@ -73,10 +74,10 @@ User = get_user_model()
 class LoginLog(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     ip_address = models.GenericIPAddressField()
-    device = models.CharField(max_length=255)
-    browser = models.CharField(max_length=255)
+    device = models.CharField(max_length=500)
+    browser = models.CharField(max_length=500)
     login_time = models.DateTimeField(auto_now_add=True)
-    token = models.CharField(max_length=255)
+    token = models.CharField(max_length=500)
 
     def __str__(self):
         return f"LoginLog(user={self.user.email}, ip_address={self.ip_address}, device={self.device}, browser={self.browser}, login_time={self.login_time})"

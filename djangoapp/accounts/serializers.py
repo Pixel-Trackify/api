@@ -22,7 +22,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Usuario
-        fields = ['id', 'email', 'cpf', 'name', 'password',
+        fields = ['uid', 'email', 'cpf', 'name', 'password',
                   'confirm_password', 'date_joined', 'plan_id']
         read_only_fields = ['date_joined']
 

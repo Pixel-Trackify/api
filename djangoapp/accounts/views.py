@@ -32,7 +32,7 @@ class RegisterView(APIView):
             return Response({
                 "message": "Usuário registrado com sucesso!",
                 "user": {
-                    "id": user.id,
+                    "uid": user.uid,
                     "name": user.name,
                     "email": user.email
                 }
@@ -84,7 +84,7 @@ class StandardResultsSetPagination(PageNumberPagination):
 
 class GetUsersView(generics.ListAPIView):
     permission_classes = [IsAdminUser] # Apenas administradores podem listar usuários
-    queryset = Usuario.objects.all().order_by("id")
+    queryset = Usuario.objects.all().order_by("uid")
     serializer_class = RegisterSerializer
     pagination_class = StandardResultsSetPagination # Usando a paginação personalizada
 
@@ -94,16 +94,16 @@ class AccountRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     View para detalhar, atualizar ou excluir a conta do usuário.
     Requer autenticação para edição e só permite que o dono da conta edite.
     """
-    permission_classes = [
-        IsAuthenticated]  # Exige autenticação para todas as ações exceto GET?
-    queryset = Usuario.objects.all().order_by("id")
+    permission_classes = [IsAuthenticated]  # Exige autenticação para todas as ações exceto GET?
+    queryset = Usuario.objects.all()
     serializer_class = UserUpdateSerializer # Serializador específico para atualização
+    lookup_field = 'uid' # Campo para busca de usuário na URL
 
     def get_object(self):
         """Busca o usuário pelo ID na URL e verifica permissões."""
         user_id = self.kwargs.get("pk")
         try:
-            user = Usuario.objects.get(id=user_id)
+            user = Usuario.objects.get(uid=user_uid)
         except Usuario.DoesNotExist:
             raise NotFound(detail="Usuário não encontrado.",
                            code="not_found")  # HTTP 404
@@ -142,7 +142,7 @@ class FilterUsersView(generics.ListAPIView):
     - Paginada para lidar com grandes quantidades de dados.
     """
     permission_classes = [IsAuthenticated]
-    queryset = Usuario.objects.all().order_by("id")
+    queryset = Usuario.objects.all().order_by("uid")
     serializer_class = RegisterSerializer
     pagination_class = StandardResultsSetPagination
 

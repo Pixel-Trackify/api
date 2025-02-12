@@ -5,10 +5,10 @@ from accounts.models import Usuario
 
 @admin.register(Usuario)
 class UsuarioAdmin(UserAdmin):
-    list_display = ("id", "name", "email", "cpf", "is_active", "is_staff")
+    list_display = ("uid", "name", "email", "cpf", "is_active", "is_staff")
     list_filter = ("is_active", "is_staff", "date_joined")
     search_fields = ("email", "cpf", "name")
-    ordering = ("id",)
+    ordering = ("uid",)
     # Campos que não podem ser editados
     readonly_fields = ("date_joined", "locked_until", "login_attempts")
     fieldsets = (
