@@ -227,8 +227,8 @@ SIMPLE_JWT = {
     'ALGORITHM': 'HS256',                           
     'SIGNING_KEY': os.getenv('SECRET_KEY', 'change-me'),
     "AUTH_HEADER_TYPES": ("Bearer",),
-    "USER_ID_FIELD": "id",
-    "USER_ID_CLAIM": "user_id",
+    "USER_ID_FIELD": "uid",
+    "USER_ID_CLAIM": "user_uid",
 }
 
 
