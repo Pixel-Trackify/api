@@ -274,6 +274,7 @@ class LoginSerializer(serializers.Serializer):
         return attrs
 
 
+
 class UpdateUserPlanSerializer(serializers.Serializer):
     plan_id = serializers.IntegerField(write_only=True)
 
@@ -285,12 +286,22 @@ class UpdateUserPlanSerializer(serializers.Serializer):
     def update(self, instance, validated_data):
         plan = Plan.objects.get(id=validated_data['plan_id'])
 
-        # Atualiza ou cria uma assinatura para o usuário
-        subscription, created = UserSubscription.objects.update_or_create(
+        # Desativar a assinatura anterior
+        UserSubscription.objects.filter(
+            user=instance, is_active=True).update(is_active=False)
+
+        # Criar uma nova assinatura
+        UserSubscription.objects.create(
             user=instance,
-            defaults={'plan': plan, 'start_date': timezone.now(
-            ), 'end_date': timezone.now() + timedelta(days=30), 'is_active': True}
+            plan=plan,
+            start_date=timezone.now(),
+            end_date=timezone.now() + timedelta(days=30),
+            is_active=True
         )
+
+        # Atualizar o tipo de conta do usuário
+        instance.account_type = plan
+        instance.save()
 
         return instance
 

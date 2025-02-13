@@ -15,6 +15,7 @@ from rest_framework.exceptions import NotFound
 from rest_framework import generics
 import logging
 from .models import Usuario, LoginLog
+from plans.models import Plan
 from .filters import UsuarioFilter
 import user_agents
 from django.utils import timezone
