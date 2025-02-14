@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'accounts',
     'plans',
     'authentication',
+    'tutorials',
 ]
 
 SITE_ID = 1

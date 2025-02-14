@@ -10,5 +10,7 @@ urlpatterns = [
     path('api/', include('authentication.urls')),
     path('auth/', include('allauth.urls')),
     path('api/', include('plans.urls')),
+    path('api/', include('tutorials.urls')),
+
    
 ]
