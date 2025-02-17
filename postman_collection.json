@@ -1,0 +1,456 @@
+{
+    "info": {
+        "_postman_id": "d9b1e6e0-4f7e-4d8b-8b1e-8b1e6e0d8b1e",
+        "name": "Django API - Complete",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Obter Token JWT",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"email\": \"admin@example.com\",\n    \"password\": \"adminpassword\"\n}"
+                },
+                "url": {
+                    "raw": "http://127.0.0.1:8000/api/token/",
+                    "protocol": "http",
+                    "host": [
+                        "127",
+                        "0",
+                        "0",
+                        "1"
+                    ],
+                    "port": "8000",
+                    "path": [
+                        "api",
+                        "token"
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "Renovar Token JWT",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"refresh\": \"<refresh_token>\"\n}"
+                },
+                "url": {
+                    "raw": "http://127.0.0.1:8000/api/token/refresh/",
+                    "protocol": "http",
+                    "host": [
+                        "127",
+                        "0",
+                        "0",
+                        "1"
+                    ],
+                    "port": "8000",
+                    "path": [
+                        "api",
+                        "token",
+                        "refresh"
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "Registrar Usuário",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"email\": \"user@example.com\",\n    \"cpf\": \"12345678901\",\n    \"name\": \"John Doe\",\n    \"password\": \"Password123!\",\n    \"confirm_password\": \"Password123!\",\n    \"plan_id\": 1\n}"
+                },
+                "url": {
+                    "raw": "http://127.0.0.1:8000/auth/register-accounts/",
+                    "protocol": "http",
+                    "host": [
+                        "127",
+                        "0",
+                        "0",
+                        "1"
+                    ],
+                    "port": "8000",
+                    "path": [
+                        "auth",
+                        "register-accounts"
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "Login do Usuário",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"identifier\": \"user@example.com\",\n    \"password\": \"Password123!\"\n}"
+                },
+                "url": {
+                    "raw": "http://127.0.0.1:8000/auth/login/",
+                    "protocol": "http",
+                    "host": [
+                        "127",
+                        "0",
+                        "0",
+                        "1"
+                    ],
+                    "port": "8000",
+                    "path": [
+                        "auth",
+                        "login"
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "Logout do Usuário",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer <user_token>"
+                    }
+                ],
+                "url": {
+                    "raw": "http://127.0.0.1:8000/auth/logout/",
+                    "protocol": "http",
+                    "host": [
+                        "127",
+                        "0",
+                        "0",
+                        "1"
+                    ],
+                    "port": "8000",
+                    "path": [
+                        "auth",
+                        "logout"
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "Visualizar Perfil do Usuário",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer <user_token>"
+                    }
+                ],
+                "url": {
+                    "raw": "http://127.0.0.1:8000/auth/profile/",
+                    "protocol": "http",
+                    "host": [
+                        "127",
+                        "0",
+                        "0",
+                        "1"
+                    ],
+                    "port": "8000",
+                    "path": [
+                        "auth",
+                        "profile"
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "Atualizar Perfil do Usuário",
+            "request": {
+                "method": "PUT",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer <user_token>"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"name\": \"John Doe Updated\",\n    \"email\": \"updated@example.com\"\n}"
+                },
+                "url": {
+                    "raw": "http://127.0.0.1:8000/auth/profile/",
+                    "protocol": "http",
+                    "host": [
+                        "127",
+                        "0",
+                        "0",
+                        "1"
+                    ],
+                    "port": "8000",
+                    "path": [
+                        "auth",
+                        "profile"
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "Alterar Senha do Usuário",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer <user_token>"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"old_password\": \"Password123!\",\n    \"new_password\": \"NewPassword123!\",\n    \"confirm_new_password\": \"NewPassword123!\"\n}"
+                },
+                "url": {
+                    "raw": "http://127.0.0.1:8000/auth/change-password/",
+                    "protocol": "http",
+                    "host": [
+                        "127",
+                        "0",
+                        "0",
+                        "1"
+                    ],
+                    "port": "8000",
+                    "path": [
+                        "auth",
+                        "change-password"
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "Atualizar Plano do Usuário",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer <user_token>"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"plan_id\": 2\n}"
+                },
+                "url": {
+                    "raw": "http://127.0.0.1:8000/auth/update-plan/",
+                    "protocol": "http",
+                    "host": [
+                        "127",
+                        "0",
+                        "0",
+                        "1"
+                    ],
+                    "port": "8000",
+                    "path": [
+                        "auth",
+                        "update-plan"
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "Histórico de Assinaturas do Usuário",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer <user_token>"
+                    }
+                ],
+                "url": {
+                    "raw": "http://127.0.0.1:8000/auth/subscription-history/",
+                    "protocol": "http",
+                    "host": [
+                        "127",
+                        "0",
+                        "0",
+                        "1"
+                    ],
+                    "port": "8000",
+                    "path": [
+                        "auth",
+                        "subscription-history"
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "Listar Tutoriais",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer <user_token>"
+                    }
+                ],
+                "url": {
+                    "raw": "http://127.0.0.1:8000/tutoriais/",
+                    "protocol": "http",
+                    "host": [
+                        "127",
+                        "0",
+                        "0",
+                        "1"
+                    ],
+                    "port": "8000",
+                    "path": [
+                        "tutoriais"
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "Criar Tutorial (Somente Admin)",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer <admin_access_token>"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"title\": \"Como usar Django REST Framework\",\n    \"description\": \"Este tutorial explica como usar o Django REST Framework para criar APIs.\",\n    \"youtube_url\": \"https://www.youtube.com/watch?v=example\"\n}"
+                },
+                "url": {
+                    "raw": "http://127.0.0.1:8000/tutoriais/",
+                    "protocol": "http",
+                    "host": [
+                        "127",
+                        "0",
+                        "0",
+                        "1"
+                    ],
+                    "port": "8000",
+                    "path": [
+                        "tutoriais"
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "Atualizar Tutorial (Somente Admin)",
+            "request": {
+                "method": "PUT",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer <admin_access_token>"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"title\": \"Como usar Django REST Framework - Atualizado\",\n    \"description\": \"Este tutorial explica como usar o Django REST Framework para criar APIs.\",\n    \"youtube_url\": \"https://www.youtube.com/watch?v=example\"\n}"
+                },
+                "url": {
+                    "raw": "http://127.0.0.1:8000/tutoriais/1/",
+                    "protocol": "http",
+                    "host": [
+                        "127",
+                        "0",
+                        "0",
+                        "1"
+                    ],
+                    "port": "8000",
+                    "path": [
+                        "tutoriais",
+                        "1"
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "Deletar Tutorial (Somente Admin)",
+            "request": {
+                "method": "DELETE",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer <admin_access_token>"
+                    }
+                ],
+                "url": {
+                    "raw": "http://127.0.0.1:8000/tutoriais/1/",
+                    "protocol": "http",
+                    "host": [
+                        "127",
+                        "0",
+                        "0",
+                        "1"
+                    ],
+                    "port": "8000",
+                    "path": [
+                        "tutoriais",
+                        "1"
+                    ]
+                }
+            },
+            "response": []
+        }
+    ]
+}

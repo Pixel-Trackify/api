@@ -38,6 +38,14 @@ Este projeto é uma API baseada em Django para autenticação e gerenciamento de
 4. **Acesse a aplicação:**
     A API estará disponível em `http://0.0.0.0:8000`.
 
+## Instruções para Importar a Coleção no Postman
+
+- Abra o Postman.
+- Clique no botão "Import" no canto superior esquerdo.
+- Selecione a aba "Upload Files".
+- Selecione o arquivo postman_collection.json do projeto.
+- Clique no botão "Import".
+
 ## Endpoints da API
 
 ### Autenticação
@@ -57,6 +65,8 @@ Este projeto é uma API baseada em Django para autenticação e gerenciamento de
 - `POST /auth/change-password/`: Alterar senha do usuário autenticado
 - `POST /auth/update-plan/`: Atualizar plano do usuário
 - `GET /auth/my-plan/`: Visualizar plano do usuário autenticado
+- `GET /auth/subscription-history/`:  Retorna o histórico de assinaturas do usuário autenticado.
+
 - `GET /auth/accounts/<int:pk>`: Recuperar, atualizar ou excluir uma conta de usuário
 - `GET /auth/filter-users/`: Filtrar, buscar e ordenar usuários
 
@@ -65,6 +75,12 @@ Este projeto é uma API baseada em Django para autenticação e gerenciamento de
 - `GET /plans/`: Listar todos os planos
 - `POST /plans/`: Criar um novo plano (somente admin)
 - `GET /plans/<int:pk>`: Recuperar, atualizar ou excluir um plano (somente admin)
+
+### Gerenciamento de Tutoriais
+
+- `GET /tutoriais/`: Lista todos os tutoriais disponíveis.
+- `POST /tutoriais/`: Cria um novo tutorial (somente para administradores).
+- `GET /tutoriais/<int:pk>/`: Recupera, atualiza ou exclui um tutorial específico (somente para administradores).
 
 ## Executando Testes
 
