@@ -12,6 +12,7 @@ urlpatterns = [
     path('auth/change-password/',
          views.ChangePasswordView.as_view(), name='change_password'),
     path('auth/update-plan/', views.UpdateUserPlanView.as_view(), name='update-plan'),
+    path('auth/subscription-history/', views.UserSubscriptionHistoryView.as_view(), name='subscription-history'),
     path('auth/my-plan/', views.UserPlanView.as_view(), name='my-plan'),
     path('auth/accounts/<uuid:uuid>',views.AccountRetrieveUpdateDestroyView.as_view(), name='account-detail-view'),
     path('auth/filter-users/', views.FilterUsersView.as_view(), name='filter-users'),

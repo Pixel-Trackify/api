@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
-
+from django.utils import timezone
+from datetime import timedelta
 
 class Plan(models.Model):
     """Modelo para representar planos de assinatura"""
@@ -13,6 +14,7 @@ class Plan(models.Model):
     name = models.CharField(max_length=100, unique=True,verbose_name="name-plan")
     price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="price")
     duration = models.CharField(max_length=10, choices=DURATION_CHOICES, default='month', verbose_name="duration")
+    duration_value = models.PositiveIntegerField(default=1, verbose_name="duration-value")  # Valor da duração
     is_current = models.BooleanField(default=False, verbose_name="active-plan")  # Indica se é o plano atual (destaque)
     description = models.TextField(blank=True, verbose_name="description-adm")  # Visível apenas no admin
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="creation-date")
@@ -44,6 +46,17 @@ class UserSubscription(models.Model):
     end_date = models.DateTimeField(verbose_name="end-date")
     is_active = models.BooleanField(default=True, verbose_name="active-subscription")  # Pode ser desativada
 
+    def save(self, *args, **kwargs):
+        if not self.end_date:
+            self.end_date = self.calculate_end_date()
+        super().save(*args, **kwargs)
+
+    def calculate_end_date(self):
+        if self.plan.duration == 'month':
+            return self.start_date + timedelta(days=30 * self.plan.duration_value)
+        elif self.plan.duration == 'year':
+            return self.start_date + timedelta(days=365 * self.plan.duration_value)
+        return self.start_date
+
     def __str__(self):
-        # Identificação clara no admin
         return f"{self.user.email} - {self.plan.name}"

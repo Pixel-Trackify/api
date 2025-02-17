@@ -7,7 +7,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, IsAuthenticatedOrReadOnly
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .serializers import RegisterSerializer, LoginSerializer, UserUpdateSerializer, UpdateUserPlanSerializer, UserProfileSerializer, ChangePasswordSerializer
+from .serializers import RegisterSerializer, LoginSerializer, UserUpdateSerializer, UpdateUserPlanSerializer, UserProfileSerializer, ChangePasswordSerializer, UserSubscriptionSerializer
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
@@ -15,7 +15,7 @@ from rest_framework.exceptions import NotFound
 from rest_framework import generics
 import logging
 from .models import Usuario, LoginLog
-from plans.models import Plan
+from plans.models import Plan, UserSubscription
 from .filters import UsuarioFilter
 import user_agents
 from django.utils import timezone
@@ -272,3 +272,13 @@ class UserPlanView(APIView):
         plan_data = PlanSerializer(subscription.plan).data
 
 
+class UserSubscriptionHistoryView(APIView):
+    """
+    Retorna o histórico de assinaturas do usuário autenticado.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        subscriptions = UserSubscription.objects.filter(user=request.user)
+        serializer = UserSubscriptionSerializer(subscriptions, many=True)
+        return Response(serializer.data)

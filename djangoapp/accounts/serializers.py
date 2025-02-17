@@ -211,7 +211,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Usuario
-        fields = ['name', 'email', 'password']
+        fields = ['name', 'email', 'password', 'account_type']
         extra_kwargs = {
             'email': {'required': False},  # Permite atualização sem email
             'name': {'required': False},
@@ -274,6 +274,30 @@ class LoginSerializer(serializers.Serializer):
         return attrs
 
 
+class PlanSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Plan
+        fields = ['id', 'name', 'description',
+                  'price', 'duration', 'duration_value']
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    account_type = PlanSerializer()
+
+    class Meta:
+        model = Usuario
+        fields = ['uid', 'name', 'email', 'cpf',
+                  'account_type', 'date_joined', 'is_active', 'is_staff']
+
+
+class UserSubscriptionSerializer(serializers.ModelSerializer):
+    plan = PlanSerializer()
+
+    class Meta:
+        model = UserSubscription
+        fields = ['plan', 'start_date', 'end_date', 'is_active']
+
+
 
 class UpdateUserPlanSerializer(serializers.Serializer):
     plan_id = serializers.IntegerField(write_only=True)
@@ -295,7 +319,6 @@ class UpdateUserPlanSerializer(serializers.Serializer):
             user=instance,
             plan=plan,
             start_date=timezone.now(),
-            end_date=timezone.now() + timedelta(days=30),
             is_active=True
         )
 
@@ -306,13 +329,6 @@ class UpdateUserPlanSerializer(serializers.Serializer):
         return instance
 
 
-class UserProfileSerializer(serializers.ModelSerializer):
-    """
-    Serializer para visualizar e atualizar o perfil do usuário.
-    """
-    class Meta:
-        model = User
-        fields = ['uid', 'name', 'email', 'cpf', 'account_type', 'date_joined', 'is_active', 'is_staff']
 
 
 class ChangePasswordSerializer(serializers.Serializer):
@@ -342,3 +358,5 @@ class ChangePasswordSerializer(serializers.Serializer):
         password_validator(new_password)
 
         return data
+
+
