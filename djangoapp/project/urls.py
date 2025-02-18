@@ -11,6 +11,7 @@ urlpatterns = [
     path('auth/', include('allauth.urls')),
     path('api/', include('plans.urls')),
     path('api/', include('tutorials.urls')),
+    path('api', include('campaigns.urls')),
 
    
 ]
