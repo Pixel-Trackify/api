@@ -12,4 +12,4 @@ echo "✅ Postgres Database Started Successfully ($POSTGRES_HOST:$POSTGRES_PORT)
 
 python manage.py makemigrations --noinput
 python manage.py migrate --noinput
-exec gunicorn project.wsgi:application --bind 0.0.0.0:8000 --workers 2
+exec uwsgi --http :8000 --module project.wsgi --master --processes 4 --threads 2
