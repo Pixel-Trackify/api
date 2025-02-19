@@ -32,11 +32,11 @@ Este projeto é uma API baseada em Django para autenticação e gerenciamento de
 
 3. **Construa e execute os containers Docker:**
     ```sh
-    docker compose up -d --build
+    docker compose up -d --build app
     ```
 
 4. **Acesse a aplicação:**
-    A API estará disponível em `http://0.0.0.0:8000`.
+    A API estará disponível em `http://127.0.0.1:8000`.
 
 ## Instruções para Importar a Coleção no Postman
 

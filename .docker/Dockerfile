@@ -13,7 +13,7 @@ ENV PYTHONUNBUFFERED 1
 # Copia a pasta "djangoapp" e "scripts" para dentro do container.
 #COPY requirements.txt /djangoapp/requirements.txt
 COPY djangoapp /djangoapp
-COPY scripts /scripts
+COPY .docker/scripts /scripts
 
 # Entra na pasta djangoapp no container
 WORKDIR /djangoapp
