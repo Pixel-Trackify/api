@@ -19,6 +19,20 @@ class Campaign(models.Model):
     ROI = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     total_views = models.IntegerField(default=0)
     total_clicks = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.title
+
+class CampaignView(models.Model):
+    campaign = models.ForeignKey(
+        Campaign, on_delete=models.CASCADE, related_name='views')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    user_agent = models.TextField()
+    ip_address = models.GenericIPAddressField()
+    action = models.CharField(max_length=10)  # 'view' ou 'click'
+
+    def __str__(self):
+        return f"{self.campaign.title} - {self.action} - {self.created_at}"

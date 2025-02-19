@@ -45,8 +45,6 @@ INSTALLED_APPS = [
 
     'django.contrib.sites',
     'allauth',
-    'allauth.account',
-    'allauth.socialaccount',
     'dj_rest_auth',
     'dj_rest_auth.registration',
     
@@ -114,11 +112,7 @@ DATABASES = {
 
 AUTHENTICATION_BACKENDS = [
     
-    # Needed to login by username in Django admin, regardless of `allauth`
-    'django.contrib.auth.backends.ModelBackend',
-
-    # `allauth` specific authentication methods, such as login by email
-    'allauth.account.auth_backends.AuthenticationBackend',
+  
     
 ]
 
