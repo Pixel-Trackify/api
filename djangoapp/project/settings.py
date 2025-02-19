@@ -244,11 +244,11 @@ ACCOUNT_EMAIL_REQUIRED = True  # O email é obrigatório
 ACCOUNT_USERNAME_REQUIRED = False  # Desativa username padrão do Django
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None  # Define que não há campo de username
 ACCOUNT_EMAIL_VERIFICATION = 'none'  # "optional", "mandatory" ou "none"
-ACCOUNT_LOGIN_ATTEMPTS_LIMIT = 5  # Número máximo de tentativas antes do bloqueio
-ACCOUNT_LOGIN_ATTEMPTS_TIMEOUT = 300  # Tempo de bloqueio em segundos (5 min)
 ACCOUNT_ADAPTER = 'allauth.account.adapter.DefaultAccountAdapter'
 
-
+ACCOUNT_RATE_LIMITS = {
+    'login_failed': f"{os.getenv('MAX_LOGIN_ATTEMPTS', '5')}/{int(os.getenv('LOCKOUT_DURATION_MINUTES', '5')) * 60}s",
+}
 
 
 
