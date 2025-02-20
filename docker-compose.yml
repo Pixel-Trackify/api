@@ -4,14 +4,14 @@ services:
     build:
       context: ./.docker
       dockerfile: nginx.dockerfile
+    env_file:
+      - ./dotenv_files/.env
     ports:
       - "${APP_PORT:-81}:80"
     volumes:
-      - ./app/Public:/app/Public
+      - .:/app:delegated
       - ./data/certbot/conf:/etc/letsencrypt
-      - ./data/certbot/www:/var/www/certbot
-    env_file:
-      - ./dotenv_files/.env
+      - ./data/certbot/www:/app/data/certbot
     environment:
       - APP_AMBIENT=${APP_AMBIENT:-development}
       - APP_DOMAIN=${APP_DOMAIN:-localhost}
@@ -26,15 +26,15 @@ services:
     build:
       context: ./.docker
       dockerfile: nginx.dockerfile
-    ports:
-      - "${APP_PORT:-81}:80"
-      - "${APP_PORT_SSL:-443}:443"
-    volumes:
-      - ./app/Public:/app/Public
-      - ./data/certbot/conf:/etc/letsencrypt
-      - ./data/certbot/www:/var/www/certbot
     env_file:
       - ./dotenv_files/.env
+    ports:
+      - "${APP_PORT:-80}:80"
+      - "${APP_PORT_SSL:-443}:443"
+    volumes:
+      - .:/app:delegated
+      - ./data/certbot/conf:/etc/letsencrypt
+      - ./data/certbot/www:/app/data/certbot
     environment:
       - APP_AMBIENT=${APP_AMBIENT:-development}
       - APP_DOMAIN=${APP_DOMAIN:-localhost}
@@ -44,24 +44,12 @@ services:
       - app_network
     restart: always
 
-  certbot:
-    image: certbot/certbot
-    volumes:
-      - ./data/certbot/conf:/etc/letsencrypt
-      - ./data/certbot/www:/var/www/certbot
-      - ./data/certbot/log:/var/log/letsencrypt
-    env_file:
-      - ./dotenv_files/.env
-    entrypoint: /bin/sh -c 'trap exit TERM; while :; do certbot certonly --webroot -w /var/www/certbot -d ${APP_DOMAIN:-localhost} --non-interactive --agree-tos --email webmaster@${APP_DOMAIN:-localhost}; sleep 12h & wait $${!}; done'
-    networks:
-      - app_network
-
   app:
     build:
       context: .
       dockerfile: .docker/Dockerfile
     expose:
-      - 8000:8000
+      - "8000"
     volumes:
       - ./app:/app
     env_file:
@@ -70,6 +58,20 @@ services:
       - app_network
     restart: always
       
+  certbot:
+    image: certbot/certbot
+    env_file:
+      - ./dotenv_files/.env
+    volumes:
+      - ./data/certbot/conf:/etc/letsencrypt
+      - ./data/certbot/www:/app/data/certbot
+      - ./data/certbot/log:/var/log/letsencrypt
+    environment:
+      - APP_DOMAIN=${APP_DOMAIN:-localhost}
+    entrypoint: /bin/sh -c 'trap exit TERM; while :; do certbot certonly --webroot -w /app/data/certbot -d ${APP_DOMAIN:-localhost} --non-interactive --agree-tos --email webmaster@${APP_DOMAIN:-localhost}; sleep 12h & wait $${!}; done'
+    networks:
+      - app_network
+
   django-command-runner:
     build:
       context: .
