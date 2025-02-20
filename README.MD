@@ -20,8 +20,8 @@ Este projeto é uma API baseada em Django para autenticação e gerenciamento de
 
 1. **Clone o repositório:**
     ```sh
-    git clone https://github.com/mmmatheus013/login_django.git
-    cd login_django
+    git clone https://TOKEN@github.com/Pixel-Trackify/api.git
+    cd api
     ```
 
 2. **Crie e configure as variáveis de ambiente:**
@@ -30,11 +30,17 @@ Este projeto é uma API baseada em Django para autenticação e gerenciamento de
     cp dotenv_files/.env-example dotenv_files/.env
     ```
 
-3. **Construa e execute os containers Docker:**
-    ```sh
-    docker compose up -d --build app
-    ```
+3. **Executando o Projeto:**
 
+    Edite o arquivo `.env` e configure as variáveis de acordo com seu ambiente.
+    ***Ambiente de Desenvolvimento:***
+    ```sh
+    docker compose up -d --scale app=3 --build local
+    ```
+    ***Ambiente de Produção:***
+    ```sh
+    docker compose up -d --scale app=3 --build production
+    ```
 4. **Acesse a aplicação:**
     A API estará disponível em `http://127.0.0.1:8000`.
 

@@ -4,10 +4,10 @@ LABEL mantainer="mmmatheus013gmail.com"
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
-COPY djangoapp /djangoapp
+COPY app /app
 COPY .docker/scripts /scripts
 
-WORKDIR /djangoapp
+WORKDIR /app
 
 EXPOSE 8000
 
@@ -16,7 +16,7 @@ RUN apk update && \
     python -m venv /venv && \
     /venv/bin/pip install --upgrade pip && \
     /venv/bin/pip install uwsgi && \
-    /venv/bin/pip install -r /djangoapp/requirements.txt && \
+    /venv/bin/pip install -r /app/requirements.txt && \
     adduser --disabled-password --no-create-home duser && \
     chmod -R +x /scripts
 
