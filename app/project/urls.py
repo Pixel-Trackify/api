@@ -10,6 +10,7 @@ urlpatterns = [
     path('api/', include('plans.urls')),
     path('api/', include('tutorials.urls')),
     path('api/', include('campaigns.urls')),
+    path('api/', include('integrations.urls')),
     path('', index, name='index'),
    
 ]
