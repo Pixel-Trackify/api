@@ -22,6 +22,9 @@ class Campaign(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        db_table = 'campaigns'
+
     def __str__(self):
         return self.title
 
@@ -33,6 +36,10 @@ class CampaignView(models.Model):
     user_agent = models.TextField()
     ip_address = models.GenericIPAddressField()
     action = models.CharField(max_length=10)  # 'view' ou 'click'
+
+
+    class Meta:
+        db_table = 'campaign_views'
 
     def __str__(self):
         return f"{self.campaign.title} - {self.action} - {self.created_at}"

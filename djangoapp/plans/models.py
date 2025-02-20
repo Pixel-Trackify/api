@@ -19,6 +19,10 @@ class Plan(models.Model):
     description = models.TextField(blank=True, verbose_name="description-adm")  # Visível apenas no admin
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="creation-date")
 
+
+    class Meta:
+        db_table = 'Plan'
+
     def __str__(self):
         return self.name  # Representação legível no admin
 
@@ -30,6 +34,9 @@ class PlanFeature(models.Model):
         verbose_name="related-plan"
     )
     text = models.CharField(max_length=200, verbose_name="deature-description")
+
+    class Meta:
+        db_table = 'plan_feature'
 
     def __str__(self):
         return self.text  # Exibe o texto no admin
@@ -57,6 +64,10 @@ class UserSubscription(models.Model):
         elif self.plan.duration == 'year':
             return self.start_date + timedelta(days=365 * self.plan.duration_value)
         return self.start_date
+
+
+    class Meta:
+        db_table = 'user_subscription'
 
     def __str__(self):
         return f"{self.user.email} - {self.plan.name}"

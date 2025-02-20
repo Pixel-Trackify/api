@@ -47,6 +47,11 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     USERNAME_FIELD = "email"  # Mudança para compatibilidade com django-allauth
     REQUIRED_FIELDS = ["cpf", "name"]
 
+    class Meta:
+        db_table = 'users'
+
+
+
     def __str__(self):
         return self.email or self.cpf
 
@@ -80,6 +85,9 @@ class LoginLog(models.Model):
     browser = models.CharField(max_length=500)
     login_time = models.DateTimeField(auto_now_add=True)
     token = models.CharField(max_length=500)
+
+    class Meta:
+        db_table = 'login_log'
 
     def __str__(self):
         return f"LoginLog(user={self.user.email}, ip_address={self.ip_address}, device={self.device}, browser={self.browser}, login_time={self.login_time})"

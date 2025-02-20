@@ -7,5 +7,8 @@ class Tutorial(models.Model):
     youtube_url = models.URLField(max_length=200)
     thumbnail_url = models.URLField(max_length=200, blank=True)
 
+    class Meta:
+        db_table = 'tutorials'
+
     def __str__(self):
         return self.title
