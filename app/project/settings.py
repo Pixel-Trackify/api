@@ -230,6 +230,11 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ),
+
+    # Renderizadores padrão (para garantir que a resposta seja JSON)
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+    ),
 }
 
 # Configurações do JWT
