@@ -1,12 +1,10 @@
 
 from rest_framework.views import APIView
 from django.http import Http404
-from django.core.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated, IsAdminUser, IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.views import TokenObtainPairView
 from .serializers import RegisterSerializer, LoginSerializer, UserUpdateSerializer, UpdateUserPlanSerializer, UserProfileSerializer, ChangePasswordSerializer, UserSubscriptionSerializer
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.filters import SearchFilter, OrderingFilter
@@ -21,11 +19,11 @@ import user_agents
 from django.utils import timezone
 
 
-
 class RegisterView(APIView):
     """
     View para registrar um novo usuário.
     """
+
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
@@ -74,9 +72,6 @@ class ChangePasswordView(APIView):
         return Response({"message": "Senha alterada com sucesso."}, status=status.HTTP_200_OK)
 
 
-
-
-
 class StandardResultsSetPagination(PageNumberPagination):
     page_size = 10
     page_size_query_param = 'page_size'
@@ -84,10 +79,12 @@ class StandardResultsSetPagination(PageNumberPagination):
 
 
 class GetUsersView(generics.ListAPIView):
-    permission_classes = [IsAdminUser] # Apenas administradores podem listar usuários
+    # Apenas administradores podem listar usuários
+    permission_classes = [IsAdminUser]
     queryset = Usuario.objects.all().order_by("uid")
     serializer_class = RegisterSerializer
-    pagination_class = StandardResultsSetPagination # Usando a paginação personalizada
+    # Usando a paginação personalizada
+    pagination_class = StandardResultsSetPagination
 
 
 class AccountRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
@@ -95,14 +92,16 @@ class AccountRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     View para detalhar, atualizar ou excluir a conta do usuário.
     Requer autenticação para edição e só permite que o dono da conta edite.
     """
-    permission_classes = [IsAuthenticated]  # Exige autenticação para todas as ações exceto GET?
+    permission_classes = [
+        IsAuthenticated]  # Exige autenticação para todas as ações exceto GET?
     queryset = Usuario.objects.all()
-    serializer_class = UserUpdateSerializer # Serializador específico para atualização
-    lookup_field = 'uid' # Campo para busca de usuário na URL
+    # Serializador específico para atualização
+    serializer_class = UserUpdateSerializer
+    lookup_field = 'uid'  # Campo para busca de usuário na URL
 
     def get_object(self):
         """Busca o usuário pelo ID na URL e verifica permissões."""
-        user_id = self.kwargs.get("pk")
+        user_uid = self.kwargs.get("pk")
         try:
             user = Usuario.objects.get(uid=user_uid)
         except Usuario.DoesNotExist:
@@ -111,7 +110,8 @@ class AccountRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 
         # Verifica se o usuário autenticado é o dono do recurso
         if self.request.user != user:
-            raise NotFound(detail="Usuário não encontrado.") # Esconde a existência do recurso para não donos
+            # Esconde a existência do recurso para não donos
+            raise NotFound(detail="Usuário não encontrado.")
 
         return user
 
@@ -134,8 +134,6 @@ class AccountRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         )
 
 
-
-
 class FilterUsersView(generics.ListAPIView):
     """
     View para listar, filtrar, pesquisar e ordenar usuários.
@@ -152,7 +150,7 @@ class FilterUsersView(generics.ListAPIView):
     filterset_class = UsuarioFilter  # Filtros personalizados
     search_fields = ['name', 'email']  # Campos para pesquisa textual
     ordering_fields = ['name', 'email', 'created_at']  # Ordenação permitida
-    #ordering = ['id']  # Ordenação padrão
+    # ordering = ['id']  # Ordenação padrão
 
 
 logger = logging.getLogger('accounts')  # Logger para a aplicação de accounts
@@ -200,7 +198,6 @@ class LoginView(APIView):
             "refresh": str(refresh),
             "access": str(refresh.access_token),
         }, status=status.HTTP_200_OK)
-
 
 
 class LogoutView(APIView):
