@@ -56,37 +56,37 @@ Este projeto é uma API baseada em Django para autenticação e gerenciamento de
 
 ### Autenticação
 
-- `POST /authentication/token/`: Obter par de tokens JWT
-- `POST /authentication/token/refresh/`: Atualizar token JWT
-- `POST /authentication/token/verify/`: Verificar token JWT
+- `POST /api/authentication/token/`: Obter par de tokens JWT
+- `POST /api/authentication/token/refresh/`: Atualizar token JWT
+- `POST /api/authentication/token/verify/`: Verificar token JWT
 
 ### Gerenciamento de Usuários
 
-- `POST /auth/login/`: Login do usuário
-- `POST /auth/logout/`: Logout do usuário
-- `POST /auth/register-accounts/`: Registrar um novo usuário
-- `GET /auth/users/`: Listar todos os usuários (somente admin)
-- `GET /auth/profile/`: Visualizar perfil do usuário autenticado
-- `PUT /auth/profile/`: Atualizar perfil do usuário autenticado
-- `POST /auth/change-password/`: Alterar senha do usuário autenticado
-- `POST /auth/update-plan/`: Atualizar plano do usuário
-- `GET /auth/my-plan/`: Visualizar plano do usuário autenticado
-- `GET /auth/subscription-history/`:  Retorna o histórico de assinaturas do usuário autenticado.
+- `POST /api/auth/login/`: Login do usuário
+- `POST /api/auth/logout/`: Logout do usuário
+- `POST /api/auth/register-accounts/`: Registrar um novo usuário
+- `GET /api/auth/users/`: Listar todos os usuários (somente admin)
+- `GET /api/auth/profile/`: Visualizar perfil do usuário autenticado
+- `PUT /api/auth/profile/`: Atualizar perfil do usuário autenticado
+- `POST /api/auth/change-password/`: Alterar senha do usuário autenticado
+- `POST /api/auth/update-plan/`: Atualizar plano do usuário
+- `GET /api/auth/my-plan/`: Visualizar plano do usuário autenticado
+- `GET /api/auth/subscription-history/`:  Retorna o histórico de assinaturas do usuário autenticado.
 
 - `GET /auth/accounts/<int:pk>`: Recuperar, atualizar ou excluir uma conta de usuário
 - `GET /auth/filter-users/`: Filtrar, buscar e ordenar usuários
 
 ### Gerenciamento de Planos
 
-- `GET /plans/`: Listar todos os planos
-- `POST /plans/`: Criar um novo plano (somente admin)
-- `GET /plans/<int:pk>`: Recuperar, atualizar ou excluir um plano (somente admin)
+- `GET /api/plans/`: Listar todos os planos
+- `POST /api/plans/`: Criar um novo plano (somente admin)
+- `GET /api/plans/<int:pk>`: Recuperar, atualizar ou excluir um plano (somente admin)
 
 ### Gerenciamento de Tutoriais
 
-- `GET /tutoriais/`: Lista todos os tutoriais disponíveis.
-- `POST /tutoriais/`: Cria um novo tutorial (somente para administradores).
-- `GET /tutoriais/<int:pk>/`: Recupera, atualiza ou exclui um tutorial específico (somente para administradores).
+- `GET /api/tutoriais/`: Lista todos os tutoriais disponíveis.
+- `POST /api/tutoriais/`: Cria um novo tutorial (somente para administradores).
+- `GET /api/tutoriais/<int:pk>/`: Recupera, atualiza ou exclui um tutorial específico (somente para administradores).
 
 ## Executando Testes
 

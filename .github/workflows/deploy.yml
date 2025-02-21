@@ -1,0 +1,65 @@
+name: CD App
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Copy .env.example to .env and replace secrets
+      run: |
+        cp .env-example .env
+        sed -i 's|DEBUG=.*|DEBUG=${{ secrets.DEBUG }}|' .env
+        sed -i 's|ALLOWED_HOSTS=.*|ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}|' .env
+        sed -i 's|SECRET_KEY=.*|SECRET_KEY=${{ secrets.SECRET_KEY }}|' .env
+        sed -i 's|POSTGRES_DB=.*|POSTGRES_DB=${{ secrets.POSTGRES_DB }}|' .env
+        sed -i 's|POSTGRES_USER=.*|POSTGRES_USER=${{ secrets.POSTGRES_USER }}|' .env
+        sed -i 's|POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}|' .env
+        sed -i 's|POSTGRES_HOST=.*|POSTGRES_HOST=${{ secrets.POSTGRES_HOST }}|' .env
+        sed -i 's|POSTGRES_PORT=.*|POSTGRES_PORT=${{ secrets.POSTGRES_PORT }}|' .env
+        sed -i 's|APP_PORT=.*|APP_PORT=${{ secrets.APP_PORT }}|' .env
+        sed -i 's|APP_PORT_SSL=.*|APP_PORT_SSL=${{ secrets.APP_PORT_SSL }}|' .env
+        sed -i 's|APP_DOMAIN=.*|APP_DOMAIN=${{ secrets.APP_DOMAIN }}|' .env
+        sed -i 's|APP_AMBIENT=.*|APP_AMBIENT=${{ secrets.APP_AMBIENT }}|' .env
+
+    - name: Deploy to Server via SCP
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        port: ${{ secrets.SSH_PORT }}
+        source: ./*
+        target: ${{ secrets.SSH_TARGET }}
+
+    - name: Rolling Restart
+      uses: appleboy/ssh-action@master
+      with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            cd ${{ secrets.SSH_TARGET }}
+            
+            echo "🔄 Criando nova imagem sem derrubar tudo..."
+            docker compose build app
+  
+            echo "🚀 Reiniciando containers um por um..."
+            for container in $(docker ps --format "{{.Names}}" | grep app); do
+              echo "🔄 Reiniciando $container"
+              docker restart $container
+              sleep 5
+            done
+            
+            echo "🧹 Limpando imagens antigas..."
+            docker image prune -f
+
+            echo "✅ Deploy concluído!"
