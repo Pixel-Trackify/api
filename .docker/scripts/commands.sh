@@ -12,6 +12,4 @@ fi
 
 echo "✅ Postgres Database Started Successfully ($POSTGRES_HOST:$POSTGRES_PORT)"
 
-python manage.py makemigrations --noinput
-python manage.py migrate --noinput
 exec uwsgi --http :8000 --module project.wsgi --master --processes 4 --threads 2

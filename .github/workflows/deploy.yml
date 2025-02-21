@@ -50,6 +50,7 @@ jobs:
             cd ${{ secrets.SSH_TARGET }}
             
             echo "🔄 Criando nova imagem sem derrubar tudo..."
+            docker compose run --rm 
             docker compose build app
   
             echo "🚀 Reiniciando containers um por um..."
@@ -63,3 +64,15 @@ jobs:
             docker image prune -f
 
             echo "✅ Deploy concluído!"
+
+    - name: Migrate Database
+      uses: appleboy/ssh-action@master
+      with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            cd ${{ secrets.SSH_TARGET }}
+            docker compose build --no-cache django-command-runner
+            docker compose run --rm django-command-runner python manage.py migrate

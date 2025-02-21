@@ -18,6 +18,7 @@ RUN apk update && \
     /venv/bin/pip install uwsgi && \
     /venv/bin/pip install -r /app/requirements.txt && \
     adduser --disabled-password --no-create-home duser && \
+    chown -R duser:duser /scripts && \
     chmod -R +x /scripts
 
 ENV PATH="/scripts:/venv/bin:$PATH"

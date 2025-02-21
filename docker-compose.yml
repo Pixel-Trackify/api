@@ -69,13 +69,14 @@ services:
     build:
       context: .
       dockerfile: .docker/Dockerfile
+    environment:
+      - APP_AMBIENT=${APP_AMBIENT:-development}
     volumes:
       - ./app:/app
-    depends_on:
-      - psql
+      - ./.env:/app/.env
     networks:
       - app_network
-    entrypoint: ["entrypoint.sh"]
+    entrypoint: ["/scripts/entrypoint.sh"]
 
   psql:
     image: postgres:13-alpine
