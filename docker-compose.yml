@@ -4,10 +4,8 @@ services:
     build:
       context: ./.docker
       dockerfile: nginx.dockerfile
-    env_file:
-      - ./dotenv_files/.env
     ports:
-      - "${APP_PORT:-81}:80"
+      - "${APP_PORT}:80"
     volumes:
       - .:/app:delegated
       - ./data/certbot/conf:/etc/letsencrypt
@@ -26,8 +24,6 @@ services:
     build:
       context: ./.docker
       dockerfile: nginx.dockerfile
-    env_file:
-      - ./dotenv_files/.env
     ports:
       - "${APP_PORT:-80}:80"
       - "${APP_PORT_SSL:-443}:443"
@@ -52,16 +48,13 @@ services:
       - "8000"
     volumes:
       - ./app:/app
-    env_file:
-      - ./dotenv_files/.env 
+      - ./.env:/app/.env
     networks:
       - app_network
     restart: always
       
   certbot:
     image: certbot/certbot
-    env_file:
-      - ./dotenv_files/.env
     volumes:
       - ./data/certbot/conf:/etc/letsencrypt
       - ./data/certbot/www:/app/data/certbot
@@ -78,8 +71,6 @@ services:
       dockerfile: .docker/Dockerfile
     volumes:
       - ./app:/app
-    env_file:
-      - ./dotenv_files/.env
     depends_on:
       - psql
     networks:
@@ -92,8 +83,6 @@ services:
       - "5432:5432"
     volumes:
       - ./data/postgres/data:/var/lib/postgresql/data/
-    env_file:
-      - ./dotenv_files/.env
     networks:
       - app_network
     restart: always

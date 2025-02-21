@@ -13,10 +13,25 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 import os
 from pathlib import Path
 from datetime import timedelta
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+dotenv_path = os.path.join(BASE_DIR, '.env')
 
+if os.path.exists(dotenv_path):
+    load_dotenv(dotenv_path)
+    print("✅ .env carregado com sucesso!")
+else:
+    print("❌ Arquivo .env NÃO encontrado!")
+
+try:
+    load_dotenv(dotenv_path)
+except Exception as e:
+    raise ValueError(f'Error loading .env file: {e}')
+    
+if not os.getenv('SECRET_KEY'):
+    raise ValueError('SECRET_KEY not found in environment variables')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
