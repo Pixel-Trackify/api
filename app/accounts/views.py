@@ -1,11 +1,13 @@
 
 from rest_framework.views import APIView
+from rest_framework.exceptions import NotFound
+from rest_framework_simplejwt.exceptions import TokenError
 from django.http import Http404
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import RegisterSerializer, LoginSerializer, UserUpdateSerializer, UpdateUserPlanSerializer, UserProfileSerializer, ChangePasswordSerializer, UserSubscriptionSerializer
+from .serializers import RegisterSerializer, LoginSerializer, UserUpdateSerializer, UpdateUserPlanSerializer, UserProfileSerializer, ChangePasswordSerializer, UserSubscriptionSerializer, PlanSerializer
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
