@@ -1,6 +1,6 @@
 # API de Autenticação e Gerenciamento de Usuários Django
 
-Este projeto é uma API baseada em Django para autenticação e gerenciamento de usuários, com autenticação JWT, registro de usuários, login, logout, gerenciamento de planos e capacidades de filtragem de usuários.
+Este projeto é uma aplicação Django que fornece uma API para gerenciar autenticação de usuários, campanhas publicitárias, integrações, planos e assinaturas.
 
 ## Funcionalidades
 
@@ -10,6 +10,10 @@ Este projeto é uma API baseada em Django para autenticação e gerenciamento de
 - Modelo de usuário personalizado com rastreamento de tentativas de login e bloqueio de conta
 - Gerenciamento de planos de usuários
 - Interface administrativa para gerenciamento de usuários
+- Criação e gerenciamento de campanhas publicitárias
+- Integração com plataformas externas
+- Gerenciamento de assinaturas e transações
+- Processamento de webhooks
 
 ## Requisitos
 
@@ -54,39 +58,65 @@ Este projeto é uma API baseada em Django para autenticação e gerenciamento de
 
 ## Endpoints da API
 
-### Autenticação
+## Endpoints de Autenticação
+- **GET /api/auth/accounts/{uuid}**: Recuperar detalhes da conta do usuário pelo UUID.
+- **POST /api/auth/register-accounts/**: Registrar uma nova conta de usuário.
+- **POST /api/authentication/token/**: Obter um token JWT para autenticação.
+- **POST /api/authentication/token/refresh/**: Atualizar o token JWT.
+- **POST /api/authentication/token/verify/**: Verificar o token JWT.
 
-- `POST /api/authentication/token/`: Obter par de tokens JWT
-- `POST /api/authentication/token/refresh/`: Atualizar token JWT
-- `POST /api/authentication/token/verify/`: Verificar token JWT
+## Endpoints de Gerenciamento de Usuários
+- **GET /api/auth/users/**: Listar todos os usuários (acesso de administrador necessário).
 
-### Gerenciamento de Usuários
+## Endpoints de Assinatura
+- **GET /api/auth/subscription-history/**: Recuperar o histórico de assinaturas do usuário autenticado.
+- **POST /api/auth/update-plan/**: Atualizar o plano de assinatura do usuário.
 
-- `POST /api/auth/login/`: Login do usuário
-- `POST /api/auth/logout/`: Logout do usuário
-- `POST /api/auth/register-accounts/`: Registrar um novo usuário
-- `GET /api/auth/users/`: Listar todos os usuários (somente admin)
-- `GET /api/auth/profile/`: Visualizar perfil do usuário autenticado
-- `PUT /api/auth/profile/`: Atualizar perfil do usuário autenticado
-- `POST /api/auth/change-password/`: Alterar senha do usuário autenticado
-- `POST /api/auth/update-plan/`: Atualizar plano do usuário
-- `GET /api/auth/my-plan/`: Visualizar plano do usuário autenticado
-- `GET /api/auth/subscription-history/`:  Retorna o histórico de assinaturas do usuário autenticado.
+## Endpoints de Campanhas
+- **GET /api/campaigns/**: Listar todas as campanhas (acesso de administrador necessário).
+- **POST /api/campaigns/**: Criar uma nova campanha (acesso de administrador necessário).
+- **GET /api/campaigns/{id}/**: Recuperar detalhes de uma campanha específica.
+- **PUT /api/campaigns/{id}/**: Atualizar uma campanha específica (acesso de administrador necessário).
+- **PATCH /api/campaigns/{id}/**: Atualizar parcialmente uma campanha específica (acesso de administrador necessário).
+- **DELETE /api/campaigns/{id}/**: Excluir uma campanha específica (acesso de administrador necessário).
 
-- `GET /auth/accounts/<int:pk>`: Recuperar, atualizar ou excluir uma conta de usuário
-- `GET /auth/filter-users/`: Filtrar, buscar e ordenar usuários
+## Endpoints de Integração
+- **GET /api/integration/{uid}/**: Recuperar detalhes de uma integração específica (acesso de administrador necessário).
+- **DELETE /api/integration/{uid}/**: Excluir uma integração específica (acesso de administrador necessário).
+- **GET /api/integrations/**: Listar todas as integrações (acesso de administrador necessário).
+- **POST /api/integrations/**: Criar uma nova integração (acesso de administrador necessário).
+- **GET /api/integrations/{id}/**: Recuperar detalhes de uma integração específica.
+- **PUT /api/integrations/{id}/**: Atualizar uma integração específica (acesso de administrador necessário).
+- **PATCH /api/integrations/{id}/**: Atualizar parcialmente uma integração específica (acesso de administrador necessário).
+- **DELETE /api/integrations/{id}/**: Excluir uma integração específica (acesso de administrador necessário).
 
-### Gerenciamento de Planos
+## Endpoints de Planos
+- **GET /api/plans/**: Listar todos os planos (acesso de administrador necessário).
+- **POST /api/plans/**: Criar um novo plano (acesso de administrador necessário).
+- **GET /api/plans/{id}/**: Recuperar detalhes de um plano específico.
+- **PUT /api/plans/{id}/**: Atualizar um plano específico (acesso de administrador necessário).
+- **PATCH /api/plans/{id}/**: Atualizar parcialmente um plano específico (acesso de administrador necessário).
+- **DELETE /api/plans/{id}/**: Excluir um plano específico (acesso de administrador necessário).
 
-- `GET /api/plans/`: Listar todos os planos
-- `POST /api/plans/`: Criar um novo plano (somente admin)
-- `GET /api/plans/<int:pk>`: Recuperar, atualizar ou excluir um plano (somente admin)
+## Endpoints de Assinaturas
+- **POST /api/subscriptions/**: Criar uma nova assinatura (requer autenticação JWT).
 
-### Gerenciamento de Tutoriais
+## Endpoints de Transações
+- **GET /api/transactions/**: Listar todas as transações (acesso de administrador necessário).
+- **GET /api/transactions/{transaction_id}/**: Recuperar detalhes de uma transação específica.
 
-- `GET /api/tutoriais/`: Lista todos os tutoriais disponíveis.
-- `POST /api/tutoriais/`: Cria um novo tutorial (somente para administradores).
-- `GET /api/tutoriais/<int:pk>/`: Recupera, atualiza ou exclui um tutorial específico (somente para administradores).
+## Endpoints de Tutoriais
+- **GET /api/tutoriais/**: Listar todos os tutoriais.
+- **POST /api/tutoriais/**: Criar um novo tutorial.
+- **GET /api/tutoriais/{id}/**: Recuperar detalhes de um tutorial específico.
+- **PUT /api/tutoriais/{id}/**: Atualizar um tutorial específico.
+- **PATCH /api/tutoriais/{id}/**: Atualizar parcialmente um tutorial específico.
+- **DELETE /api/tutoriais/{id}/**: Excluir um tutorial específico.
+
+## Endpoints de Webhooks
+- **GET /api/webhook/kwai/{uid}/**: Recuperar detalhes do webhook KWAI.
+- **POST /api/webhook/zeroone/{uid}/**: Processar uma requisição POST do webhook ZeroOne.
+
 
 ## Executando Testes
 
@@ -95,10 +125,18 @@ Para executar os testes, use o seguinte comando:
 docker compose run django-command-runner python manage.py test
 ```
 
+## Segurança
+
+A API utiliza autenticação baseada em JWT (JSON Web Tokens) para proteger os endpoints. Certifique-se de incluir o token JWT no cabeçalho `Authorization` para todas as requisições que requerem autenticação.
+
+## Contribuição
+
+1. **Fork o repositório**
+2. **Crie uma branch para sua feature (`git checkout -b feature/nova-feature`)**
+3. **Commit suas mudanças (`git commit -m 'Adiciona nova feature'`)**
+4. **Push para a branch (`git push origin feature/nova-feature`)**
+5. **Abra um Pull Request**
+
 ## Licença
 
-Este projeto está licenciado sob a Licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
-
-## Contribuindo
-
-Contribuições são bem-vindas! Por favor, abra uma issue ou envie um pull request para quaisquer alterações.
+Este projeto está licenciado sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.

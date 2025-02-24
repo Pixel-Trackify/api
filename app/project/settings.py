@@ -29,7 +29,7 @@ try:
     load_dotenv(dotenv_path)
 except Exception as e:
     raise ValueError(f'Error loading .env file: {e}')
-    
+
 if not os.getenv('SECRET_KEY'):
     raise ValueError('SECRET_KEY not found in environment variables')
 
@@ -62,12 +62,13 @@ INSTALLED_APPS = [
     'allauth',
     'dj_rest_auth',
     'dj_rest_auth.registration',
-    
+    'drf_spectacular',
+
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'rest_framework',
     'rest_framework.authtoken',
-    
+
     'django_filters',
     'accounts',
     'plans',
@@ -128,9 +129,9 @@ DATABASES = {
 
 
 AUTHENTICATION_BACKENDS = [
-    
-  
-    
+
+
+
 ]
 
 
@@ -235,6 +236,8 @@ REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',
     ),
+
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 # Configurações do JWT
@@ -243,7 +246,7 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
-    'ALGORITHM': 'HS256',                           
+    'ALGORITHM': 'HS256',
     'SIGNING_KEY': os.getenv('SECRET_KEY', 'change-me'),
     "AUTH_HEADER_TYPES": ("Bearer",),
     "USER_ID_FIELD": "uid",
@@ -251,12 +254,11 @@ SIMPLE_JWT = {
 }
 
 
-
-
 # Configuração do Django Allauth
 
 
-ACCOUNT_AUTHENTICATION_METHOD = 'email'  # "email" para login com email, "username" para usuário
+# "email" para login com email, "username" para usuário
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
 ACCOUNT_EMAIL_REQUIRED = True  # O email é obrigatório
 ACCOUNT_USERNAME_REQUIRED = False  # Desativa username padrão do Django
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None  # Define que não há campo de username
@@ -266,7 +268,6 @@ ACCOUNT_ADAPTER = 'allauth.account.adapter.DefaultAccountAdapter'
 ACCOUNT_RATE_LIMITS = {
     'login_failed': f"{os.getenv('MAX_LOGIN_ATTEMPTS', '5')}/{int(os.getenv('LOCKOUT_DURATION_MINUTES', '5')) * 60}s",
 }
-
 
 
 # Configurações de validação de senha
