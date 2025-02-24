@@ -89,9 +89,11 @@ class ZeroOneWebhookView(APIView):
         transaction_id = request.data.get('id')
         transaction_status = request.data.get('status')
         amount = request.data.get('amount')
+        method = request.data.get('method')
+        data_response = request.data
 
         # Verifica se todos os campos obrigatórios estão presentes
-        if not transaction_id or not transaction_status or not amount:
+        if not transaction_id or not transaction_status or not amount or not method:
             return Response({"error": "Missing required fields"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
@@ -101,7 +103,11 @@ class ZeroOneWebhookView(APIView):
                 defaults={
                     'integration': integration,
                     'status': transaction_status,
-                    'amount': amount
+                    'amount': amount,
+                    'method': method,
+                    'data_response': data_response,
+                    'created_at': data_response.get('created_at'),
+                    'updated_at': data_response.get('updated_at')
                 }
             )
         except Exception as e:
@@ -122,11 +128,11 @@ class ZeroOneWebhookView(APIView):
         campaigns = Campaign.objects.filter(integrations=integration)
         for campaign in campaigns:
             transactions = Transaction.objects.filter(integration=integration)
-            total_approved = transactions.filter(status='APPROVED').count()
-            total_pending = transactions.filter(status='PENDING').count()
+            total_approved = transactions.filter(status='paid').count()
+            total_pending = transactions.filter(status='pending').count()
             amount_approved = transactions.filter(
-                status='APPROVED').aggregate(Sum('amount'))['amount__sum'] or 0
-            amount_pending = transactions.filter(status='PENDING').aggregate(
+                status='paid').aggregate(Sum('amount'))['amount__sum'] or 0
+            amount_pending = transactions.filter(status='pending').aggregate(
                 Sum('amount'))['amount__sum'] or 0
             profit = amount_approved - amount_pending
             roi = (profit / amount_approved) * \
