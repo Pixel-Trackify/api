@@ -122,7 +122,14 @@ Este projeto é uma aplicação Django que fornece uma API para gerenciar autent
 
 Para executar os testes, use o seguinte comando:
 ```sh
-docker compose run django-command-runner python manage.py test
+docker compose run --rm django-command-runner python manage.py test
+```
+
+## Executando Migrações de Tabela
+
+Para executar o migrate, use o seguinte comando:
+```sh
+docker compose run --rm django-command-runner python manage.py migrate
 ```
 
 ## Segurança
