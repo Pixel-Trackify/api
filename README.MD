@@ -48,6 +48,31 @@ Este projeto é uma aplicação Django que fornece uma API para gerenciar autent
 4. **Acesse a aplicação:**
     A API estará disponível em `http://127.0.0.1:8000`.
 
+
+## Executando Testes
+
+Para executar os testes, use o seguinte comando:
+```sh
+docker compose run --rm django-command-runner python manage.py test
+```
+
+## Executando Migrações de Tabela
+
+Para executar o migrate, use o seguinte comando:
+```sh
+docker compose run --rm django-command-runner python manage.py migrate
+```
+
+## Certbot SSL
+
+Para obter e renovar certificados SSL usando Certbot, utilize o seguinte comando:
+
+```sh
+docker compose run --rm certbot certonly --webroot -w /app/data/certbot -d api.onetracking.io --non-interactive --agree-tos --email webmaster@onetracking.io
+```
+
+Este comando irá gerar certificados SSL para o domínio `api.onetracking.io` e armazená-los no diretório especificado.
+
 ## Instruções para Importar a Coleção no Postman
 
 - Abra o Postman.
@@ -117,20 +142,6 @@ Este projeto é uma aplicação Django que fornece uma API para gerenciar autent
 - **GET /api/webhook/kwai/{uid}/**: Recuperar detalhes do webhook KWAI.
 - **POST /api/webhook/zeroone/{uid}/**: Processar uma requisição POST do webhook ZeroOne.
 
-
-## Executando Testes
-
-Para executar os testes, use o seguinte comando:
-```sh
-docker compose run --rm django-command-runner python manage.py test
-```
-
-## Executando Migrações de Tabela
-
-Para executar o migrate, use o seguinte comando:
-```sh
-docker compose run --rm django-command-runner python manage.py migrate
-```
 
 ## Segurança
 
