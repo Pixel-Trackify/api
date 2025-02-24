@@ -18,9 +18,9 @@ class CampaignViewSet(viewsets.ModelViewSet):
 class KwaiWebhookView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, id):
+    def get(self, request, uid):
         action = request.query_params.get('action')
-        campaign = get_object_or_404(Campaign, id=id)
+        campaign = get_object_or_404(Campaign, uid=uid)
 
         # Capturar User-Agent e IP
         user_agent_string = request.META.get('HTTP_USER_AGENT', 'unknown')
@@ -31,7 +31,7 @@ class KwaiWebhookView(APIView):
         # Gerar timestamp
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # Criar o dicionário 
+        # Criar o dicionário
         server_data = {
             "timestamp": timestamp,
             "server": {
@@ -61,7 +61,7 @@ class KwaiWebhookView(APIView):
 
         # Criar uma entrada no CampaignView
         data = {
-            'campaign': campaign.id,
+            'campaign': campaign.uid,
             'user_agent': user_agent_string,
             'ip_address': ip_address,
             'action': action
