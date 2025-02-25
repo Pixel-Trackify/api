@@ -84,7 +84,7 @@ class GetUsersView(generics.ListAPIView):
     # Apenas administradores podem listar usuários
     permission_classes = [IsAdminUser]
     queryset = Usuario.objects.all().order_by("uid")
-    serializer_class = RegisterSerializer
+    serializer_class = UserProfileSerializer
     # Usando a paginação personalizada
     pagination_class = StandardResultsSetPagination
 
