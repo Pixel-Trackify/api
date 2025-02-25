@@ -11,6 +11,7 @@ urlpatterns = [
     path('api/', include('tutorials.urls')),
     path('api/', include('campaigns.urls')),
     path('api/', include('integrations.urls')),
+    path('api/', include('payments.urls')),
     path('', index, name='index'),
-   
+
 ]
