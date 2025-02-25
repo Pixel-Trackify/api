@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
+import uuid
 
 class Plan(models.Model):
     """Modelo para representar planos de assinatura"""
@@ -11,14 +12,15 @@ class Plan(models.Model):
     ]
 
     # Campos básicos do plano
-    name = models.CharField(max_length=100, unique=True,verbose_name="name-plan")
+    id = models.AutoField(primary_key=True)
+    uid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    name = models.CharField(max_length=100, unique=True, verbose_name="name-plan")
     price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="price")
     duration = models.CharField(max_length=10, choices=DURATION_CHOICES, default='month', verbose_name="duration")
     duration_value = models.PositiveIntegerField(default=1, verbose_name="duration-value")  # Valor da duração
     is_current = models.BooleanField(default=False, verbose_name="active-plan")  # Indica se é o plano atual (destaque)
     description = models.TextField(blank=True, verbose_name="description-adm")  # Visível apenas no admin
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="creation-date")
-
 
     class Meta:
         db_table = 'Plan'
@@ -33,7 +35,7 @@ class PlanFeature(models.Model):
         related_name='features',  # Acessar features via plano.features.all()
         verbose_name="related-plan"
     )
-    text = models.CharField(max_length=200, verbose_name="deature-description")
+    text = models.CharField(max_length=200, verbose_name="feature-description")
 
     class Meta:
         db_table = 'plan_feature'
@@ -48,7 +50,7 @@ class UserSubscription(models.Model):
         related_name='subscriptions',  # Acessar via user.subscriptions.all()
         verbose_name="Usuário"
     )
-    plan = models.ForeignKey(Plan,on_delete=models.CASCADE,verbose_name="contracted-plan")
+    plan = models.ForeignKey(Plan, on_delete=models.CASCADE, verbose_name="contracted-plan")
     start_date = models.DateTimeField(auto_now_add=True, verbose_name="start-date")  # Automático na criação
     end_date = models.DateTimeField(verbose_name="end-date")
     is_active = models.BooleanField(default=True, verbose_name="active-subscription")  # Pode ser desativada
@@ -64,7 +66,6 @@ class UserSubscription(models.Model):
         elif self.plan.duration == 'year':
             return self.start_date + timedelta(days=365 * self.plan.duration_value)
         return self.start_date
-
 
     class Meta:
         db_table = 'user_subscription'

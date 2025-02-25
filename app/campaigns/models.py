@@ -29,8 +29,7 @@ class Campaign(models.Model):
         return self.title
 
 class CampaignView(models.Model):
-    campaign = models.ForeignKey(
-        Campaign, on_delete=models.CASCADE, related_name='views')
+    campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE, related_name='views')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     user_agent = models.TextField()

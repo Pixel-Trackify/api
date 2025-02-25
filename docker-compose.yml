@@ -59,9 +59,6 @@ services:
       - ./data/certbot/conf:/etc/letsencrypt
       - ./data/certbot/www:/app/data/certbot
       - ./data/certbot/log:/var/log/letsencrypt
-    environment:
-      - APP_DOMAIN=${APP_DOMAIN:-localhost}
-    entrypoint: /bin/sh -c 'trap exit TERM; while :; do certbot certonly --webroot -w /app/data/certbot -d ${APP_DOMAIN:-localhost} --non-interactive --agree-tos --email webmaster@${APP_DOMAIN:-localhost}; sleep 12h & wait $${!}; done'
     networks:
       - app_network
 

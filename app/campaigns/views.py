@@ -7,7 +7,9 @@ from .models import Campaign, CampaignView
 from .serializers import CampaignSerializer, CampaignViewSerializer
 from user_agents import parse
 import datetime
+import logging
 
+logger = logging.getLogger(__name__)
 
 class CampaignViewSet(viewsets.ModelViewSet):
     queryset = Campaign.objects.all()
@@ -25,39 +27,7 @@ class KwaiWebhookView(APIView):
         # Capturar User-Agent e IP
         user_agent_string = request.META.get('HTTP_USER_AGENT', 'unknown')
         user_agent = parse(user_agent_string)
-        ip_address = request.META.get(
-            'HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR'))
-
-        # Gerar timestamp
-        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        # Criar o dicionário
-        server_data = {
-            "timestamp": timestamp,
-            "server": {
-                "HTTP_USER_AGENT": user_agent_string,
-                "HTTP_X_FORWARDED_FOR": ip_address,
-                "HTTP_X_REAL_IP": request.META.get("HTTP_X_REAL_IP", ip_address),
-                "HTTP_X_REAL_PORT": request.META.get("HTTP_X_REAL_PORT", ""),
-                "HTTP_X_FORWARDED_PORT": request.META.get("HTTP_X_FORWARDED_PORT", ""),
-                "HTTP_X_PORT": request.META.get("HTTP_X_PORT", ""),
-                "HTTP_X_LSCACHE": request.META.get("HTTP_X_LSCACHE", ""),
-                "HTTP_X_CLIENT_INFO": f"model={user_agent.device.family};os={user_agent.os.family};network=WIFI;",
-                "REMOTE_ADDR": ip_address,
-                "SERVER_ADDR": request.META.get("SERVER_ADDR", ""),
-                "SERVER_NAME": request.META.get("SERVER_NAME", ""),
-                "SERVER_PORT": request.META.get("SERVER_PORT", ""),
-                "REQUEST_SCHEME": request.META.get("REQUEST_SCHEME", "https"),
-                "REQUEST_URI": request.get_full_path(),
-                "QUERY_STRING": request.META.get("QUERY_STRING", ""),
-                "SCRIPT_URI": request.build_absolute_uri(),
-                "REQUEST_METHOD": request.method,
-                "SERVER_PROTOCOL": request.META.get("SERVER_PROTOCOL", ""),
-                "SERVER_SOFTWARE": request.META.get("SERVER_SOFTWARE", ""),
-                "REQUEST_TIME_FLOAT": request.META.get("REQUEST_TIME_FLOAT", ""),
-                "REQUEST_TIME": request.META.get("REQUEST_TIME", ""),
-            }
-        }
+        ip_address = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR'))
 
         # Criar uma entrada no CampaignView
         data = {
@@ -81,6 +51,9 @@ class KwaiWebhookView(APIView):
 
             campaign.save()
 
-            return Response({"status": "success", "message": "Campaign updated successfully.", "server_data": server_data})
+            logger.debug(f"Campaign {campaign.id} updated: Total Ads: {campaign.total_ads}, Total Views: {campaign.total_views}, Total Clicks: {campaign.total_clicks}")
+
+            return Response({"status": "success", "message": "Campaign updated successfully."})
         else:
+            logger.error(f"Error saving CampaignView: {serializer.errors}")
             return Response(serializer.errors, status=400)
