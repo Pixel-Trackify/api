@@ -11,7 +11,7 @@ urlpatterns = [
          name='integration-detail'),
     path('webhook/zeroone/<str:uid>/',
          ZeroOneWebhookView.as_view(), name='zeroone-webhook'),
-    path('transactions/<str:transaction_id>/',
+    path('zeroone/transactions/<str:transaction_id>/',
          TransactionDetailView.as_view(), name='transaction-detail'),
-    path('transactions/', TransactionListView.as_view(), name='transaction-list'),
+    path('zeroone/transactions/', TransactionListView.as_view(), name='transaction-list'),
 ]

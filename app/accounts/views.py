@@ -16,6 +16,8 @@ from rest_framework import generics
 import logging
 from .models import Usuario, LoginLog
 from plans.models import Plan, UserSubscription
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.test import RequestFactory
 from payments.views import CreatePaymentView
 from .filters import UsuarioFilter
 import user_agents
@@ -24,29 +26,22 @@ import uuid
 
 
 class RegisterView(APIView):
+    """
+    View para registrar um novo usuário.
+    """
+
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            plan_uid = request.data.get('plan_uid')
-            if plan_uid:
-                try:
-                    plan = Plan.objects.get(uid=plan_uid)
-                except Plan.DoesNotExist:
-                    return Response({"error": "Plano não encontrado."}, status=status.HTTP_404_NOT_FOUND)
-
-                # Redirecionar para o endpoint de pagamento
-                payment_data = {
-                    'plan_uid': plan_uid,
-                    'idempotency': str(uuid.uuid4()),  # Gerar UUID para idempotência
-                    'cpf': request.data.get('cpf'),  # Assumindo que o CPF é fornecido no registro
+            return Response({
+                "message": "Usuário registrado com sucesso!",
+                "user": {
+                    "uid": user.uid,
+                    "name": user.name,
+                    "email": user.email
                 }
-                payment_view = CreatePaymentView.as_view()
-                payment_request = request._request
-                payment_request.data = payment_data
-                return payment_view(payment_request)
-
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

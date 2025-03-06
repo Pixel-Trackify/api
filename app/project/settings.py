@@ -187,29 +187,34 @@ LOGGING = {
             'format': '{levelname} {asctime} {module} {message}',
             'style': '{',
         },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
     },
     'handlers': {
-        'security_file': {
+        'file': {
             'level': 'DEBUG',
-            'class': 'logging.handlers.TimedRotatingFileHandler',
-            'filename': os.path.join('auth.log'),  # Caminho absoluto
-            'when': 'midnight',
-            'backupCount': 7,
+            'class': 'logging.FileHandler',
+            'filename': 'debug.log',
             'formatter': 'verbose',
-            'encoding': 'utf-8',
         },
-        'console': {  # Novo handler para debug no terminal
+        'console': {
             'level': 'DEBUG',
             'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
+            'formatter': 'simple',
         },
     },
     'loggers': {
-        'accounts.views': {
-            # Incluído console para debug
-            'handlers': ['security_file', 'console'],
-            'level': 'DEBUG',  # Alterado para DEBUG para capturar logs de depuração
-            'propagate': True,  # Propaga logs para outros handlers se necessário
+        'django': {
+            'handlers': ['file', 'console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'payments': {
+            'handlers': ['file', 'console'],
+            'level': 'DEBUG',
+            'propagate': True,
         },
     },
 }
@@ -281,3 +286,10 @@ PASSWORD_REQUIRE_UPPERCASE = bool(os.getenv(
     'PASSWORD_REQUIRE_UPPERCASE', default=True))
 PASSWORD_REQUIRE_SPECIAL_CHAR = bool(os.getenv(
     'PASSWORD_REQUIRE_SPECIAL_CHAR', default=True))
+
+
+# Configurações do Fire Banking
+# pela URL correta da API do Fire Banking
+FIRE_BANKING_API_URL = 'https://api.firebanking.com.br'
+# chave de API do Fire Banking
+FIRE_BANKING_API_KEY = os.getenv('FIRE_BANKING_API_KEY')
