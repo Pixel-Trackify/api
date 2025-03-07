@@ -1,4 +1,4 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
@@ -10,6 +10,7 @@ import datetime
 import logging
 
 logger = logging.getLogger(__name__)
+
 
 class CampaignViewSet(viewsets.ModelViewSet):
     queryset = Campaign.objects.all()
@@ -48,7 +49,8 @@ class KwaiWebhookView(APIView):
         # Capturar User-Agent e IP
         user_agent_string = request.META.get('HTTP_USER_AGENT', 'unknown')
         user_agent = parse(user_agent_string)
-        ip_address = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR'))
+        ip_address = request.META.get(
+            'HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR'))
 
         # Criar uma entrada no CampaignView
         data = {
@@ -72,7 +74,8 @@ class KwaiWebhookView(APIView):
 
             campaign.save()
 
-            logger.debug(f"Campaign {campaign.id} updated: Total Ads: {campaign.total_ads}, Total Views: {campaign.total_views}, Total Clicks: {campaign.total_clicks}")
+            logger.debug(
+                f"Campaign {campaign.id} updated: Total Ads: {campaign.total_ads}, Total Views: {campaign.total_views}, Total Clicks: {campaign.total_clicks}")
 
             return Response({"status": "success", "message": "Campaign updated successfully."})
         else:
