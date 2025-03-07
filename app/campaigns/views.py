@@ -16,13 +16,34 @@ class CampaignViewSet(viewsets.ModelViewSet):
     serializer_class = CampaignSerializer
     permission_classes = [IsAuthenticated]
 
+    def get_queryset(self):
+        """Retorna as campanhas do usuário autenticado"""
+        return self.queryset.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        """Vincula automaticamente o usuário logado à campanha"""
+        serializer.save(user=self.request.user)
+
+    def perform_update(self, serializer):
+        """Atualiza a campanha se o usuário autenticado for o proprietário"""
+        instance = self.get_object()
+        if instance.user != self.request.user:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        """Deleta a campanha se o usuário autenticado for o proprietário"""
+        if instance.user != self.request.user:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        instance.delete()
+
 
 class KwaiWebhookView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, uid):
         action = request.query_params.get('action')
-        campaign = get_object_or_404(Campaign, uid=uid)
+        campaign = get_object_or_404(Campaign, uid=uid, user=request.user)
 
         # Capturar User-Agent e IP
         user_agent_string = request.META.get('HTTP_USER_AGENT', 'unknown')

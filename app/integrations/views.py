@@ -87,7 +87,7 @@ class ZeroOneWebhookView(APIView):
         Processa notificações de transações do gateway de pagamento ZeroOne.
         """
         integration = get_object_or_404(
-            Integration, uid=uid, deleted=False, status='active')
+            Integration, uid=uid, user=request.user, deleted=False, status='active')
 
         try:
             # Processa o webhook usando a função separada
@@ -112,7 +112,7 @@ class TransactionDetailView(APIView):
         Retorna os detalhes de uma transação específica.
         """
         transaction = get_object_or_404(
-            Transaction, transaction_id=transaction_id)
+            Transaction, transaction_id=transaction_id, integration__user=request.user)
         serializer = TransactionSerializer(transaction)
         return Response(serializer.data)
 
@@ -125,8 +125,9 @@ class TransactionListView(APIView):
 
     def get(self, request):
         """
-        Retorna uma lista de todas as transações.
+        Retorna uma lista de todas as transações do usuário autenticado.
         """
-        transactions = Transaction.objects.all()
+        transactions = Transaction.objects.filter(
+            integration__user=request.user)
         serializer = TransactionSerializer(transactions, many=True)
         return Response(serializer.data)

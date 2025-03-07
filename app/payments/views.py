@@ -100,11 +100,12 @@ class PaymentStatusCheckView(APIView):
 
     def get(self, request, uid):
         try:
-            payment = SubscriptionPayment.objects.get(uid=uid)
+            payment = SubscriptionPayment.objects.get(
+                uid=uid, user=request.user)
             is_paid = payment.status == 1  # Assuming 1 means 'Paid'
             return Response({"status": is_paid}, status=status.HTTP_200_OK)
         except SubscriptionPayment.DoesNotExist:
-            return Response({"error": "Pagamento não encontrado."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Pagamento não encontrado ou não pertence ao usuário autenticado."}, status=status.HTTP_404_NOT_FOUND)
 
 
 class PaymentStatusView(APIView):
@@ -115,7 +116,7 @@ class PaymentStatusView(APIView):
             payment = SubscriptionPayment.objects.get(
                 uid=uid, user=request.user)
         except SubscriptionPayment.DoesNotExist:
-            return Response({"error": "Pagamento não encontrado."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Pagamento não encontrado ou não pertence ao usuário autenticado."}, status=status.HTTP_404_NOT_FOUND)
 
         try:
             pix_status = check_pix_payment_status(payment.token)
@@ -176,11 +177,12 @@ class TransactionStatusView(APIView):
         except ValueError:
             return Response({"error": "UUID inválido."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Buscar o pagamento na tabela SubscriptionPayment
+        # Buscar o pagamento na tabela SubscriptionPayment e garantir que pertence ao usuário autenticado
         try:
-            payment = SubscriptionPayment.objects.get(token=transaction_id)
+            payment = SubscriptionPayment.objects.get(
+                token=transaction_id, user=request.user)
         except SubscriptionPayment.DoesNotExist:
-            return Response({"error": "Pagamento não encontrado."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Pagamento não encontrado ou não pertence ao usuário autenticado."}, status=status.HTTP_404_NOT_FOUND)
 
         # Fazer a requisição para o endpoint do provedor de pagamento
         url = f"{settings.FIRE_BANKING_API_URL}/transactions/{transaction_id}"

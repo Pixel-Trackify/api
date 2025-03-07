@@ -273,6 +273,7 @@ class UserPlanView(APIView):
             return Response({"message": "Nenhum plano ativo encontrado."}, status=404)
 
         plan_data = PlanSerializer(subscription.plan).data
+        return Response(plan_data)
 
 
 class UserSubscriptionHistoryView(APIView):
