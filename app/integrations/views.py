@@ -101,6 +101,31 @@ class ZeroOneWebhookView(APIView):
         return Response({"message": "Transaction processed successfully"}, status=status.HTTP_200_OK)
 
 
+class PagFlexWebhookView(APIView):
+    """
+    APIView para processar notificações de transações do gateway de pagamento PagFlex.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, uid):
+        """
+        Processa notificações de transações do gateway de pagamento PagFlex.
+        """
+        integration = get_object_or_404(
+            Integration, uid=uid, user=request.user, deleted=False, status='active')
+
+        try:
+            # Processa o webhook usando a função separada
+            process_zeroone_webhook(request.data, integration)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"Error processing transaction: {e}")
+            return Response({"error": "Error processing transaction"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({"message": "Transaction processed successfully"}, status=status.HTTP_200_OK)
+
+
 class TransactionDetailView(APIView):
     """
     APIView para obter os detalhes de uma transação específica.
