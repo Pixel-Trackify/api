@@ -6,7 +6,11 @@ from django.shortcuts import get_object_or_404
 from .models import Integration, Transaction
 from campaigns.models import Campaign
 from django.db.models import Sum
-from .serializers import TransactionSerializer, IntegrationSerializer
+from .serializers import TransactionSerializer, IntegrationSerializer, IntegrationRequestSerializer
+from .zeroone_webhook import process_zeroone_webhook
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class IntegrationViewSet(viewsets.ModelViewSet):
@@ -74,77 +78,27 @@ class IntegrationDetailView(APIView):
 
 class ZeroOneWebhookView(APIView):
     """
-    APIView para processar webhooks do gateway de pagamento ZeroOne.
+    APIView para processar notificações de transações do gateway de pagamento ZeroOne.
     """
     permission_classes = [IsAuthenticated]
 
     def post(self, request, uid):
         """
-        Processa uma requisição POST recebida do webhook.
+        Processa notificações de transações do gateway de pagamento ZeroOne.
         """
-        # Obtém a integração correspondente ao UID fornecido
-        integration = get_object_or_404(Integration, uid=uid)
-
-        # Extrai os dados da transação do corpo da requisição
-        transaction_id = request.data.get('id')
-        transaction_status = request.data.get('status')
-        amount = request.data.get('amount')
-        method = request.data.get('method')
-        data_response = request.data
-
-        # Verifica se todos os campos obrigatórios estão presentes
-        if not transaction_id or not transaction_status or not amount or not method:
-            return Response({"error": "Missing required fields"}, status=status.HTTP_400_BAD_REQUEST)
+        integration = get_object_or_404(
+            Integration, uid=uid, deleted=False, status='active')
 
         try:
-            # Cria ou atualiza a transação com os dados fornecidos
-            transaction, created = Transaction.objects.update_or_create(
-                transaction_id=transaction_id,
-                defaults={
-                    'integration': integration,
-                    'status': transaction_status,
-                    'amount': amount,
-                    'method': method,
-                    'data_response': data_response,
-                    'created_at': data_response.get('created_at'),
-                    'updated_at': data_response.get('updated_at')
-                }
-            )
+            # Processa o webhook usando a função separada
+            process_zeroone_webhook(request.data, integration)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
+            logger.error(f"Error processing transaction: {e}")
             return Response({"error": "Error processing transaction"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Recalcula as informações na tabela Campaign
-        try:
-            self.recalculate_campaigns(integration)
-        except Exception as e:
-            return Response({"error": "Error recalculating campaigns"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
         return Response({"message": "Transaction processed successfully"}, status=status.HTTP_200_OK)
-
-    def recalculate_campaigns(self, integration):
-        """
-        Recalcula as informações das campanhas associadas à integração.
-        """
-        campaigns = Campaign.objects.filter(integrations=integration)
-        for campaign in campaigns:
-            transactions = Transaction.objects.filter(integration=integration)
-            total_approved = transactions.filter(status='paid').count()
-            total_pending = transactions.filter(status='pending').count()
-            amount_approved = transactions.filter(
-                status='paid').aggregate(Sum('amount'))['amount__sum'] or 0
-            amount_pending = transactions.filter(status='pending').aggregate(
-                Sum('amount'))['amount__sum'] or 0
-            profit = amount_approved - amount_pending
-            roi = (profit / amount_approved) * \
-                100 if amount_approved > 0 else 0
-
-            campaign.total_approved = total_approved
-            campaign.total_pending = total_pending
-            campaign.amount_approved = amount_approved
-            campaign.amount_pending = amount_pending
-            campaign.profit = profit
-            campaign.ROI = roi
-            campaign.save()
 
 
 class TransactionDetailView(APIView):
@@ -170,6 +124,9 @@ class TransactionListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        """
+        Retorna uma lista de todas as transações.
+        """
         transactions = Transaction.objects.all()
         serializer = TransactionSerializer(transactions, many=True)
         return Response(serializer.data)
