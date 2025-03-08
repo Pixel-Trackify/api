@@ -13,7 +13,7 @@ class Integration(models.Model):
         User, on_delete=models.CASCADE, related_name='integrations')
     name = models.CharField(max_length=255)
     gateway = models.CharField(max_length=255, choices=[(
-        'ZeroOne', 'ZeroOne'), ('PagFlex', 'PagFlex')])
+        'ZeroOne', 'ZeroOne'), ('GhostsPay', 'GhostsPay')])
     deleted = models.BooleanField(default=False)
     status = models.CharField(max_length=10, choices=[(
         'active', 'Active'), ('inactive', 'Inactive')], default='active')

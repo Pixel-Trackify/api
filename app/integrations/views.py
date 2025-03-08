@@ -101,15 +101,15 @@ class ZeroOneWebhookView(APIView):
         return Response({"message": "Transaction processed successfully"}, status=status.HTTP_200_OK)
 
 
-class PagFlexWebhookView(APIView):
+class GhostsPayWebhookView(APIView):
     """
-    APIView para processar notificações de transações do gateway de pagamento PagFlex.
+    APIView para processar notificações de transações do gateway de pagamento GhostsPay.
     """
     permission_classes = [IsAuthenticated]
 
     def post(self, request, uid):
         """
-        Processa notificações de transações do gateway de pagamento PagFlex.
+        Processa notificações de transações do gateway de pagamento GhostsPay.
         """
         integration = get_object_or_404(
             Integration, uid=uid, user=request.user, deleted=False, status='active')
