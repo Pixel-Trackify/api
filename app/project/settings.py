@@ -53,7 +53,7 @@ ALLOWED_HOSTS = [
 ]
 
 # Permitir todos as origens
-CORS_ALLOW_ALL_ORIGINS = True if os.getenv('CORS_ALLOW_ALL_ORIGINS', False) == 'True' else False
+CORS_ALLOW_ALL_ORIGINS = True if os.getenv('CORS_ALLOW_ALL_ORIGINS', "false") == 'true' else False
 
 INSTALLED_APPS = [
     'corsheaders',
