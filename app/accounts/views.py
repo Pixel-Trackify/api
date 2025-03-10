@@ -16,9 +16,13 @@ from rest_framework import generics
 import logging
 from .models import Usuario, LoginLog
 from plans.models import Plan, UserSubscription
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.test import RequestFactory
+from payments.views import CreatePaymentView
 from .filters import UsuarioFilter
 import user_agents
 from django.utils import timezone
+import uuid
 
 
 class RegisterView(APIView):
@@ -269,6 +273,7 @@ class UserPlanView(APIView):
             return Response({"message": "Nenhum plano ativo encontrado."}, status=404)
 
         plan_data = PlanSerializer(subscription.plan).data
+        return Response(plan_data)
 
 
 class UserSubscriptionHistoryView(APIView):
