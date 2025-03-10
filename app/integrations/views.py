@@ -9,6 +9,7 @@ from django.db.models import Sum
 from .serializers import TransactionSerializer, IntegrationSerializer, IntegrationRequestSerializer
 from .zeroone_webhook import process_zeroone_webhook
 from .disrupty_webhook import process_disrupty_webhook, process_wolfpay_webhook
+from .vega_checkout_webhook import process_vega_checkout_webhook
 import logging
 
 logger = logging.getLogger(__name__)
@@ -193,6 +194,31 @@ class WolfPayWebhookView(APIView):
         try:
             # Processa o webhook usando a função separada
             process_wolfpay_webhook(request.data, integration)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"Error processing transaction: {e}")
+            return Response({"error": "Error processing transaction"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({"message": "Transaction processed successfully"}, status=status.HTTP_200_OK)
+
+
+class VegaCheckoutWebhookView(APIView):
+    """
+    APIView para processar notificações de transações do gateway de pagamento Vega Checkout.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, uid):
+        """
+        Processa notificações de transações do gateway de pagamento Vega Checkout.
+        """
+        integration = get_object_or_404(
+            Integration, uid=uid, user=request.user, deleted=False, status='active')
+
+        try:
+            # Processa o webhook usando a função separada
+            process_vega_checkout_webhook(request.data, integration)
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
