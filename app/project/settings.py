@@ -42,12 +42,14 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'change-me')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = bool(int(os.getenv('DEBUG', 0)))
 
-ALLOWED_HOSTS = [
+CORS_ALLOWED_ORIGINS = [
     h.strip() for h in os.getenv('ALLOWED_HOSTS', '').split(',')
     if h.strip()
 ]
-
-
+# Permitir qualquer origem para URLs de webhook
+CORS_URLS_REGEX = r'^/webhook/.*$'
+# Permitir todos as origens
+CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'False').lower() == 'true'
 # Application definition
 
 INSTALLED_APPS = [
