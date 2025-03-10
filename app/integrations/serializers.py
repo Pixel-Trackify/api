@@ -5,7 +5,8 @@ from .models import Integration, Transaction, IntegrationRequest
 class IntegrationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Integration
-        fields = ['name', 'gateway']
+        fields = ['id', 'uid', 'user', 'name', 'gateway',
+                  'deleted', 'status', 'created_at', 'updated_at']
 
 
 class TransactionSerializer(serializers.ModelSerializer):
@@ -22,9 +23,3 @@ class IntegrationRequestSerializer(serializers.ModelSerializer):
                   'amount', 'phone', 'name', 'email', 'response', 'created_at', 'updated_at']
         read_only_fields = ['integration', 'status', 'payment_id',
                             'payment_method', 'amount', 'response', 'created_at', 'updated_at']
-
-
-class IntegrationMinimalSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Integration
-        fields = ['name', 'gateway']

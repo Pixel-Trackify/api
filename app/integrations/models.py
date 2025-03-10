@@ -15,7 +15,9 @@ class Integration(models.Model):
     gateway = models.CharField(max_length=255, choices=[
         ('ZeroOne', 'ZeroOne'),
         ('GhostsPay', 'GhostsPay'),
-        ('ParadisePag', 'ParadisePag')
+        ('ParadisePag', 'ParadisePag'),
+        ('Disrupty', 'Disrupty'),
+        ('WolfPay', 'WolfPay')
     ])
     deleted = models.BooleanField(default=False)
     status = models.CharField(max_length=10, choices=[(
