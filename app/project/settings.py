@@ -294,3 +294,5 @@ PASSWORD_REQUIRE_SPECIAL_CHAR = bool(os.getenv(
 FIRE_BANKING_API_URL = 'https://api.firebanking.com.br'
 # chave de API do Fire Banking
 FIRE_BANKING_API_KEY = os.getenv('FIRE_BANKING_API_KEY')
+
+REQUIRE_EMAIL_CONFIRMATION = os.getenv("REQUIRE_EMAIL_CONFIRMATION", "True") == "True"

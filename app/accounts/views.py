@@ -23,6 +23,7 @@ from .filters import UsuarioFilter
 import user_agents
 from django.utils import timezone
 import uuid
+import os
 
 
 class RegisterView(APIView):
@@ -34,16 +35,56 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
+
+         # Verificar se a confirmação de e-mail é necessária
+            require_email_confirmation = os.getenv("REQUIRE_EMAIL_CONFIRMATION", "True") == "True"
+
+            if not require_email_confirmation:
+                # Gerar tokens JWT
+                refresh = RefreshToken.for_user(user)
+
+                # Registrar o log de login
+                ip_address = request.META.get('REMOTE_ADDR')
+                user_agent_string = request.META.get('HTTP_USER_AGENT', '')
+                user_agent = user_agents.parse(user_agent_string)
+                device = f"{user_agent.device.family} {user_agent.device.brand} {user_agent.device.model}"
+                browser = f"{user_agent.browser.family} {user_agent.browser.version_string}"
+                token = str(refresh.access_token)
+
+                LoginLog.objects.create(
+                    user=user,
+                    ip_address=ip_address,
+                    device=device,
+                    browser=browser,
+                    login_time=timezone.now(),
+                    token=token
+                )
+
+                logger.info(f"Usuário {user.email} registrado e logado com sucesso.")
+
+                return Response({
+                    "message": "Usuário registrado com sucesso!",
+                    "user": {
+                        "uid": user.uid,
+                        "name": user.name,
+                        "email": user.email
+                    },
+                    "require_email_confirmation": require_email_confirmation,
+                    "refresh": str(refresh),
+                    "access": str(refresh.access_token),
+                }, status=status.HTTP_201_CREATED)
+
             return Response({
                 "message": "Usuário registrado com sucesso!",
                 "user": {
                     "uid": user.uid,
                     "name": user.name,
                     "email": user.email
-                }
+                },
+                "require_email_confirmation": require_email_confirmation
             }, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class UserProfileView(APIView):
     """
