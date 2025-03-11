@@ -45,7 +45,11 @@ CORS_ALLOWED_ORIGINS = [
     h.strip() for h in os.getenv('ALLOWED_HOSTS', '').split(',')
     if h.strip()
 ]
-
+ALLOWED_HOSTS = [
+    h.replace('http://', '').replace('https://', '').strip()
+    for h in os.getenv('ALLOWED_HOSTS', '').split(',')
+    if h.strip()
+]
 # Permitir todos as origens
 CORS_ALLOW_ALL_ORIGINS = True if os.getenv(
     'CORS_ALLOW_ALL_ORIGINS', "false") == 'true' else False
