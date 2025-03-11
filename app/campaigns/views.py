@@ -8,10 +8,11 @@ from .serializers import CampaignSerializer, CampaignViewSerializer
 from user_agents import parse
 import datetime
 import logging
+from .schema import schemas
 
 logger = logging.getLogger(__name__)
 
-
+@schemas['campaign_view_set']
 class CampaignViewSet(viewsets.ModelViewSet):
     queryset = Campaign.objects.all()
     serializer_class = CampaignSerializer
@@ -38,7 +39,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
             return Response(status=status.HTTP_403_FORBIDDEN)
         instance.delete()
 
-
+@schemas['kwai_webhook_view']
 class KwaiWebhookView(APIView):
     permission_classes = [IsAuthenticated]
 

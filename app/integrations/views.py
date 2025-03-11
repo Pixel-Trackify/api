@@ -12,10 +12,12 @@ from .disrupty_webhook import process_disrupty_webhook, process_wolfpay_webhook
 from .vega_checkout_webhook import process_vega_checkout_webhook
 from .cloudfy_webhook import process_cloudfy_webhook
 import logging
+from .schema import schemas
 
 logger = logging.getLogger(__name__)
 
 
+@schemas['integration_view_set']
 class IntegrationViewSet(viewsets.ModelViewSet):
     """
     ViewSet para gerenciar integrações.
@@ -54,6 +56,7 @@ class IntegrationViewSet(viewsets.ModelViewSet):
         instance.delete()
 
 
+@schemas['integration_detail_view']
 class IntegrationDetailView(APIView):
     """
     APIView para gerenciar uma integração específica.
@@ -79,6 +82,7 @@ class IntegrationDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@schemas['zeroone_webhook_view']
 class ZeroOneWebhookView(APIView):
     """
     APIView para processar notificações de transações do gateway de pagamento ZeroOne.
@@ -104,6 +108,7 @@ class ZeroOneWebhookView(APIView):
         return Response({"message": "Transaction processed successfully"}, status=status.HTTP_200_OK)
 
 
+@schemas['ghostspay_webhook_view']
 class GhostsPayWebhookView(APIView):
     """
     APIView para processar notificações de transações do gateway de pagamento GhostsPay.
@@ -129,6 +134,7 @@ class GhostsPayWebhookView(APIView):
         return Response({"message": "Transaction processed successfully"}, status=status.HTTP_200_OK)
 
 
+@schemas['paradisepag_webhook_view']
 class ParadisePagWebhookView(APIView):
     """
     APIView para processar notificações de transações do gateway de pagamento ParadisePag.
@@ -154,6 +160,7 @@ class ParadisePagWebhookView(APIView):
         return Response({"message": "Transaction processed successfully"}, status=status.HTTP_200_OK)
 
 
+@schemas['disrupty_webhook_view']
 class DisruptyWebhookView(APIView):
     """
     APIView para processar notificações de transações do gateway de pagamento Disrupty.
@@ -179,6 +186,7 @@ class DisruptyWebhookView(APIView):
         return Response({"message": "Transaction processed successfully"}, status=status.HTTP_200_OK)
 
 
+@schemas['wolfpay_webhook_view']
 class WolfPayWebhookView(APIView):
     """
     APIView para processar notificações de transações do gateway de pagamento WolfPay.
@@ -204,6 +212,7 @@ class WolfPayWebhookView(APIView):
         return Response({"message": "Transaction processed successfully"}, status=status.HTTP_200_OK)
 
 
+@schemas['vegacheckout_webhook_view']
 class VegaCheckoutWebhookView(APIView):
     """
     APIView para processar notificações de transações do gateway de pagamento Vega Checkout.
@@ -229,6 +238,7 @@ class VegaCheckoutWebhookView(APIView):
         return Response({"message": "Transaction processed successfully"}, status=status.HTTP_200_OK)
 
 
+@schemas['cloudfy_webhook_view']
 class CloudFyWebhookView(APIView):
     """
     APIView para processar notificações de transações do gateway de pagamento CloudFy.
@@ -254,6 +264,7 @@ class CloudFyWebhookView(APIView):
         return Response({"message": "Transaction processed successfully"}, status=status.HTTP_200_OK)
 
 
+@schemas['transaction_detail_view']
 class TransactionDetailView(APIView):
     """
     APIView para obter os detalhes de uma transação específica.
@@ -270,6 +281,7 @@ class TransactionDetailView(APIView):
         return Response(serializer.data)
 
 
+@schemas['transaction_list_view']
 class TransactionListView(APIView):
     """
     APIView para listar todas as transações.
