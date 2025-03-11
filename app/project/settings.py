@@ -47,7 +47,8 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 # Permitir todos as origens
-CORS_ALLOW_ALL_ORIGINS = True if os.getenv('CORS_ALLOW_ALL_ORIGINS', "false") == 'true' else False
+CORS_ALLOW_ALL_ORIGINS = True if os.getenv(
+    'CORS_ALLOW_ALL_ORIGINS', "false") == 'true' else False
 
 INSTALLED_APPS = [
     'corsheaders',
@@ -260,6 +261,13 @@ SIMPLE_JWT = {
     "USER_ID_CLAIM": "user_uid",
 }
 
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'API Pixel Trackify ',
+    'DESCRIPTION': 'Endpoints da API Pixel Trackify',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+}
+
 
 # Configuração do Django Allauth
 
@@ -295,4 +303,5 @@ FIRE_BANKING_API_URL = 'https://api.firebanking.com.br'
 # chave de API do Fire Banking
 FIRE_BANKING_API_KEY = os.getenv('FIRE_BANKING_API_KEY')
 
-REQUIRE_EMAIL_CONFIRMATION = os.getenv("REQUIRE_EMAIL_CONFIRMATION", "True") == "True"
+REQUIRE_EMAIL_CONFIRMATION = os.getenv(
+    "REQUIRE_EMAIL_CONFIRMATION", "True") == "True"
