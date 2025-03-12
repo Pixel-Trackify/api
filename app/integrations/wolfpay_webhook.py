@@ -7,12 +7,12 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 
-def process_disrupty_webhook(data, integration):
+def process_wolfpay_webhook(data, integration):
     """
-    Processa os dados do webhook do Disrupty e atualiza as transações e requisições de integração.
+    Processa os dados do webhook do WolfPay e atualiza as transações e requisições de integração.
 
     Args:
-        data (dict): Dados recebidos do webhook do Disrupty.
+        data (dict): Dados recebidos do webhook do WolfPay.
         integration (Integration): Instância da integração associada.
 
     Raises:
@@ -20,10 +20,10 @@ def process_disrupty_webhook(data, integration):
     """
     try:
         # Extrai os dados necessários do payload do webhook
-        transaction_id = data.get('hash')
-        status = data.get('payment_status')
-        payment_method = data.get('payment_method')
-        amount = data.get('amount')
+        transaction_id = data.get('transaction', {}).get('id')
+        status = data.get('status')
+        payment_method = data.get('method')
+        amount = data.get('transaction', {}).get('amount')
         customer = data.get('customer', {})
         response = data
 
@@ -52,7 +52,7 @@ def process_disrupty_webhook(data, integration):
             payment_id=transaction_id,
             payment_method=payment_method,
             amount=amount,
-            phone=customer.get('phone_number'),
+            phone=customer.get('phone'),
             name=customer.get('name'),
             email=customer.get('email'),
             response=response,
@@ -82,11 +82,11 @@ def recalculate_campaigns(integration):
         transactions = Transaction.objects.filter(integration=integration)
 
         # Calcula os totais e valores das transações aprovadas e pendentes
-        total_approved = transactions.filter(status='APPROVED').count()
-        total_pending = transactions.filter(status='PENDING').count()
+        total_approved = transactions.filter(status='paid').count()
+        total_pending = transactions.filter(status='waiting_payment').count()
         amount_approved = transactions.filter(
-            status='APPROVED').aggregate(Sum('amount'))['amount__sum'] or 0
-        amount_pending = transactions.filter(status='PENDING').aggregate(
+            status='paid').aggregate(Sum('amount'))['amount__sum'] or 0
+        amount_pending = transactions.filter(status='waiting_payment').aggregate(
             Sum('amount'))['amount__sum'] or 0
 
         # Calcula o lucro e o ROI (taxa de conversão)
@@ -101,5 +101,3 @@ def recalculate_campaigns(integration):
         campaign.profit = profit
         campaign.ROI = roi
         campaign.save()
-
-

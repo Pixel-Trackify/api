@@ -8,10 +8,11 @@ from campaigns.models import Campaign
 from django.db.models import Sum
 from .serializers import TransactionSerializer, IntegrationSerializer, IntegrationRequestSerializer
 from .zeroone_webhook import process_zeroone_webhook
-from .disrupty_webhook import process_disrupty_webhook, process_wolfpay_webhook
+from .disrupty_webhook import process_disrupty_webhook
 from .vega_checkout_webhook import process_vega_checkout_webhook
 from .cloudfy_webhook import process_cloudfy_webhook
 from .tribopay_webhook import process_tribopay_webhook
+from .wolfpay_webhook import process_wolfpay_webhook
 import logging
 from .schema import schemas
 
