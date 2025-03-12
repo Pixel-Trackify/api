@@ -19,7 +19,8 @@ class Integration(models.Model):
         ('Disrupty', 'Disrupty'),
         ('WolfPay', 'WolfPay'),
         ('VegaCheckout', 'VegaCheckout'),
-        ('CloudFy', 'CloudFy')
+        ('CloudFy', 'CloudFy'),
+        ('TriboPay', 'TriboPay'),
     ])
     deleted = models.BooleanField(default=False)
     status = models.CharField(max_length=10, choices=[(
