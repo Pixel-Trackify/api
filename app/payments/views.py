@@ -14,11 +14,13 @@ from django.conf import settings
 import logging
 import json
 import requests
+from .schema import schemas
 
 
 logger = logging.getLogger(__name__)
 
 
+@schemas['create_payment_view']
 class CreatePaymentView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -95,6 +97,7 @@ class CreatePaymentView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@schemas['payment_status_check_view']
 class PaymentStatusCheckView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -108,6 +111,7 @@ class PaymentStatusCheckView(APIView):
             return Response({"error": "Pagamento não encontrado ou não pertence ao usuário autenticado."}, status=status.HTTP_404_NOT_FOUND)
 
 
+@schemas['payment_status_view']
 class PaymentStatusView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -125,6 +129,7 @@ class PaymentStatusView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@schemas['payment_webhook_view']
 class PaymentWebhookView(APIView):
     def post(self, request):
         try:
@@ -167,6 +172,7 @@ class PaymentWebhookView(APIView):
             return Response({"error": "Status de pagamento inválido."}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@schemas['transaction_status_view']
 class TransactionStatusView(APIView):
     permission_classes = [IsAuthenticated]
 
