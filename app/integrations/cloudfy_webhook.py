@@ -1,5 +1,5 @@
 from .models import Integration, IntegrationRequest, Transaction
-from .campaign_utils import recalculate_campaigns
+from .campaign_utils import recalculate_campaigns, map_payment_status 
 from campaigns.models import Campaign
 from django.db.models import Sum
 import logging
@@ -22,7 +22,7 @@ def process_cloudfy_webhook(data, integration):
         # Extrai os dados necessários do payload do webhook
         payload = data.get('payload', {})
         transaction_id = payload.get('_id')
-        status = payload.get('status')
+        status = map_payment_status(payload.get('status'), 'CloudFy')
         payment_method = payload.get('paymentMethod')
         amount = payload.get('value')
         customer = {

@@ -1,5 +1,5 @@
 from .models import Integration, IntegrationRequest, Transaction
-from .campaign_utils import recalculate_campaigns
+from .campaign_utils import recalculate_campaigns, map_payment_status 
 from campaigns.models import Campaign
 from django.db.models import Sum
 import logging
@@ -21,7 +21,7 @@ def process_vega_checkout_webhook(data, integration):
     try:
         # Extrai os dados necessários do payload do webhook
         transaction_id = data.get('transaction_token')
-        status = data.get('status')
+        status = map_payment_status(data.get('status'), 'VegaCheckout')
         payment_method = data.get('method')
         amount = data.get('total_price')
         customer = data.get('customer', {})

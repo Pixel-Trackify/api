@@ -1,5 +1,5 @@
 from .models import Integration, IntegrationRequest, Transaction
-from .campaign_utils import recalculate_campaigns
+from .campaign_utils import recalculate_campaigns, map_payment_status 
 from campaigns.models import Campaign  
 from django.db.models import Sum
 import logging
@@ -21,7 +21,7 @@ def process_zeroone_webhook(data, integration):
     """
     # Extrai os dados necessários do payload do webhook
     payment_id = data.get('paymentId')
-    status = data.get('status')
+    status = map_payment_status(data.get('status'), 'ZeroOne')
     payment_method = data.get('paymentMethod')
     amount = data.get('totalValue')
     customer = data.get('customer', {})

@@ -2,6 +2,71 @@ from campaigns.models import Campaign
 from django.db.models import Sum
 from integrations.models import Transaction
 
+def map_payment_status(status, gateway):
+    """
+    Mapeia os status de pagamento específicos para categorias mais gerais.
+
+    Args:
+        status (str): Status de pagamento específico.
+        gateway (str): Nome do gateway de pagamento.
+
+    Returns:
+        str: Categoria geral do status de pagamento.
+    """
+    status_mapping = {
+        'CloudFy': {
+            'APPROVED': 'APPROVED',
+            'PENDING': 'PENDING',
+            'REFUSED': 'REJECTED',
+            'REFUNDED': 'REFUNDED',
+            'CHARGED_BACK': 'CHARGEBACK'
+        },
+        'VegaCheckout': {
+            'approved': 'APPROVED',
+            'pending': 'PENDING',
+            'refused': 'REJECTED',
+            'charge_back': 'CHARGEBACK',
+            'refunded': 'REFUNDED',
+            'expired': 'PENDING',
+            'in_process': 'PENDING',
+            'in_dispute': 'PENDING'
+        },
+        'Disrupty': {
+            'processing': 'PENDING',
+            'authorized': 'PENDING',
+            'paid': 'APPROVED',
+            'refunded': 'REFUNDED',
+            'waiting_payment': 'PENDING',
+            'refused': 'REJECTED',
+            'antifraud': 'REJECTED',
+            'chargedback': 'CHARGEBACK'
+        },
+        'WolfPay': {
+            'processing': 'PENDING',
+            'authorized': 'PENDING',
+            'paid': 'APPROVED',
+            'refunded': 'REFUNDED',
+            'waiting_payment': 'PENDING',
+            'refused': 'REJECTED',
+            'antifraud': 'REJECTED',
+            'chargedback': 'CHARGEBACK'
+        },
+        'ParadisePag': {
+            'PENDING': 'PENDING',
+            'APPROVED': 'APPROVED',
+            'REJECTED': 'REJECTED',
+            'REFUNDED': 'REFUNDED',
+            'CHARGEBACK': 'CHARGEBACK'
+        },
+        'ZeroOne': {
+            'PENDING': 'PENDING',
+            'APPROVED': 'APPROVED',
+            'REJECTED': 'REJECTED',
+            'REFUNDED': 'REFUNDED',
+            'CHARGEBACK': 'CHARGEBACK'
+        }
+    }
+    return status_mapping.get(gateway, {}).get(status, 'UNKNOWN')
 
 def recalculate_campaigns(integration):
     """
@@ -16,23 +81,34 @@ def recalculate_campaigns(integration):
         # Obtém todas as transações associadas à integração
         transactions = Transaction.objects.filter(integration=integration)
 
-        # Calcula os totais e valores das transações aprovadas e pendentes
+        # Calcula os totais e valores das transações aprovadas, pendentes, reembolsadas e chargeback
         total_approved = transactions.filter(status='APPROVED').count()
         total_pending = transactions.filter(status='PENDING').count()
+        total_refunded = transactions.filter(status='REFUNDED').count()
+        total_chargeback = transactions.filter(status='CHARGEBACK').count()
+        
         amount_approved = transactions.filter(
             status='APPROVED').aggregate(Sum('amount'))['amount__sum'] or 0
         amount_pending = transactions.filter(status='PENDING').aggregate(
             Sum('amount'))['amount__sum'] or 0
+        amount_refunded = transactions.filter(status='REFUNDED').aggregate(
+            Sum('amount'))['amount__sum'] or 0
+        amount_chargeback = transactions.filter(status='CHARGEBACK').aggregate(
+            Sum('amount'))['amount__sum'] or 0
 
         # Calcula o lucro e o ROI (taxa de conversão)
-        profit = amount_approved - amount_pending
+        profit = amount_approved - amount_refunded - amount_chargeback
         roi = (profit / amount_approved) * 100 if amount_approved > 0 else 0
 
         # Atualiza os campos da campanha com os novos valores calculados
         campaign.total_approved = total_approved
         campaign.total_pending = total_pending
+        campaign.total_refunded = total_refunded
+        campaign.total_chargeback = total_chargeback
         campaign.amount_approved = amount_approved
         campaign.amount_pending = amount_pending
+        campaign.amount_refunded = amount_refunded
+        campaign.amount_chargeback = amount_chargeback
         campaign.profit = profit
         campaign.ROI = roi
         campaign.save()
