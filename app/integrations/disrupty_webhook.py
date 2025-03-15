@@ -1,7 +1,5 @@
 from .models import Integration, IntegrationRequest, Transaction
 from .campaign_utils import recalculate_campaigns, map_payment_status 
-from campaigns.models import Campaign
-from django.db.models import Sum
 import logging
 from django.utils import timezone
 
