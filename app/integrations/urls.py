@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import IntegrationViewSet, IntegrationDetailView, ZeroOneWebhookView, TransactionDetailView, TransactionListView, GhostsPayWebhookView, ParadisePagWebhookView, DisruptyWebhookView, WolfPayWebhookView, VegaCheckoutWebhookView, CloudFyWebhookView, TriboPayWebhookView
+from .views import IntegrationViewSet, IntegrationDetailView, ZeroOneWebhookView, IntegrationRequestDetailView, IntegrationRequestListView ,GhostsPayWebhookView, ParadisePagWebhookView, DisruptyWebhookView, WolfPayWebhookView, VegaCheckoutWebhookView, CloudFyWebhookView, TriboPayWebhookView
 
 router = DefaultRouter()
 router.register(r'integrations', IntegrationViewSet, basename='integration')
@@ -25,9 +25,9 @@ urlpatterns = [
          CloudFyWebhookView.as_view(), name='cloudfy-webhook'),
     path('webhook/tribopay/<str:uid>/',
          TriboPayWebhookView.as_view(), name='tribopay-webhook'),
-    path('zeroone/transactions/<str:transaction_id>/',
-         TransactionDetailView.as_view(), name='transaction-detail'),
-    path('zeroone/transactions/', TransactionListView.as_view(),
+    path('transactions/<str:transaction_id>/',
+         IntegrationRequestDetailView.as_view(), name='transaction-detail'),
+    path('transactions/', IntegrationRequestListView.as_view(),
          name='transaction-list'),
 
 
