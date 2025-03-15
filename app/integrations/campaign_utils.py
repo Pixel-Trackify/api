@@ -1,6 +1,6 @@
 from campaigns.models import Campaign
 from django.db.models import Sum
-from integrations.models import Transaction
+from integrations.models import IntegrationRequest
 
 def map_payment_status(status, gateway):
     """
@@ -78,22 +78,22 @@ def recalculate_campaigns(integration):
     # Obtém todas as campanhas associadas à integração
     campaigns = Campaign.objects.filter(integrations=integration)
     for campaign in campaigns:
-        # Obtém todas as transações associadas à integração
-        transactions = Transaction.objects.filter(integration=integration)
+        # Obtém todas as requisições de integração associadas à integração
+        integration_requests = IntegrationRequest.objects.filter(integration=integration)
 
-        # Calcula os totais e valores das transações aprovadas, pendentes, reembolsadas e chargeback
-        total_approved = transactions.filter(status='APPROVED').count()
-        total_pending = transactions.filter(status='PENDING').count()
-        total_refunded = transactions.filter(status='REFUNDED').count()
-        total_chargeback = transactions.filter(status='CHARGEBACK').count()
+        # Calcula os totais e valores das requisições aprovadas, pendentes, reembolsadas e chargeback
+        total_approved = integration_requests.filter(status='APPROVED').count()
+        total_pending = integration_requests.filter(status='PENDING').count()
+        total_refunded = integration_requests.filter(status='REFUNDED').count()
+        total_chargeback = integration_requests.filter(status='CHARGEBACK').count()
         
-        amount_approved = transactions.filter(
+        amount_approved = integration_requests.filter(
             status='APPROVED').aggregate(Sum('amount'))['amount__sum'] or 0
-        amount_pending = transactions.filter(status='PENDING').aggregate(
+        amount_pending = integration_requests.filter(status='PENDING').aggregate(
             Sum('amount'))['amount__sum'] or 0
-        amount_refunded = transactions.filter(status='REFUNDED').aggregate(
+        amount_refunded = integration_requests.filter(status='REFUNDED').aggregate(
             Sum('amount'))['amount__sum'] or 0
-        amount_chargeback = transactions.filter(status='CHARGEBACK').aggregate(
+        amount_chargeback = integration_requests.filter(status='CHARGEBACK').aggregate(
             Sum('amount'))['amount__sum'] or 0
 
         # Calcula o lucro e o ROI (taxa de conversão)

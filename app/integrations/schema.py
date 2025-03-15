@@ -41,16 +41,16 @@ schemas = {
             responses={204: None}
         )
     ),
-    'transaction_detail_view': extend_schema_view(
+    'integrationrequest_detail_view': extend_schema_view(
         get=extend_schema(
-            description="Retorna os detalhes de uma transação específica.",
-            responses={200: TransactionSerializer}
+            description="Retorna os detalhes de uma requisição de integração específica.",
+            responses={200: IntegrationRequestSerializer}
         )
     ),
-    'transaction_list_view': extend_schema_view(
+    'integrationrequest_list_view': extend_schema_view(
         get=extend_schema(
-            description="Retorna uma lista de todas as transações do usuário autenticado.",
-            responses={200: TransactionSerializer(many=True)}
+            description="Retorna uma lista de todas as requisições de integração do usuário autenticado.",
+            responses={200: IntegrationRequestSerializer(many=True)}
         )
     ),
     'cloudfy_webhook_view': extend_schema_view(

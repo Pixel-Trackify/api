@@ -3,10 +3,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
-from .models import Integration, Transaction
-from campaigns.models import Campaign
-from django.db.models import Sum
-from .serializers import TransactionSerializer, IntegrationSerializer, IntegrationRequestSerializer
+from .models import Integration, IntegrationRequest
+from .serializers import IntegrationSerializer, IntegrationRequestSerializer
 from .zeroone_webhook import process_zeroone_webhook
 from .disrupty_webhook import process_disrupty_webhook
 from .vega_checkout_webhook import process_vega_checkout_webhook
@@ -299,35 +297,35 @@ class TriboPayWebhookView(APIView):
             return Response({"error": "Erro ao processar o webhook"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@schemas['transaction_detail_view']
-class TransactionDetailView(APIView):
+@schemas['integrationrequest_detail_view']
+class IntegrationRequestDetailView(APIView):
     """
-    APIView para obter os detalhes de uma transação específica.
+    APIView para obter os detalhes de uma requisição de integração específica.
     """
     permission_classes = [IsAuthenticated]
 
     def get(self, request, transaction_id):
         """
-        Retorna os detalhes de uma transação específica.
+        Retorna os detalhes de uma requisição de integração específica.
         """
-        transaction = get_object_or_404(
-            Transaction, transaction_id=transaction_id, integration__user=request.user)
-        serializer = TransactionSerializer(transaction)
+        integration_request = get_object_or_404(
+            IntegrationRequest, payment_id=transaction_id, integration__user=request.user)
+        serializer = IntegrationRequestSerializer(integration_request)
         return Response(serializer.data)
 
 
-@schemas['transaction_list_view']
-class TransactionListView(APIView):
+@schemas['integrationrequest_list_view']
+class IntegrationRequestListView(APIView):
     """
-    APIView para listar todas as transações.
+    APIView para listar todas as requisições de integração.
     """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         """
-        Retorna uma lista de todas as transações do usuário autenticado.
+        Retorna uma lista de todas as requisições de integração do usuário autenticado.
         """
-        transactions = Transaction.objects.filter(
+        integration_requests = IntegrationRequest.objects.filter(
             integration__user=request.user)
-        serializer = TransactionSerializer(transactions, many=True)
+        serializer = IntegrationRequestSerializer(integration_requests, many=True)
         return Response(serializer.data)
