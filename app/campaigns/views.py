@@ -12,6 +12,7 @@ from .schema import schemas
 
 logger = logging.getLogger(__name__)
 
+
 @schemas['campaign_view_set']
 class CampaignViewSet(viewsets.ModelViewSet):
     queryset = Campaign.objects.all()
@@ -38,6 +39,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
         if instance.user != self.request.user:
             return Response(status=status.HTTP_403_FORBIDDEN)
         instance.delete()
+
 
 @schemas['kwai_webhook_view']
 class KwaiWebhookView(APIView):
