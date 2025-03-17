@@ -21,6 +21,7 @@ class Integration(models.Model):
         ('VegaCheckout', 'VegaCheckout'),
         ('CloudFy', 'CloudFy'),
         ('TriboPay', 'TriboPay'),
+        ('WestPay', 'WestPay'),
     ])
     deleted = models.BooleanField(default=False)
     status = models.CharField(max_length=10, choices=[(

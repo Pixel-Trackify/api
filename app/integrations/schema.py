@@ -100,5 +100,11 @@ schemas = {
             description="Processa notificações de transações do gateway de pagamento Tribo Pay.",
             responses={200: None}
         )
+    ),
+    'westpay_webhook_view': extend_schema_view(
+        post=extend_schema(
+            description="Processa notificações de transações do gateway de pagamento WestPay.",
+            responses={200: None}
+        )
     )
 }

@@ -2,6 +2,7 @@ from campaigns.models import Campaign
 from django.db.models import Sum
 from integrations.models import IntegrationRequest
 
+
 def map_payment_status(status, gateway):
     """
     Mapeia os status de pagamento específicos para categorias mais gerais.
@@ -64,9 +65,20 @@ def map_payment_status(status, gateway):
             'REJECTED': 'REJECTED',
             'REFUNDED': 'REFUNDED',
             'CHARGEBACK': 'CHARGEBACK'
+        },
+        'WestPay': {
+            'waiting_payment': 'PENDING',
+            'paid': 'APPROVED',
+            'refused': 'REJECTED',
+            'canceled': 'REJECTED',
+            'expired': 'PENDING',
+            'refunded': 'REFUNDED',
+            'chargedback': 'CHARGEBACK',
+            'in_protest': 'CHARGEBACK'
         }
     }
     return status_mapping.get(gateway, {}).get(status, 'UNKNOWN')
+
 
 def recalculate_campaigns(integration):
     """
@@ -79,14 +91,16 @@ def recalculate_campaigns(integration):
     campaigns = Campaign.objects.filter(integrations=integration)
     for campaign in campaigns:
         # Obtém todas as requisições de integração associadas à integração
-        integration_requests = IntegrationRequest.objects.filter(integration=integration)
+        integration_requests = IntegrationRequest.objects.filter(
+            integration=integration)
 
         # Calcula os totais e valores das requisições aprovadas, pendentes, reembolsadas e chargeback
         total_approved = integration_requests.filter(status='APPROVED').count()
         total_pending = integration_requests.filter(status='PENDING').count()
         total_refunded = integration_requests.filter(status='REFUNDED').count()
-        total_chargeback = integration_requests.filter(status='CHARGEBACK').count()
-        
+        total_chargeback = integration_requests.filter(
+            status='CHARGEBACK').count()
+
         amount_approved = integration_requests.filter(
             status='APPROVED').aggregate(Sum('amount'))['amount__sum'] or 0
         amount_pending = integration_requests.filter(status='PENDING').aggregate(
