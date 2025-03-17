@@ -34,4 +34,6 @@ class CampaignViewSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CampaignView
-        fields = '__all__'
+        fields = ['id', 'campaign', 'user_agent',
+                  'ip_address', 'action', 'created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at']
