@@ -21,6 +21,7 @@ class Integration(models.Model):
         ('VegaCheckout', 'VegaCheckout'),
         ('CloudFy', 'CloudFy'),
         ('TriboPay', 'TriboPay'),
+        ('WestPay', 'WestPay'),
     ])
     deleted = models.BooleanField(default=False)
     status = models.CharField(max_length=10, choices=[(
@@ -58,6 +59,20 @@ class IntegrationRequest(models.Model):
 
     class Meta:
         db_table = 'integrations_requests'
+
+
+class IntegrationSample(models.Model):
+    id = models.AutoField(primary_key=True)
+    gateway = models.CharField(max_length=255, unique=True)
+    response = models.JSONField()
+    timestamp = models.DateTimeField(
+        auto_now_add=True)
+
+    def __str__(self):
+        return f"Sample for {self.gateway}"
+
+    class Meta:
+        db_table = 'integration_samples'
 
 
 class Transaction(models.Model):

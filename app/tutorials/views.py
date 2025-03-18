@@ -2,32 +2,29 @@ from rest_framework import generics, permissions
 from .models import Tutorial
 from .serializers import TutorialSerializer
 
+# Permissão personalizada para permitir apenas administradores para métodos não seguros
+class IsAdminOrReadOnly(permissions.BasePermission):
+    def has_permission(self, request, view):
+        # Permite métodos seguros para qualquer usuário
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        # Permite métodos não seguros apenas para administradores
+        return request.user and request.user.is_superuser
 
-# View para listar e criar tutoriais
-class TutorialListCreateView(generics.ListCreateAPIView):
-    queryset = Tutorial.objects.all()  
-    serializer_class = TutorialSerializer  
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly] # Permissões padrão: autenticado ou somente leitura
-
-    def get_permissions(self):
-        # Se o método for seguro (GET, HEAD ou OPTIONS), qualquer usuário autenticado pode acessar
-        if self.request.method in permissions.SAFE_METHODS:
-            return [permissions.IsAuthenticated()]
-        # Para métodos não seguros (POST, PUT, DELETE), apenas administradores podem acessar
-        return [permissions.IsAdminUser()]
-
-# View para recuperar, atualizar e deletar tutoriais
-
-
-class TutorialRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Tutorial.objects.all()  
-    serializer_class = TutorialSerializer  
-    # Permissões padrão: autenticado ou somente leitura
+# View para listar tutoriais (qualquer usuário pode visualizar)
+class TutorialListView(generics.ListAPIView):
+    queryset = Tutorial.objects.all()
+    serializer_class = TutorialSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
-    def get_permissions(self):
-        # Se o método for seguro (GET, HEAD ou OPTIONS), qualquer usuário autenticado pode acessar
-        if self.request.method in permissions.SAFE_METHODS:
-            return [permissions.IsAuthenticated()]
-        # Para métodos não seguros (POST, PUT, DELETE), apenas administradores podem acessar
-        return [permissions.IsAdminUser()]
+# View para criar tutoriais (apenas administradores podem criar)
+class TutorialCreateView(generics.CreateAPIView):
+    queryset = Tutorial.objects.all()
+    serializer_class = TutorialSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+# View para recuperar, atualizar e deletar tutoriais (apenas administradores podem editar e deletar)
+class TutorialRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Tutorial.objects.all()
+    serializer_class = TutorialSerializer
+    permission_classes = [IsAdminOrReadOnly]

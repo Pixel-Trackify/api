@@ -7,6 +7,8 @@ class IntegrationSerializer(serializers.ModelSerializer):
         model = Integration
         fields = ['id', 'uid', 'user', 'name', 'gateway',
                   'deleted', 'status', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'uid', 'user', 'deleted',
+                            'status', 'created_at', 'updated_at']
 
 
 class TransactionSerializer(serializers.ModelSerializer):
