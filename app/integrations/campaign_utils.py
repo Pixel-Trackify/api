@@ -75,6 +75,16 @@ def map_payment_status(status, gateway):
             'refunded': 'REFUNDED',
             'chargedback': 'CHARGEBACK',
             'in_protest': 'CHARGEBACK'
+        },
+        'TriboPay': {
+            'processing': 'PENDING',  # Pagamento em processamento
+            'authorized': 'PENDING',  # Pagamento autorizado na adquirente
+            'paid': 'APPROVED',       # Pagamento realizado
+            'refunded': 'REFUNDED',   # Reembolsado
+            'waiting_payment': 'PENDING',  # Aguardando pagamento
+            'refused': 'REJECTED',    # Pagamento recusado
+            'antifraud': 'REJECTED',  # Reprovado pelo antifraude
+            'chargedback': 'CHARGEBACK'  # Chargeback
         }
     }
     return status_mapping.get(gateway, {}).get(status, 'UNKNOWN')
