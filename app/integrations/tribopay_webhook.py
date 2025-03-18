@@ -1,9 +1,10 @@
 from .models import Integration, IntegrationRequest, Transaction
-from .campaign_utils import recalculate_campaigns, map_payment_status 
+from .campaign_utils import recalculate_campaigns, map_payment_status
 import logging
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
+
 
 def process_tribopay_webhook(data, integration):
     """
@@ -18,10 +19,11 @@ def process_tribopay_webhook(data, integration):
     """
     try:
         # Extrai os dados necessários do payload do webhook
-        transaction_id = data.get('transaction')
-        status = map_payment_status(data.get('status'), 'TriboPay')  
-        payment_method = data.get('payment_method')
-        amount = data.get('amount')
+        transaction = data.get('transaction', {})
+        transaction_id = transaction.get('id')
+        status = map_payment_status(transaction.get('status'), 'TriboPay')
+        payment_method = transaction.get('method')
+        amount = transaction.get('amount')
         customer = data.get('customer', {})
         response = data
 
@@ -64,4 +66,3 @@ def process_tribopay_webhook(data, integration):
     except Exception as e:
         logger.error(f"Error processing transaction: {e}", exc_info=True)
         raise
-
