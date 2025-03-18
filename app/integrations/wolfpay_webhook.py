@@ -1,5 +1,5 @@
 from .models import Integration, IntegrationRequest, Transaction
-from .campaign_utils import recalculate_campaigns, map_payment_status 
+from .campaign_utils import recalculate_campaigns, map_payment_status
 import logging
 from django.utils import timezone
 
@@ -30,20 +30,6 @@ def process_wolfpay_webhook(data, integration):
         if not transaction_id or not status or not payment_method or not amount:
             raise ValueError("Missing required fields")
 
-        # Atualiza ou cria a transação com base no transaction_id
-        transaction, created = Transaction.objects.update_or_create(
-            transaction_id=transaction_id,
-            defaults={
-                'integration': integration,
-                'status': status,
-                'amount': amount,
-                'method': payment_method,
-                'data_response': response,
-                'created_at': data.get('created_at', timezone.now()),
-                'updated_at': data.get('updated_at', timezone.now())
-            }
-        )
-
         # Cria um registro de requisição de integração
         IntegrationRequest.objects.create(
             integration=integration,
@@ -65,5 +51,3 @@ def process_wolfpay_webhook(data, integration):
     except Exception as e:
         logger.error(f"Error processing transaction: {e}", exc_info=True)
         raise
-
-

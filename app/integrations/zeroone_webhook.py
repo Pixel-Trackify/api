@@ -1,5 +1,5 @@
 from .models import Integration, IntegrationRequest, Transaction
-from .campaign_utils import recalculate_campaigns, map_payment_status 
+from .campaign_utils import recalculate_campaigns, map_payment_status
 import logging
 from django.utils import timezone
 
@@ -29,20 +29,6 @@ def process_zeroone_webhook(data, integration):
     if not payment_id or not status or not payment_method or not amount:
         raise ValueError("Missing required fields")
 
-    # Atualiza ou cria a transação com base no payment_id
-    transaction, created = Transaction.objects.update_or_create(
-        transaction_id=payment_id,
-        defaults={
-            'integration': integration,
-            'status': status,
-            'amount': amount,
-            'method': payment_method,
-            'data_response': response,
-            'created_at': data.get('createdAt', timezone.now()),
-            'updated_at': data.get('updatedAt', timezone.now())
-        }
-    )
-
     # Cria um registro de requisição de integração
     IntegrationRequest.objects.create(
         integration=integration,
@@ -60,5 +46,3 @@ def process_zeroone_webhook(data, integration):
 
     # Recalcula as campanhas associadas à integração
     recalculate_campaigns(integration)
-
-
