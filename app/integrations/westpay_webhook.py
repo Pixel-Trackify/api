@@ -1,4 +1,4 @@
-from .models import Integration, IntegrationRequest
+from .models import Integration, IntegrationRequest, IntegrationSample
 from .campaign_utils import recalculate_campaigns, map_payment_status
 from django.utils import timezone
 import logging
@@ -18,6 +18,11 @@ def process_westpay_webhook(data, integration):
         ValueError: Se algum campo obrigatório estiver ausente nos dados recebidos.
     """
     try:
+        # Verifica se já existe uma amostra para o gateway
+        gateway = 'WestPay'
+        if not IntegrationSample.objects.filter(gateway=gateway).exists():
+            IntegrationSample.objects.create(gateway=gateway, response=data)
+
         # Extrai os dados necessários do payload do webhook
         transaction_data = data.get('data', {})
         transaction_id = transaction_data.get('id')

@@ -1,4 +1,4 @@
-from .models import Integration, IntegrationRequest, Transaction
+from .models import Integration, IntegrationRequest, Transaction, IntegrationSample
 from .campaign_utils import recalculate_campaigns, map_payment_status
 import logging
 from django.utils import timezone
@@ -18,6 +18,10 @@ def process_cloudfy_webhook(data, integration):
         ValueError: Se algum campo obrigatório estiver ausente nos dados recebidos.
     """
     try:
+        # Verifica se já existe uma amostra para o gateway
+        gateway = 'CloudFy'
+        if not IntegrationSample.objects.filter(gateway=gateway).exists():
+            IntegrationSample.objects.create(gateway=gateway, response=data)
         # Extrai os dados necessários do payload do webhook
         payload = data.get('payload', {})
         transaction_id = payload.get('_id')
