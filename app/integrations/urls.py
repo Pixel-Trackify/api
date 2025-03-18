@@ -25,7 +25,7 @@ urlpatterns = [
          CloudFyWebhookView.as_view(), name='cloudfy-webhook'),
     path('webhook/tribopay/<str:uid>/',
          TriboPayWebhookView.as_view(), name='tribopay-webhook'),
-    path('webhooks/westpay/<uuid:uid>/',
+    path('webhook/westpay/<uuid:uid>/',
          WestPayWebhookView.as_view(), name='westpay-webhook'),
     path('transactions/<str:transaction_id>/',
          IntegrationRequestDetailView.as_view(), name='transaction-detail'),
