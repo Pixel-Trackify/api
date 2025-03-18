@@ -1,6 +1,7 @@
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from .serializers import TransactionSerializer, IntegrationSerializer, IntegrationRequestSerializer
 
+
 schemas = {
     'integration_view_set': extend_schema_view(
         list=extend_schema(
@@ -9,7 +10,7 @@ schemas = {
         ),
         create=extend_schema(
             description="Cria uma nova integração vinculada ao usuário autenticado.",
-            request=IntegrationRequestSerializer,
+            request=IntegrationSerializer,
             responses={201: IntegrationSerializer}
         ),
         retrieve=extend_schema(
@@ -18,12 +19,12 @@ schemas = {
         ),
         update=extend_schema(
             description="Atualiza uma integração se o usuário autenticado for o proprietário.",
-            request=IntegrationRequestSerializer,
+            request=IntegrationSerializer,
             responses={200: IntegrationSerializer}
         ),
         partial_update=extend_schema(
             description="Atualiza parcialmente uma integração se o usuário autenticado for o proprietário.",
-            request=IntegrationRequestSerializer,
+            request=IntegrationSerializer,
             responses={200: IntegrationSerializer}
         ),
         destroy=extend_schema(
@@ -44,13 +45,13 @@ schemas = {
     'integrationrequest_detail_view': extend_schema_view(
         get=extend_schema(
             description="Retorna os detalhes de uma requisição de integração específica.",
-            responses={200: IntegrationRequestSerializer}
+            responses={200: IntegrationSerializer}
         )
     ),
     'integrationrequest_list_view': extend_schema_view(
         get=extend_schema(
             description="Retorna uma lista de todas as requisições de integração do usuário autenticado.",
-            responses={200: IntegrationRequestSerializer(many=True)}
+            responses={200: IntegrationSerializer(many=True)}
         )
     ),
     'cloudfy_webhook_view': extend_schema_view(
