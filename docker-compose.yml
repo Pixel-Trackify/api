@@ -46,6 +46,9 @@ services:
       dockerfile: .docker/Dockerfile
     expose:
       - "8000"
+    environment:
+      - POSTGRES_HOST=${POSTGRES_HOST:-psql}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
     volumes:
       - ./app:/app
       - ./.env:/app/.env
@@ -78,7 +81,11 @@ services:
   psql:
     image: postgres:13-alpine
     ports:
-      - "5432:5432"
+      - "${DATABASE_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: ${DATABASE_USER:-postgres}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      POSTGRES_DB: ${DATABASE_NAME:-postgres}
     volumes:
       - ./data/postgres/data:/var/lib/postgresql/data/
     networks:
