@@ -1,6 +1,5 @@
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 from .serializers import TransactionSerializer, IntegrationSerializer, IntegrationRequestSerializer
-
 
 schemas = {
     'integration_view_set': extend_schema_view(
@@ -15,96 +14,240 @@ schemas = {
         ),
         retrieve=extend_schema(
             description="Retorna os detalhes de uma integração específica do usuário autenticado.",
+            parameters=[
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
+            ],
             responses={200: IntegrationSerializer}
         ),
         update=extend_schema(
             description="Atualiza uma integração se o usuário autenticado for o proprietário.",
             request=IntegrationSerializer,
+            parameters=[
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
+            ],
             responses={200: IntegrationSerializer}
         ),
         partial_update=extend_schema(
             description="Atualiza parcialmente uma integração se o usuário autenticado for o proprietário.",
             request=IntegrationSerializer,
+            parameters=[
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
+            ],
             responses={200: IntegrationSerializer}
         ),
         destroy=extend_schema(
             description="Deleta uma integração se o usuário autenticado for o proprietário.",
+            parameters=[
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
+            ],
             responses={204: None}
         )
     ),
     'integration_detail_view': extend_schema_view(
         get=extend_schema(
             description="Retorna os detalhes de uma integração específica do usuário autenticado.",
+            parameters=[
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
+            ],
             responses={200: IntegrationSerializer}
         ),
         delete=extend_schema(
             description="Deleta uma integração específica do usuário autenticado.",
+            parameters=[
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
+            ],
             responses={204: None}
         )
     ),
     'integrationrequest_detail_view': extend_schema_view(
         get=extend_schema(
             description="Retorna os detalhes de uma requisição de integração específica.",
-            responses={200: IntegrationSerializer}
+            parameters=[
+                OpenApiParameter(
+                    name="transaction_id",
+                    description="UUID da requisição de integração",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
+            ],
+            responses={200: IntegrationRequestSerializer}
         )
     ),
     'integrationrequest_list_view': extend_schema_view(
         get=extend_schema(
             description="Retorna uma lista de todas as requisições de integração do usuário autenticado.",
-            responses={200: IntegrationSerializer(many=True)}
+            responses={200: IntegrationRequestSerializer(many=True)}
         )
     ),
     'cloudfy_webhook_view': extend_schema_view(
         post=extend_schema(
             description="Processa notificações de transações do gateway de pagamento CloudFy.",
+            parameters=[
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
+            ],
             responses={200: None}
         )
     ),
     'zeroone_webhook_view': extend_schema_view(
         post=extend_schema(
             description="Processa notificações de transações do gateway de pagamento ZeroOne.",
+            parameters=[
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
+            ],
             responses={200: None}
         )
     ),
     'ghostspay_webhook_view': extend_schema_view(
         post=extend_schema(
             description="Processa notificações de transações do gateway de pagamento GhostsPay.",
+            parameters=[
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
+            ],
             responses={200: None}
         )
     ),
     'paradisepag_webhook_view': extend_schema_view(
         post=extend_schema(
             description="Processa notificações de transações do gateway de pagamento ParadisePag.",
+            parameters=[
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
+            ],
             responses={200: None}
         )
     ),
     'disrupty_webhook_view': extend_schema_view(
         post=extend_schema(
             description="Processa notificações de transações do gateway de pagamento Disrupty.",
+            parameters=[
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
+            ],
             responses={200: None}
         )
     ),
     'wolfpay_webhook_view': extend_schema_view(
         post=extend_schema(
             description="Processa notificações de transações do gateway de pagamento WolfPay.",
+            parameters=[
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
+            ],
             responses={200: None}
         )
     ),
     'vegacheckout_webhook_view': extend_schema_view(
         post=extend_schema(
             description="Processa notificações de transações do gateway de pagamento Vega Checkout.",
+            parameters=[
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
+            ],
             responses={200: None}
         )
     ),
     'tribopay_webhook_view': extend_schema_view(
         post=extend_schema(
             description="Processa notificações de transações do gateway de pagamento Tribo Pay.",
+            parameters=[
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
+            ],
             responses={200: None}
         )
     ),
     'westpay_webhook_view': extend_schema_view(
         post=extend_schema(
             description="Processa notificações de transações do gateway de pagamento WestPay.",
+            parameters=[
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
+            ],
             responses={200: None}
         )
     )

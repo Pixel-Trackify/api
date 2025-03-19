@@ -1,7 +1,8 @@
 from rest_framework import viewsets, status
+from django.urls import reverse
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.shortcuts import get_object_or_404
 from .models import Integration, IntegrationRequest
 from .serializers import IntegrationSerializer, IntegrationRequestSerializer
@@ -26,6 +27,7 @@ class IntegrationViewSet(viewsets.ModelViewSet):
     queryset = Integration.objects.all()
     serializer_class = IntegrationSerializer
     permission_classes = [IsAuthenticated]
+    lookup_field = 'uid'  # Usar `uid` como identificador em vez de `id`
 
     def get_queryset(self):
         """
@@ -33,11 +35,39 @@ class IntegrationViewSet(viewsets.ModelViewSet):
         """
         return self.queryset.filter(user=self.request.user)
 
+    def get_object(self):
+        """
+        Sobrescreve o método para buscar a integração pelo campo `uid` em vez de `id`.
+        """
+        uid = self.kwargs.get('pk')  # `pk` é o parâmetro padrão usado pelo DRF
+        return get_object_or_404(self.queryset, uid=uid, user=self.request.user)
+
     def perform_create(self, serializer):
         """
-        Salva a nova integração com o usuário autenticado.
+        Salva a nova integração com o usuário autenticado e retorna a URL do webhook.
         """
-        serializer.save(user=self.request.user)
+        integration = serializer.save(user=self.request.user)
+        webhook_url = self.build_webhook_url(integration)
+        logger.debug(f"Webhook URL gerada: {webhook_url}")
+        return Response(
+            {
+                "message": "Integração criada com sucesso.",
+                "webhook_url": webhook_url,
+                "integration": IntegrationSerializer(integration).data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+    def build_webhook_url(self, integration):
+        """
+        Constrói a URL do webhook com base no gateway e no UID da integração.
+        """
+        return self.request.build_absolute_uri(
+            reverse(
+                f"{integration.gateway.lower()}-webhook",
+                kwargs={"uid": integration.uid},
+            )
+        )
 
     def perform_update(self, serializer):
         """
@@ -50,11 +80,16 @@ class IntegrationViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         """
-        Deleta a integração se o usuário autenticado for o proprietário.
+        Deleta a integração pelo UUID se o usuário autenticado for o proprietário.
+        Retorna uma mensagem de sucesso.
         """
         if instance.user != self.request.user:
             return Response(status=status.HTTP_403_FORBIDDEN)
         instance.delete()
+        return Response(
+            {"message": "Integração excluída com sucesso."},
+            status=status.HTTP_200_OK
+        )
 
 
 @schemas['integration_detail_view']
@@ -72,15 +107,6 @@ class IntegrationDetailView(APIView):
             Integration, uid=uid, user=request.user)
         serializer = IntegrationSerializer(integration)
         return Response(serializer.data)
-
-    def delete(self, request, uid):
-        """
-        Deleta uma integração específica do usuário autenticado.
-        """
-        integration = get_object_or_404(
-            Integration, uid=uid, user=request.user)
-        integration.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 @schemas['integrationrequest_detail_view']
@@ -122,8 +148,14 @@ class BaseWebhookView(APIView):
     """
     Classe base para processar notificações de webhooks de gateways de pagamento.
     """
-    permission_classes = [IsAuthenticated]
-    required_fields = []  # Campos obrigatórios para validação
+    permission_classes = [AllowAny]
+
+    @property
+    def gateway_name(self):
+        """
+        Propriedade que deve ser sobrescrita pelas subclasses para definir o nome do gateway.
+        """
+        raise NotImplementedError("Subclasses must define 'gateway_name'.")
 
     @property
     def process_function(self):
@@ -138,8 +170,15 @@ class BaseWebhookView(APIView):
         """
         # Recupera a integração ativa
         integration = get_object_or_404(
-            Integration, uid=uid, user=request.user, deleted=False, status='active'
+            Integration, uid=uid, deleted=False, status='active'
         )
+
+        # Valida se o gateway da integração corresponde ao gateway esperado
+        if integration.gateway != self.gateway_name:
+            return Response(
+                {"error": f"Invalid gateway for this integration. Expected: {self.gateway_name}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         # Processa o webhook
         try:
@@ -155,12 +194,20 @@ class BaseWebhookView(APIView):
 @schemas['zeroone_webhook_view']
 class ZeroOneWebhookView(BaseWebhookView):
     @property
+    def gateway_name(self):
+        return 'ZeroOne'
+
+    @property
     def process_function(self):
         return process_zeroone_webhook
 
 
 @schemas['ghostspay_webhook_view']
 class GhostsPayWebhookView(BaseWebhookView):
+    @property
+    def gateway_name(self):
+        return 'GhostsPay'
+
     @property
     def process_function(self):
         return process_zeroone_webhook
@@ -169,12 +216,20 @@ class GhostsPayWebhookView(BaseWebhookView):
 @schemas['paradisepag_webhook_view']
 class ParadisePagWebhookView(BaseWebhookView):
     @property
+    def gateway_name(self):
+        return 'ParadisePag'
+
+    @property
     def process_function(self):
         return process_zeroone_webhook
 
 
 @schemas['disrupty_webhook_view']
 class DisruptyWebhookView(BaseWebhookView):
+    @property
+    def gateway_name(self):
+        return 'Disrupty'
+
     @property
     def process_function(self):
         return process_disrupty_webhook
@@ -183,12 +238,20 @@ class DisruptyWebhookView(BaseWebhookView):
 @schemas['wolfpay_webhook_view']
 class WolfPayWebhookView(BaseWebhookView):
     @property
+    def gateway_name(self):
+        return 'WolfPay'
+
+    @property
     def process_function(self):
         return process_wolfpay_webhook
 
 
 @schemas['vegacheckout_webhook_view']
 class VegaCheckoutWebhookView(BaseWebhookView):
+    @property
+    def gateway_name(self):
+        return 'VegaCheckout'
+
     @property
     def process_function(self):
         return process_vega_checkout_webhook
@@ -197,6 +260,10 @@ class VegaCheckoutWebhookView(BaseWebhookView):
 @schemas['cloudfy_webhook_view']
 class CloudFyWebhookView(BaseWebhookView):
     @property
+    def gateway_name(self):
+        return 'CloudFy'
+
+    @property
     def process_function(self):
         return process_cloudfy_webhook
 
@@ -204,12 +271,20 @@ class CloudFyWebhookView(BaseWebhookView):
 @schemas['tribopay_webhook_view']
 class TriboPayWebhookView(BaseWebhookView):
     @property
+    def gateway_name(self):
+        return 'TriboPay'
+
+    @property
     def process_function(self):
         return process_tribopay_webhook
 
 
 @schemas['westpay_webhook_view']
 class WestPayWebhookView(BaseWebhookView):
+    @property
+    def gateway_name(self):
+        return 'WestPay'
+
     @property
     def process_function(self):
         return process_westpay_webhook

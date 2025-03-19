@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from .models import Campaign, CampaignView
+from integrations.models import Integration
 from .serializers import CampaignSerializer, CampaignViewSerializer
 from user_agents import parse
 import datetime
@@ -18,6 +19,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
     queryset = Campaign.objects.all()
     serializer_class = CampaignSerializer
     permission_classes = [IsAuthenticated]
+    lookup_field = 'uid'
 
     def get_queryset(self):
         """Retorna as campanhas do usuário autenticado"""
@@ -25,14 +27,14 @@ class CampaignViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """Vincula automaticamente o usuário logado à campanha"""
+        logger.debug(
+            f"Dados recebidos no serializer: {serializer.validated_data}")
         serializer.save(user=self.request.user)
 
-    def perform_update(self, serializer):
-        """Atualiza a campanha se o usuário autenticado for o proprietário"""
-        instance = self.get_object()
-        if instance.user != self.request.user:
-            return Response(status=status.HTTP_403_FORBIDDEN)
-        serializer.save()
+        # Salva a campanha vinculada ao usuário e à integração
+        logger.debug(
+            f"Dados recebidos no serializer: {serializer.validated_data}")
+        serializer.save(user=self.request.user)
 
     def perform_destroy(self, instance):
         """Deleta a campanha se o usuário autenticado for o proprietário"""
