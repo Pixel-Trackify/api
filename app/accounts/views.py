@@ -23,6 +23,7 @@ from .filters import UsuarioFilter
 import user_agents
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
+from project.pagination import DefaultPagination
 import uuid
 import os
 from .schema import (
@@ -132,12 +133,6 @@ class ChangePasswordView(APIView):
         return Response({"message": "Senha alterada com sucesso."}, status=status.HTTP_200_OK)
 
 
-class StandardResultsSetPagination(PageNumberPagination):
-    page_size = 10
-    page_size_query_param = 'page_size'
-    max_page_size = 100
-
-
 @get_users_view_schema
 class GetUsersView(generics.ListAPIView):
     # Apenas administradores podem listar usuários
@@ -145,7 +140,7 @@ class GetUsersView(generics.ListAPIView):
     queryset = Usuario.objects.all().order_by("uid")
     serializer_class = UserProfileSerializer
     # Usando a paginação personalizada
-    pagination_class = StandardResultsSetPagination
+    pagination_class = DefaultPagination
 
 
 @account_retrieve_update_destroy_view_schema
@@ -206,7 +201,7 @@ class FilterUsersView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     queryset = Usuario.objects.all().order_by("uid")
     serializer_class = RegisterSerializer
-    pagination_class = StandardResultsSetPagination
+    pagination_class = DefaultPagination
 
     # Configuração dos backends de filtro, pesquisa e ordenação
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
