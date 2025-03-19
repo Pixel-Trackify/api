@@ -1,5 +1,9 @@
 from rest_framework import serializers
 from .models import Campaign, CampaignView, Integration
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 class CampaignSerializer(serializers.ModelSerializer):
@@ -43,10 +47,17 @@ class CampaignSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         """Cria uma campanha e associa as integrações"""
+        logger.debug(f"Dados validados no serializer: {validated_data}")
         integrations = validated_data.pop('integrations', [])
-        campaign = Campaign.objects.create(**validated_data)
-        campaign.integrations.set(integrations)
-        return campaign
+        try:
+            campaign = Campaign.objects.create(**validated_data)
+            logger.debug(f"Campanha criada no banco de dados: {campaign}")
+            campaign.integrations.set(integrations)
+            logger.debug(f"Integrações associadas: {integrations}")
+            return campaign
+        except Exception as e:
+            logger.error(f"Erro ao criar a campanha: {e}")
+            raise serializers.ValidationError("Erro ao salvar a campanha no banco de dados.")
 
     def update(self, instance, validated_data):
         """Atualiza uma campanha e associa as integrações"""

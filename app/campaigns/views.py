@@ -19,23 +19,22 @@ class CampaignViewSet(viewsets.ModelViewSet):
     queryset = Campaign.objects.all()
     serializer_class = CampaignSerializer
     permission_classes = [IsAuthenticated]
+    lookup_field = 'uid'
 
     def get_queryset(self):
         """Retorna as campanhas do usuário autenticado"""
         return self.queryset.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        """Vincula automaticamente o usuário logado à campanha e valida a integração"""
-        integration_uid = serializer.validated_data.get('integration_uid')
-
-        # Verifica se a integração existe
-        integration = Integration.objects.filter(
-            uid=integration_uid, user=self.request.user).first()
-        if not integration:
-            return Response({"detail": "Integração não encontrada."}, status=status.HTTP_404_NOT_FOUND)
+        """Vincula automaticamente o usuário logado à campanha"""
+        logger.debug(
+            f"Dados recebidos no serializer: {serializer.validated_data}")
+        serializer.save(user=self.request.user)
 
         # Salva a campanha vinculada ao usuário e à integração
-        serializer.save(user=self.request.user, integration=integration)
+        logger.debug(
+            f"Dados recebidos no serializer: {serializer.validated_data}")
+        serializer.save(user=self.request.user)
 
     def perform_destroy(self, instance):
         """Deleta a campanha se o usuário autenticado for o proprietário"""
