@@ -1,4 +1,4 @@
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 from .serializers import TransactionSerializer, IntegrationSerializer, IntegrationRequestSerializer
 
 schemas = {
@@ -15,36 +15,54 @@ schemas = {
         retrieve=extend_schema(
             description="Retorna os detalhes de uma integração específica do usuário autenticado.",
             parameters=[
-                {
-                    "name": "uid",
-                    "required": True,
-                    "in": "path",
-                    "description": "UUID da integração",
-                    "schema": {"type": "string", "format": "uuid"},
-                }
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
             ],
             responses={200: IntegrationSerializer}
         ),
         update=extend_schema(
             description="Atualiza uma integração se o usuário autenticado for o proprietário.",
             request=IntegrationSerializer,
+            parameters=[
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
+            ],
             responses={200: IntegrationSerializer}
         ),
         partial_update=extend_schema(
             description="Atualiza parcialmente uma integração se o usuário autenticado for o proprietário.",
             request=IntegrationSerializer,
+            parameters=[
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
+            ],
             responses={200: IntegrationSerializer}
         ),
         destroy=extend_schema(
             description="Deleta uma integração se o usuário autenticado for o proprietário.",
             parameters=[
-                {
-                    "name": "uid",
-                    "required": True,
-                    "in": "path",
-                    "description": "UUID da integração",
-                    "schema": {"type": "string", "format": "uuid"},
-                }
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
             ],
             responses={204: None}
         )
@@ -53,26 +71,26 @@ schemas = {
         get=extend_schema(
             description="Retorna os detalhes de uma integração específica do usuário autenticado.",
             parameters=[
-                {
-                    "name": "uid",
-                    "required": True,
-                    "in": "path",
-                    "description": "UUID da integração",
-                    "schema": {"type": "string", "format": "uuid"},
-                }
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
             ],
             responses={200: IntegrationSerializer}
         ),
         delete=extend_schema(
             description="Deleta uma integração específica do usuário autenticado.",
             parameters=[
-                {
-                    "name": "uid",
-                    "required": True,
-                    "in": "path",
-                    "description": "UUID da integração",
-                    "schema": {"type": "string", "format": "uuid"},
-                }
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
             ],
             responses={204: None}
         )
@@ -81,13 +99,13 @@ schemas = {
         get=extend_schema(
             description="Retorna os detalhes de uma requisição de integração específica.",
             parameters=[
-                {
-                    "name": "transaction_id",
-                    "required": True,
-                    "in": "path",
-                    "description": "UUID da requisição de integração",
-                    "schema": {"type": "string", "format": "uuid"},
-                }
+                OpenApiParameter(
+                    name="transaction_id",
+                    description="UUID da requisição de integração",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
             ],
             responses={200: IntegrationRequestSerializer}
         )
@@ -102,13 +120,13 @@ schemas = {
         post=extend_schema(
             description="Processa notificações de transações do gateway de pagamento CloudFy.",
             parameters=[
-                {
-                    "name": "uid",
-                    "required": True,
-                    "in": "path",
-                    "description": "UUID da integração",
-                    "schema": {"type": "string", "format": "uuid"},
-                }
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
             ],
             responses={200: None}
         )
@@ -117,13 +135,13 @@ schemas = {
         post=extend_schema(
             description="Processa notificações de transações do gateway de pagamento ZeroOne.",
             parameters=[
-                {
-                    "name": "uid",
-                    "required": True,
-                    "in": "path",
-                    "description": "UUID da integração",
-                    "schema": {"type": "string", "format": "uuid"},
-                }
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
             ],
             responses={200: None}
         )
@@ -132,13 +150,13 @@ schemas = {
         post=extend_schema(
             description="Processa notificações de transações do gateway de pagamento GhostsPay.",
             parameters=[
-                {
-                    "name": "uid",
-                    "required": True,
-                    "in": "path",
-                    "description": "UUID da integração",
-                    "schema": {"type": "string", "format": "uuid"},
-                }
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
             ],
             responses={200: None}
         )
@@ -147,13 +165,13 @@ schemas = {
         post=extend_schema(
             description="Processa notificações de transações do gateway de pagamento ParadisePag.",
             parameters=[
-                {
-                    "name": "uid",
-                    "required": True,
-                    "in": "path",
-                    "description": "UUID da integração",
-                    "schema": {"type": "string", "format": "uuid"},
-                }
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
             ],
             responses={200: None}
         )
@@ -162,13 +180,13 @@ schemas = {
         post=extend_schema(
             description="Processa notificações de transações do gateway de pagamento Disrupty.",
             parameters=[
-                {
-                    "name": "uid",
-                    "required": True,
-                    "in": "path",
-                    "description": "UUID da integração",
-                    "schema": {"type": "string", "format": "uuid"},
-                }
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
             ],
             responses={200: None}
         )
@@ -177,13 +195,13 @@ schemas = {
         post=extend_schema(
             description="Processa notificações de transações do gateway de pagamento WolfPay.",
             parameters=[
-                {
-                    "name": "uid",
-                    "required": True,
-                    "in": "path",
-                    "description": "UUID da integração",
-                    "schema": {"type": "string", "format": "uuid"},
-                }
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
             ],
             responses={200: None}
         )
@@ -192,13 +210,13 @@ schemas = {
         post=extend_schema(
             description="Processa notificações de transações do gateway de pagamento Vega Checkout.",
             parameters=[
-                {
-                    "name": "uid",
-                    "required": True,
-                    "in": "path",
-                    "description": "UUID da integração",
-                    "schema": {"type": "string", "format": "uuid"},
-                }
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
             ],
             responses={200: None}
         )
@@ -207,13 +225,13 @@ schemas = {
         post=extend_schema(
             description="Processa notificações de transações do gateway de pagamento Tribo Pay.",
             parameters=[
-                {
-                    "name": "uid",
-                    "required": True,
-                    "in": "path",
-                    "description": "UUID da integração",
-                    "schema": {"type": "string", "format": "uuid"},
-                }
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
             ],
             responses={200: None}
         )
@@ -222,13 +240,13 @@ schemas = {
         post=extend_schema(
             description="Processa notificações de transações do gateway de pagamento WestPay.",
             parameters=[
-                {
-                    "name": "uid",
-                    "required": True,
-                    "in": "path",
-                    "description": "UUID da integração",
-                    "schema": {"type": "string", "format": "uuid"},
-                }
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
             ],
             responses={200: None}
         )

@@ -27,6 +27,7 @@ class IntegrationViewSet(viewsets.ModelViewSet):
     queryset = Integration.objects.all()
     serializer_class = IntegrationSerializer
     permission_classes = [IsAuthenticated]
+    lookup_field = 'uid'  # Usar `uid` como identificador em vez de `id`
 
     def get_queryset(self):
         """
