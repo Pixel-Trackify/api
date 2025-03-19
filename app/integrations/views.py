@@ -33,6 +33,13 @@ class IntegrationViewSet(viewsets.ModelViewSet):
         """
         return self.queryset.filter(user=self.request.user)
 
+    def get_object(self):
+        """
+        Sobrescreve o método para buscar a integração pelo campo `uid` em vez de `id`.
+        """
+        uid = self.kwargs.get('pk')  # `pk` é o parâmetro padrão usado pelo DRF
+        return get_object_or_404(self.queryset, uid=uid, user=self.request.user)
+
     def perform_create(self, serializer):
         """
         Salva a nova integração com o usuário autenticado.
@@ -50,11 +57,16 @@ class IntegrationViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         """
-        Deleta a integração se o usuário autenticado for o proprietário.
+        Deleta a integração pelo UUID se o usuário autenticado for o proprietário.
+        Retorna uma mensagem de sucesso.
         """
         if instance.user != self.request.user:
             return Response(status=status.HTTP_403_FORBIDDEN)
         instance.delete()
+        return Response(
+            {"message": "Integração excluída com sucesso."},
+            status=status.HTTP_200_OK
+        )
 
 
 @schemas['integration_detail_view']
@@ -72,15 +84,6 @@ class IntegrationDetailView(APIView):
             Integration, uid=uid, user=request.user)
         serializer = IntegrationSerializer(integration)
         return Response(serializer.data)
-
-    def delete(self, request, uid):
-        """
-        Deleta uma integração específica do usuário autenticado.
-        """
-        integration = get_object_or_404(
-            Integration, uid=uid, user=request.user)
-        integration.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 @schemas['integrationrequest_detail_view']
