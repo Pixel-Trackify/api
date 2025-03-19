@@ -128,6 +128,13 @@ class BaseWebhookView(APIView):
     permission_classes = [AllowAny]
 
     @property
+    def gateway_name(self):
+        """
+        Propriedade que deve ser sobrescrita pelas subclasses para definir o nome do gateway.
+        """
+        raise NotImplementedError("Subclasses must define 'gateway_name'.")
+
+    @property
     def process_function(self):
         """
         Propriedade que deve ser sobrescrita pelas subclasses para definir a função de processamento.
@@ -143,6 +150,13 @@ class BaseWebhookView(APIView):
             Integration, uid=uid, deleted=False, status='active'
         )
 
+        # Valida se o gateway da integração corresponde ao gateway esperado
+        if integration.gateway != self.gateway_name:
+            return Response(
+                {"error": f"Invalid gateway for this integration. Expected: {self.gateway_name}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         # Processa o webhook
         try:
             self.process_function(request.data, integration)
@@ -157,12 +171,20 @@ class BaseWebhookView(APIView):
 @schemas['zeroone_webhook_view']
 class ZeroOneWebhookView(BaseWebhookView):
     @property
+    def gateway_name(self):
+        return 'ZeroOne'
+
+    @property
     def process_function(self):
         return process_zeroone_webhook
 
 
 @schemas['ghostspay_webhook_view']
 class GhostsPayWebhookView(BaseWebhookView):
+    @property
+    def gateway_name(self):
+        return 'GhostsPay'
+
     @property
     def process_function(self):
         return process_zeroone_webhook
@@ -171,12 +193,20 @@ class GhostsPayWebhookView(BaseWebhookView):
 @schemas['paradisepag_webhook_view']
 class ParadisePagWebhookView(BaseWebhookView):
     @property
+    def gateway_name(self):
+        return 'ParadisePag'
+
+    @property
     def process_function(self):
         return process_zeroone_webhook
 
 
 @schemas['disrupty_webhook_view']
 class DisruptyWebhookView(BaseWebhookView):
+    @property
+    def gateway_name(self):
+        return 'Disrupty'
+
     @property
     def process_function(self):
         return process_disrupty_webhook
@@ -185,12 +215,20 @@ class DisruptyWebhookView(BaseWebhookView):
 @schemas['wolfpay_webhook_view']
 class WolfPayWebhookView(BaseWebhookView):
     @property
+    def gateway_name(self):
+        return 'WolfPay'
+
+    @property
     def process_function(self):
         return process_wolfpay_webhook
 
 
 @schemas['vegacheckout_webhook_view']
 class VegaCheckoutWebhookView(BaseWebhookView):
+    @property
+    def gateway_name(self):
+        return 'VegaCheckout'
+
     @property
     def process_function(self):
         return process_vega_checkout_webhook
@@ -199,6 +237,10 @@ class VegaCheckoutWebhookView(BaseWebhookView):
 @schemas['cloudfy_webhook_view']
 class CloudFyWebhookView(BaseWebhookView):
     @property
+    def gateway_name(self):
+        return 'CloudFy'
+
+    @property
     def process_function(self):
         return process_cloudfy_webhook
 
@@ -206,12 +248,20 @@ class CloudFyWebhookView(BaseWebhookView):
 @schemas['tribopay_webhook_view']
 class TriboPayWebhookView(BaseWebhookView):
     @property
+    def gateway_name(self):
+        return 'TriboPay'
+
+    @property
     def process_function(self):
         return process_tribopay_webhook
 
 
 @schemas['westpay_webhook_view']
 class WestPayWebhookView(BaseWebhookView):
+    @property
+    def gateway_name(self):
+        return 'WestPay'
+
     @property
     def process_function(self):
         return process_westpay_webhook
