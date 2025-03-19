@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from .models import Campaign, CampaignView
+from integrations.models import Integration
 from .serializers import CampaignSerializer, CampaignViewSerializer
 from user_agents import parse
 import datetime
@@ -24,15 +25,17 @@ class CampaignViewSet(viewsets.ModelViewSet):
         return self.queryset.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        """Vincula automaticamente o usuário logado à campanha"""
-        serializer.save(user=self.request.user)
+        """Vincula automaticamente o usuário logado à campanha e valida a integração"""
+        integration_uid = serializer.validated_data.get('integration_uid')
 
-    def perform_update(self, serializer):
-        """Atualiza a campanha se o usuário autenticado for o proprietário"""
-        instance = self.get_object()
-        if instance.user != self.request.user:
-            return Response(status=status.HTTP_403_FORBIDDEN)
-        serializer.save()
+        # Verifica se a integração existe
+        integration = Integration.objects.filter(
+            uid=integration_uid, user=self.request.user).first()
+        if not integration:
+            return Response({"detail": "Integração não encontrada."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Salva a campanha vinculada ao usuário e à integração
+        serializer.save(user=self.request.user, integration=integration)
 
     def perform_destroy(self, instance):
         """Deleta a campanha se o usuário autenticado for o proprietário"""
