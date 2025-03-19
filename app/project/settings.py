@@ -250,7 +250,15 @@ REST_FRAMEWORK = {
     ),
 
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+
+    'DEFAULT_PAGINATION_CLASS': 'project.pagination.DefaultPagination',
+    'PAGE_SIZE': 10,  # Tamanho padrão da página
+    'DEFAULT_FILTER_BACKENDS': [
+        'rest_framework.filters.OrderingFilter',
+    ],
 }
+
+ 
 
 # Configurações do JWT
 SIMPLE_JWT = {
