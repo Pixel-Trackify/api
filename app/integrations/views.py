@@ -1,4 +1,5 @@
 from rest_framework import viewsets, status
+from django.urls import reverse
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -42,9 +43,30 @@ class IntegrationViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """
-        Salva a nova integração com o usuário autenticado.
+        Salva a nova integração com o usuário autenticado e retorna a URL do webhook.
         """
-        serializer.save(user=self.request.user)
+        integration = serializer.save(user=self.request.user)
+        webhook_url = self.build_webhook_url(integration)
+        logger.debug(f"Webhook URL gerada: {webhook_url}")
+        return Response(
+            {
+                "message": "Integração criada com sucesso.",
+                "webhook_url": webhook_url,
+                "integration": IntegrationSerializer(integration).data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+    def build_webhook_url(self, integration):
+        """
+        Constrói a URL do webhook com base no gateway e no UID da integração.
+        """
+        return self.request.build_absolute_uri(
+            reverse(
+                f"{integration.gateway.lower()}-webhook",
+                kwargs={"uid": integration.uid},
+            )
+        )
 
     def perform_update(self, serializer):
         """
