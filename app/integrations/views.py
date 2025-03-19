@@ -1,7 +1,7 @@
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.shortcuts import get_object_or_404
 from .models import Integration, IntegrationRequest
 from .serializers import IntegrationSerializer, IntegrationRequestSerializer
@@ -125,8 +125,7 @@ class BaseWebhookView(APIView):
     """
     Classe base para processar notificações de webhooks de gateways de pagamento.
     """
-    permission_classes = [IsAuthenticated]
-    required_fields = []  # Campos obrigatórios para validação
+    permission_classes = [AllowAny]
 
     @property
     def process_function(self):
@@ -141,7 +140,7 @@ class BaseWebhookView(APIView):
         """
         # Recupera a integração ativa
         integration = get_object_or_404(
-            Integration, uid=uid, user=request.user, deleted=False, status='active'
+            Integration, uid=uid, deleted=False, status='active'
         )
 
         # Processa o webhook
