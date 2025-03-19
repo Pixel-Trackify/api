@@ -31,7 +31,7 @@ Este projeto é uma aplicação Django que fornece uma API para gerenciar autent
 2. **Crie e configure as variáveis de ambiente:**
     Copie o arquivo de exemplo de ambiente e atualize os valores conforme necessário.
     ```sh
-    cp dotenv_files/.env-example dotenv_files/.env
+    cp .env-example .env
     ```
 
 3. **Executando o Projeto:**
@@ -83,65 +83,13 @@ Este comando irá gerar certificados SSL para o domínio `api.onetracking.io` e 
 
 ## Endpoints da API
 
-## Endpoints de Autenticação
-- **GET /auth/accounts/{uuid}**: Recuperar detalhes da conta do usuário pelo UUID.
-- **POST /auth/register-accounts/**: Registrar uma nova conta de usuário.
-- **POST /authentication/token/**: Obter um token JWT para autenticação.
-- **POST /authentication/token/refresh/**: Atualizar o token JWT.
-- **POST /authentication/token/verify/**: Verificar o token JWT.
+Desenvolvimento: 
 
-## Endpoints de Gerenciamento de Usuários
-- **GET /auth/users/**: Listar todos os usuários (acesso de administrador necessário).
+`http://127.0.0.1:8000/api/docs/swagger/`
 
-## Endpoints de Assinatura
-- **GET /auth/subscription-history/**: Recuperar o histórico de assinaturas do usuário autenticado.
-- **POST /auth/update-plan/**: Atualizar o plano de assinatura do usuário.
+Produção: 
 
-## Endpoints de Campanhas
-- **GET /campaigns/**: Listar todas as campanhas (acesso de administrador necessário).
-- **POST /campaigns/**: Criar uma nova campanha (acesso de administrador necessário).
-- **GET /campaigns/{id}/**: Recuperar detalhes de uma campanha específica.
-- **PUT /campaigns/{id}/**: Atualizar uma campanha específica (acesso de administrador necessário).
-- **PATCH /campaigns/{id}/**: Atualizar parcialmente uma campanha específica (acesso de administrador necessário).
-- **DELETE /campaigns/{id}/**: Excluir uma campanha específica (acesso de administrador necessário).
-
-## Endpoints de Integração
-- **GET /integration/{uid}/**: Recuperar detalhes de uma integração específica (acesso de administrador necessário).
-- **DELETE /integration/{uid}/**: Excluir uma integração específica (acesso de administrador necessário).
-- **GET /integrations/**: Listar todas as integrações (acesso de administrador necessário).
-- **POST /integrations/**: Criar uma nova integração (acesso de administrador necessário).
-- **GET /integrations/{id}/**: Recuperar detalhes de uma integração específica.
-- **PUT /integrations/{id}/**: Atualizar uma integração específica (acesso de administrador necessário).
-- **PATCH /integrations/{id}/**: Atualizar parcialmente uma integração específica (acesso de administrador necessário).
-- **DELETE /integrations/{id}/**: Excluir uma integração específica (acesso de administrador necessário).
-
-## Endpoints de Planos
-- **GET /plans/**: Listar todos os planos (acesso de administrador necessário).
-- **POST /plans/**: Criar um novo plano (acesso de administrador necessário).
-- **GET /plans/{id}/**: Recuperar detalhes de um plano específico.
-- **PUT /plans/{id}/**: Atualizar um plano específico (acesso de administrador necessário).
-- **PATCH /plans/{id}/**: Atualizar parcialmente um plano específico (acesso de administrador necessário).
-- **DELETE /plans/{id}/**: Excluir um plano específico (acesso de administrador necessário).
-
-## Endpoints de Assinaturas
-- **POST /subscriptions/**: Criar uma nova assinatura (requer autenticação JWT).
-
-## Endpoints de Transações
-- **GET /transactions/**: Listar todas as transações (acesso de administrador necessário).
-- **GET /transactions/{transaction_id}/**: Recuperar detalhes de uma transação específica.
-
-## Endpoints de Tutoriais
-- **GET /tutoriais/**: Listar todos os tutoriais.
-- **POST /tutoriais/**: Criar um novo tutorial.
-- **GET /tutoriais/{id}/**: Recuperar detalhes de um tutorial específico.
-- **PUT /tutoriais/{id}/**: Atualizar um tutorial específico.
-- **PATCH /tutoriais/{id}/**: Atualizar parcialmente um tutorial específico.
-- **DELETE /tutoriais/{id}/**: Excluir um tutorial específico.
-
-## Endpoints de Webhooks
-- **GET /webhook/kwai/{uid}/**: Recuperar detalhes do webhook KWAI.
-- **POST /webhook/zeroone/{uid}/**: Processar uma requisição POST do webhook ZeroOne.
-
+`https://api.onetracking.io/api/docs/swagger/`
 
 ## Segurança
 
