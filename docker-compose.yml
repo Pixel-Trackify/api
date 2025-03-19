@@ -46,9 +46,6 @@ services:
       dockerfile: .docker/Dockerfile
     expose:
       - "8000"
-    environment:
-      - POSTGRES_HOST=${POSTGRES_HOST:-psql}
-      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
     volumes:
       - ./app:/app
       - ./.env:/app/.env
@@ -68,15 +65,12 @@ services:
   django-command-runner:
     build:
       context: .
-      dockerfile: .docker/Dockerfile
-    environment:
-      - APP_AMBIENT=${APP_AMBIENT:-development}
+      dockerfile: .docker/migrate.dockerfile
     volumes:
       - ./app:/app
       - ./.env:/app/.env
     networks:
       - app_network
-    entrypoint: ["/scripts/entrypoint.sh"]
 
   psql:
     image: postgres:13-alpine

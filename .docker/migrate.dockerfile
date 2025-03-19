@@ -1,6 +1,7 @@
 FROM python:3.11.3-alpine3.18
 
 COPY app /app
+COPY .docker/scripts/entrypoint.sh /scripts/entrypoint.sh
 
 WORKDIR /app
 
@@ -18,4 +19,12 @@ ENV PATH="/scripts:/venv/bin:$PATH"
 
 USER duser
 
-CMD ["uwsgi", "--http", ":8000", "--module", "project.wsgi", "--master", "--processes", "4", "--threads", "2"]
+CMD ["sh", "-c", '#!/bin/sh\
+                set -e\
+                if [ "$#" -gt 0 ]; then\
+                    echo "▶ Running command: $@"\
+                    exec "$@"\
+                else\
+                    echo "⚠ No command provided. Exiting."\
+                    exit 1\
+                fi']
