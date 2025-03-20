@@ -13,15 +13,15 @@ class Integration(models.Model):
         User, on_delete=models.CASCADE, related_name='integrations')
     name = models.CharField(max_length=255)
     gateway = models.CharField(max_length=255, choices=[
-        ('ZeroOne', 'ZeroOne'),
-        ('GhostsPay', 'GhostsPay'),
-        ('ParadisePag', 'ParadisePag'),
-        ('Disrupty', 'Disrupty'),
-        ('WolfPay', 'WolfPay'),
-        ('VegaCheckout', 'VegaCheckout'),
-        ('CloudFy', 'CloudFy'),
-        ('TriboPay', 'TriboPay'),
-        ('WestPay', 'WestPay'),
+        ('zeroone', 'ZeroOne'),
+        ('ghostspay', 'GhostsPay'),
+        ('paradisepag', 'ParadisePag'),
+        ('disrupty', 'Disrupty'),
+        ('wolfpay', 'WolfPay'),
+        ('vegacheckout', 'VegaCheckout'),
+        ('cloudfy', 'CloudFy'),
+        ('tribopay', 'TriboPay'),
+        ('westpay', 'WestPay'),
     ])
     deleted = models.BooleanField(default=False)
     status = models.CharField(max_length=10, choices=[(

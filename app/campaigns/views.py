@@ -2,7 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import Campaign, CampaignView
 from integrations.models import Integration
 from .serializers import CampaignSerializer, CampaignViewSerializer
@@ -45,11 +45,11 @@ class CampaignViewSet(viewsets.ModelViewSet):
 
 @schemas['kwai_webhook_view']
 class KwaiWebhookView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]  # Permitir acesso público
 
     def get(self, request, uid):
         action = request.query_params.get('action')
-        campaign = get_object_or_404(Campaign, uid=uid, user=request.user)
+        campaign = get_object_or_404(Campaign, uid=uid)
 
         # Capturar User-Agent e IP
         user_agent_string = request.META.get('HTTP_USER_AGENT', 'unknown')
