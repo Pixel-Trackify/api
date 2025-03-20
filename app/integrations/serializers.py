@@ -68,3 +68,13 @@ class IntegrationRequestSerializer(serializers.ModelSerializer):
                   'amount', 'phone', 'name', 'email', 'response', 'created_at', 'updated_at']
         read_only_fields = ['integration', 'status', 'payment_id',
                             'payment_method', 'amount', 'response', 'created_at', 'updated_at']
+
+
+class DeleteMultipleSerializer(serializers.Serializer):
+    uids = serializers.ListField(
+        child=serializers.UUIDField(),
+        help_text="Lista de UUIDs das integrações a serem excluídas."
+    )
+
+
+

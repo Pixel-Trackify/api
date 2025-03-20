@@ -1,5 +1,5 @@
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
-from .serializers import TransactionSerializer, IntegrationSerializer, IntegrationRequestSerializer
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample, OpenApiTypes
+from .serializers import TransactionSerializer, IntegrationSerializer, IntegrationRequestSerializer, DeleteMultipleSerializer
 
 schemas = {
     'integration_view_set': extend_schema_view(
@@ -65,6 +65,40 @@ schemas = {
                 )
             ],
             responses={204: None}
+        ),
+        delete_multiple=extend_schema(
+            description="Permite deletar várias integrações enviando os UUIDs no corpo da requisição.",
+            request=DeleteMultipleSerializer,  # Use o serializer aqui
+            responses={
+                200: OpenApiTypes.OBJECT,
+
+            },
+            examples=[
+                OpenApiExample(
+                    "Exemplo de Requisição",
+                    value={
+                        "uids": [
+                            "54cc3376-3a92-4d39-8235-5d039e7df8d1",
+                            "65406f8a-80b2-4a9e-b3d2-f2475a976f6b"
+                        ]
+                    },
+                    request_only=True
+                ),
+                OpenApiExample(
+                    "Exemplo de Resposta",
+                    value={
+                        "message": "2 integração(ões) excluída(s) com sucesso.",
+                        "deleted_count": 2,
+                        "deleted_uids": [
+                            "54cc3376-3a92-4d39-8235-5d039e7df8d1",
+                            "65406f8a-80b2-4a9e-b3d2-f2475a976f6b"
+                        ],
+                        "not_found": []
+                    },
+                    response_only=True
+                )
+
+            ]
         )
     ),
     'integration_detail_view': extend_schema_view(
