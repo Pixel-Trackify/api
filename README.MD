@@ -39,11 +39,11 @@ Este projeto é uma aplicação Django que fornece uma API para gerenciar autent
     Edite o arquivo `.env` e configure as variáveis de acordo com seu ambiente.
     ***Ambiente de Desenvolvimento:***
     ```sh
-    docker compose up -d --scale app=3 --build local
+    docker compose up -d --scale app=3 local
     ```
     ***Ambiente de Produção:***
     ```sh
-    docker compose up -d --scale app=3 --build production
+    docker compose up -d --scale app=3 production
     ```
 4. **Acesse a aplicação:**
     A API estará disponível em `http://127.0.0.1:8000`.
@@ -72,6 +72,43 @@ docker compose run --rm certbot certonly --webroot -w /app/data/certbot -d api.o
 ```
 
 Este comando irá gerar certificados SSL para o domínio `api.onetracking.io` e armazená-los no diretório especificado.
+
+## Ferramentas de Monitoramento
+
+1. **Inicie os containers:**
+
+    Edite o arquivo `.env` e configure as variáveis na sessão de Monitoramento
+
+    ***Ambiente de Desenvolvimento:***
+    ```sh
+    docker compose up -d grafana-dev
+    ```
+    ***Ambiente de Produção:***
+    ```sh
+    docker compose up -d grafana
+    ```
+
+    Logue no Grafana:
+    `http://127.0.0.1:3001` use as mesmas credenciais do arquivo ``.env``
+
+2. **Configuração do Data Source**
+
+    Ao estar logado no Grafana vá até ``Connections`` - ``Add new connection`` busque por ``Prometheus``
+    
+    Clique em ``Add new data source``
+3. ***Configurando o Prometheus***
+    
+    - Em ``Prometheus server URL`` digite `http://prometheus:9090` 
+    - Em ``Authentication method`` selecione `Basic authentication`
+
+    As credenciais do ``Prometheus`` são as mesma que estão no arquivo ``.env``.
+
+4. ***Importar Dashboard***
+
+    Para importar o dashboard. 
+    Vá até o menu `Dashboard` e `New` > `Import`
+    
+    Faça o upload ou copie o json no diretório `.docker/grafana/dashboard.json`
 
 ## Instruções para Importar a Coleção no Postman
 

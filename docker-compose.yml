@@ -86,6 +86,153 @@ services:
       - app_network
     restart: always
 
+  nginx_exporter:
+      image: nginx/nginx-prometheus-exporter:latest
+      container_name: nginx-exporter
+      restart: unless-stopped
+      expose:
+        - "9113"
+      environment:
+        - APP_PORT=${APP_PORT_SSL:-443}
+      command:
+        - "--nginx.scrape-uri=https://production:${APP_PORT_SSL:-443}/stub_status" 
+      networks:
+        - app_network
+      deploy:
+        resources:
+          limits:
+            cpus: '0.25'
+            memory: 256M
+
+  nginx_exporter_dev:
+    image: nginx/nginx-prometheus-exporter:latest
+    restart: unless-stopped
+    expose:
+      - "9113"
+    environment:
+      - APP_PORT=${APP_PORT:-80}
+    command:
+      - "--nginx.scrape-uri=http://local:${APP_PORT:-80}/stub_status" 
+    networks:
+      - app_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+
+  grafana:
+    image: grafana/grafana
+    restart: unless-stopped
+    ports:
+      - "${GRAFANA_PORT}:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USERNAME}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+    depends_on:
+      - prometheus
+      - cadvisor
+      - node_exporter
+      - nginx_exporter
+    networks:
+      - app_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+
+  grafana-dev:
+    image: grafana/grafana
+    restart: unless-stopped
+    ports:
+      - "${GRAFANA_PORT}:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USERNAME}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+    depends_on:
+      - prometheus
+      - cadvisor
+      - node_exporter
+      - nginx_exporter_dev
+    networks:
+      - app_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks:
+      - app_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+
+  prometheus:
+    build:
+      context: ./.docker
+      dockerfile: prometheus.dockerfile
+    restart: unless-stopped
+    user: root
+    volumes:
+      - ./.docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./.docker/prometheus/web.yml:/etc/prometheus/web.yml
+      - ./.docker/prometheus/entrypoint.sh:/etc/prometheus/entrypoint.sh
+      - ./data/prometheus:/etc/prometheus/data
+    environment:
+      - PROMETHEUS_USERNAME=${PROMETHEUS_USERNAME}
+      - PROMETHEUS_PASSWORD=${PROMETHEUS_PASSWORD}
+    expose:
+      - "9090"
+    entrypoint: [ "/bin/sh", "/etc/prometheus/entrypoint.sh" ]
+    networks:
+      - app_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 512M
+
+  node_exporter:
+    image: prom/node-exporter:latest
+    restart: unless-stopped
+    expose:
+      - "9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+    networks:
+      - app_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+
 networks:
   app_network:
     driver: bridge
+
+volumes:
+  grafana-data:

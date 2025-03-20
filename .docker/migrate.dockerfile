@@ -1,7 +1,6 @@
 FROM python:3.11.3-alpine3.18
 
 COPY app /app
-COPY .docker/scripts/entrypoint.sh /scripts/entrypoint.sh
 
 WORKDIR /app
 
