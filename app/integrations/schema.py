@@ -250,5 +250,21 @@ schemas = {
             ],
             responses={200: None}
         )
-    )
+    ),
+
+    'sunize_webhook_view': extend_schema_view(
+        post=extend_schema(
+            description="Processa notificações de transações do gateway de pagamento Sunize.",
+            parameters=[
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração associada ao webhook.",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
+            ],
+            responses={200: None}
+        )
+    ),
 }

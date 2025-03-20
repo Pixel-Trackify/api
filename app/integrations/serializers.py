@@ -1,6 +1,9 @@
 from rest_framework import serializers
 from .models import Integration, Transaction, IntegrationRequest
 from django.urls import reverse
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class IntegrationSerializer(serializers.ModelSerializer):
@@ -12,6 +15,29 @@ class IntegrationSerializer(serializers.ModelSerializer):
                   'deleted', 'status', 'created_at', 'updated_at', 'webhook_url']
         read_only_fields = ['id', 'uid', 'user', 'deleted',
                             'status', 'created_at', 'updated_at']
+
+    def validate_gateway(self, value):
+        """
+        Valida o campo `gateway` para aceitar tanto o `id` quanto o `name` dos `choices`.
+        """
+        valid_gateways = Integration._meta.get_field('gateway').choices
+        gateway_mapping = {choice[1]: choice[0]
+                           for choice in valid_gateways}  # Mapeia name -> id
+        gateway_mapping.update(
+            # Adiciona id -> id
+            {choice[0]: choice[0] for choice in valid_gateways})
+
+        # Log para depuração
+        logger.debug(f"Valor recebido para gateway: {value}")
+        logger.debug(f"Gateways válidos: {gateway_mapping}")
+
+        if value not in gateway_mapping:
+            raise serializers.ValidationError(
+                f"Gateway inválido. Escolha um dos seguintes: {', '.join(gateway_mapping.keys())}"
+            )
+
+        # Converte o valor (name ou id) para o formato do banco de dados (id)
+        return gateway_mapping[value]
 
     def get_webhook_url(self, obj):
         """

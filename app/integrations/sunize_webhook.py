@@ -1,0 +1,65 @@
+from .models import Integration, IntegrationRequest, Transaction, IntegrationSample
+from .campaign_utils import recalculate_campaigns, map_payment_status
+import logging
+from django.utils import timezone
+
+logger = logging.getLogger(__name__)
+
+
+def process_sunize_webhook(data, integration):
+    """
+    Processa os dados do webhook do Sunize e atualiza as transações e requisições de integração.
+
+    Args:
+        data (dict): Dados recebidos do webhook do Sunize.
+        integration (Integration): Instância da integração associada.
+
+    Raises:
+        ValueError: Se algum campo obrigatório estiver ausente nos dados recebidos.
+    """
+    try:
+        # Verifica se já existe uma amostra para o gateway
+        gateway = 'Sunize'
+        if not IntegrationSample.objects.filter(gateway=gateway).exists():
+            IntegrationSample.objects.create(gateway=gateway, response=data)
+
+        # Extrai os dados necessários do payload do webhook
+        event = data.get('event')
+        body = data.get('body', {})
+        transaction_id = body.get('order_id')
+        status = map_payment_status(event, gateway)
+        payment_method = body.get('payment_method')
+        amount = sum(commission.get('amount', 0)
+                     for commission in body.get('Commissions', []))
+        customer = body.get('Customer', {})
+        response = data
+
+        # Verifica se todos os campos obrigatórios estão presentes
+        if not transaction_id or not status or not payment_method or amount is None:
+            raise ValueError("Missing required fields in the webhook payload")
+
+        # Cria um registro de requisição de integração
+        integration_request = IntegrationRequest.objects.create(
+            integration=integration,
+            status=status,
+            payment_id=transaction_id,
+            payment_method=payment_method,
+            amount=amount,
+            phone=customer.get('mobile'),
+            name=customer.get('full_name'),
+            email=customer.get('email'),
+            response=response,
+            created_at=body.get('created_at', timezone.now()),
+            updated_at=body.get('updated_at', timezone.now())
+        )
+
+        logger.info(
+            f"IntegrationRequest criada com sucesso: {integration_request.id}")
+
+        # Recalcula as campanhas associadas à integração
+        recalculate_campaigns(integration)
+
+    except Exception as e:
+        logger.error(
+            f"Erro ao processar o webhook do Sunize: {e}", exc_info=True)
+        raise

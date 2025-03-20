@@ -22,6 +22,8 @@ class Integration(models.Model):
         ('cloudfy', 'CloudFy'),
         ('tribopay', 'TriboPay'),
         ('westpay', 'WestPay'),
+        ('sunize', 'Sunize'),
+        
     ])
     deleted = models.BooleanField(default=False)
     status = models.CharField(max_length=10, choices=[(

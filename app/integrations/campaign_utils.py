@@ -77,14 +77,22 @@ def map_payment_status(status, gateway):
             'in_protest': 'CHARGEBACK'
         },
         'TriboPay': {
-            'processing': 'PENDING',  
-            'authorized': 'PENDING',  
-            'paid': 'APPROVED',       
-            'refunded': 'REFUNDED',   
-            'waiting_payment': 'PENDING',  
-            'refused': 'REJECTED',    
-            'antifraud': 'REJECTED',  
-            'chargedback': 'CHARGEBACK'  
+            'processing': 'PENDING',
+            'authorized': 'PENDING',
+            'paid': 'APPROVED',
+            'refunded': 'REFUNDED',
+            'waiting_payment': 'PENDING',
+            'refused': 'REJECTED',
+            'antifraud': 'REJECTED',
+            'chargedback': 'CHARGEBACK'
+        },
+        'Sunize': {
+            "SALE_APPROVED": "approved",
+            "PIX_GENERATED": "pending",
+            "SALE_REFUND": "refunded",
+            "SALE_REJECTED": "rejected",
+            "ABANDONED_CART": "abandoned",
+            "BANK_SLIP_GENERATED": "pending"
         }
     }
     return status_mapping.get(gateway, {}).get(status, 'UNKNOWN')

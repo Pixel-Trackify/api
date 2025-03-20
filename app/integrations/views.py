@@ -193,8 +193,8 @@ class BaseWebhookView(APIView):
             Integration, uid=uid, deleted=False, status='active'
         )
 
-        # Valida se o gateway da integração corresponde ao gateway esperado
-        if integration.gateway != self.gateway_name:
+        # Valida se o gateway da integração corresponde ao gateway esperado (case insensitive)
+        if integration.gateway.lower() != self.gateway_name.lower():
             return Response(
                 {"error": f"Invalid gateway for this integration. Expected: {self.gateway_name}"},
                 status=status.HTTP_400_BAD_REQUEST
