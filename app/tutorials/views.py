@@ -61,3 +61,4 @@ class TutorialRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Tutorial.objects.all()
     serializer_class = TutorialSerializer
     permission_classes = [IsAdminOrReadOnly]
+    lookup_field = 'uid'
