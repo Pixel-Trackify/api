@@ -1,4 +1,4 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from django.urls import reverse
 from django.db import transaction
@@ -31,7 +31,10 @@ class IntegrationViewSet(viewsets.ModelViewSet):
     queryset = Integration.objects.all()
     serializer_class = IntegrationSerializer
     permission_classes = [IsAuthenticated]
-    lookup_field = 'uid'  # Usar `uid` como identificador em vez de `id`
+    lookup_field = 'uid'  
+    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
+    ordering_fields = ['id', 'title', 'description', 'created_at']
+    search_fields = ['id', 'title', 'description', 'created_at']
 
     def get_queryset(self):
         """

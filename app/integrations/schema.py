@@ -4,8 +4,41 @@ from .serializers import TransactionSerializer, IntegrationSerializer, Integrati
 schemas = {
     'integration_view_set': extend_schema_view(
         list=extend_schema(
-            description="Retorna as integrações do usuário autenticado.",
-            responses={200: IntegrationSerializer(many=True)}
+            summary="Listar integrações",
+            description=(
+                    "Endpoint para listar as integrações do usuário autenticado com suporte a paginação, ordenação e busca."
+            ),
+            tags=["Integrações"],
+            parameters=[
+                OpenApiParameter(
+                    name="page",
+                    description="Número da página para paginação.",
+                    required=False,
+                    type=OpenApiTypes.INT,
+                    location=OpenApiParameter.QUERY,
+                ),
+                OpenApiParameter(
+                    name="page_size",
+                    description="Número de itens por página.",
+                    required=False,
+                    type=OpenApiTypes.INT,
+                    location=OpenApiParameter.QUERY,
+                ),
+
+                OpenApiParameter(
+                    name="search",
+                    description=(
+                        "Palavra-chave para busca nos campos definidos: `id`, `title`, `description`, `created_at`. "
+                        "Exemplo: `?search=Python` para buscar integrações relacionadas a 'Python'."
+                    ),
+                    required=False,
+                    type=OpenApiTypes.STR,
+                    location=OpenApiParameter.QUERY,
+                ),
+            ],
+            responses={200: IntegrationSerializer(many=True)},
+
+
         ),
         create=extend_schema(
             description="Cria uma nova integração vinculada ao usuário autenticado.",
