@@ -13,6 +13,7 @@ from .cloudfy_webhook import process_cloudfy_webhook
 from .tribopay_webhook import process_tribopay_webhook
 from .wolfpay_webhook import process_wolfpay_webhook
 from .westpay_webhook import process_westpay_webhook
+from .sunize_webhook import process_sunize_webhook
 import logging
 from .schema import schemas
 
@@ -33,14 +34,18 @@ class IntegrationViewSet(viewsets.ModelViewSet):
         """
         Retorna as integrações do usuário autenticado.
         """
-        return self.queryset.filter(user=self.request.user)
+        queryset = self.queryset.filter(user=self.request.user)
+
+        return queryset
 
     def get_object(self):
         """
         Sobrescreve o método para buscar a integração pelo campo `uid` em vez de `id`.
         """
-        uid = self.kwargs.get('pk')  # `pk` é o parâmetro padrão usado pelo DRF
-        return get_object_or_404(self.queryset, uid=uid, user=self.request.user)
+        obj = get_object_or_404(self.get_queryset(),
+                                uid=self.kwargs.get(self.lookup_field))
+
+        return obj
 
     def perform_create(self, serializer):
         """
@@ -48,7 +53,7 @@ class IntegrationViewSet(viewsets.ModelViewSet):
         """
         integration = serializer.save(user=self.request.user)
         webhook_url = self.build_webhook_url(integration)
-        logger.debug(f"Webhook URL gerada: {webhook_url}")
+
         return Response(
             {
                 "message": "Integração criada com sucesso.",
@@ -83,9 +88,12 @@ class IntegrationViewSet(viewsets.ModelViewSet):
         Deleta a integração pelo UUID se o usuário autenticado for o proprietário.
         Retorna uma mensagem de sucesso.
         """
+
         if instance.user != self.request.user:
+
             return Response(status=status.HTTP_403_FORBIDDEN)
         instance.delete()
+
         return Response(
             {"message": "Integração excluída com sucesso."},
             status=status.HTTP_200_OK
@@ -300,3 +308,14 @@ class WestPayWebhookView(BaseWebhookView):
     @property
     def process_function(self):
         return process_westpay_webhook
+
+
+@schemas['sunize_webhook_view']
+class SunizeWebhookView(BaseWebhookView):
+    @property
+    def gateway_name(self):
+        return 'Sunize'
+
+    @property
+    def process_function(self):
+        return process_sunize_webhook
