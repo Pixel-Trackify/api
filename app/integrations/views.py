@@ -144,6 +144,18 @@ class IntegrationRequestListView(APIView):
         return Response(serializer.data)
 
 
+class AvailableGatewaysView(APIView):
+    """
+    Endpoint para listar os gateways disponíveis para integração.
+    """
+    permission_classes = [AllowAny]  # Permitir acesso público
+
+    def get(self, request):
+        gateways = [{"id": key, "name": value}
+                    for key, value in Integration._meta.get_field('gateway').choices]
+        return Response(gateways)
+
+
 class BaseWebhookView(APIView):
     """
     Classe base para processar notificações de webhooks de gateways de pagamento.
