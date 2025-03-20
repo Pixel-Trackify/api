@@ -1,4 +1,5 @@
 from rest_framework import viewsets, status
+from rest_framework.decorators import action
 from django.urls import reverse
 from django.db import transaction
 from rest_framework.exceptions import PermissionDenied
@@ -87,43 +88,8 @@ class IntegrationViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         """
-        Permite deletar uma ou várias integrações.
+        Permite deletar uma única integração pela `uid` na URL.
         """
-        # Verifica se múltiplos UUIDs foram enviados no corpo da requisição
-        uids = request.data.get('uids', None)
-
-        if uids:
-            # Exclusão múltipla
-            if not isinstance(uids, list):
-                return Response(
-                    {"error": "O campo 'uids' deve ser uma lista de UUIDs."},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-            # Busca as integrações correspondentes ao usuário autenticado
-            instances = self.get_queryset().filter(uid__in=uids)
-            not_found_uids = set(uids) - set(instances.values_list('uid', flat=True))
-
-            if not instances.exists():
-                return Response(
-                    {"error": "Nenhuma integração encontrada para os UUIDs fornecidos."},
-                    status=status.HTTP_404_NOT_FOUND
-                )
-
-            # Usa uma transação para garantir consistência
-            with transaction.atomic():
-                deleted_count = instances.delete()[0]
-
-            # Retorna uma resposta detalhada
-            return Response(
-                {
-                    "message": f"{deleted_count} integração(ões) excluída(s) com sucesso.",
-                    "not_found": list(not_found_uids)  # Lista de UUIDs não encontrados
-                },
-                status=status.HTTP_200_OK
-            )
-
-        # Exclusão única (quando não há 'uids' no corpo da requisição)
         instance = self.get_object()
         self.perform_destroy(instance)
         return Response(
@@ -136,8 +102,46 @@ class IntegrationViewSet(viewsets.ModelViewSet):
         Deleta a integração pelo UUID se o usuário autenticado for o proprietário.
         """
         if instance.user != self.request.user:
-            raise PermissionDenied("Você não tem permissão para deletar esta integração.")
+            raise PermissionDenied(
+                "Você não tem permissão para deletar esta integração.")
         instance.delete()
+
+    @action(detail=False, methods=['post'], url_path='delete-multiple')
+    def delete_multiple(self, request):
+        """
+        Permite deletar várias integrações enviando os UUIDs no corpo da requisição.
+        """
+        uids = request.data.get('uids', None)
+        if not uids:
+            return Response(
+                {"error": "Nenhum UUID fornecido."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Busca as integrações correspondentes ao usuário autenticado
+        instances = self.get_queryset().filter(uid__in=uids)
+        not_found_uids = set(
+            uids) - set(instances.values_list('uid', flat=True))
+
+        if not instances.exists():
+            return Response(
+                {"error": "Nenhuma integração encontrada para os UUIDs fornecidos."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Usa uma transação para garantir consistência
+        with transaction.atomic():
+            deleted_count = instances.delete()[0]
+
+        # Retorna uma resposta detalhada
+        return Response(
+            {
+                "message": f"{deleted_count} integração(ões) excluída(s) com sucesso.",
+                # Lista de UUIDs não encontrados
+                "not_found": list(not_found_uids)
+            },
+            status=status.HTTP_200_OK
+        )
 
 
 @schemas['integration_detail_view']
