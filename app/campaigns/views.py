@@ -1,8 +1,11 @@
 from rest_framework import viewsets, status, filters
 from rest_framework.authentication import BasicAuthentication
+from rest_framework.decorators import action
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
+from django.db import transaction
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import Campaign, CampaignView
 from integrations.models import Integration
@@ -62,11 +65,63 @@ class CampaignViewSet(viewsets.ModelViewSet):
             f"Dados recebidos no serializer: {serializer.validated_data}")
         serializer.save(user=self.request.user)
 
+    def destroy(self, request, *args, **kwargs):
+        """
+        Permite deletar uma única campanha pela `uid` na URL.
+        """
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response(
+            {"message": "Campanha excluída com sucesso."},
+            status=status.HTTP_200_OK
+        )
+
     def perform_destroy(self, instance):
-        """Deleta a campanha se o usuário autenticado for o proprietário"""
+        """
+        Deleta a campanha pelo UUID se o usuário autenticado for o proprietário.
+        """
         if instance.user != self.request.user:
-            return Response(status=status.HTTP_403_FORBIDDEN)
+            raise PermissionDenied(
+                "Você não tem permissão para deletar esta campanha."
+            )
         instance.delete()
+
+    @action(detail=False, methods=['post'], url_path='delete-multiple')
+    def delete_multiple(self, request):
+        """
+        Permite deletar várias campanhas enviando os UUIDs no corpo da requisição.
+        """
+        uids = request.data.get('uids', None)
+        if not uids:
+            return Response(
+                {"error": "Nenhum UUID fornecido."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Busca as campanhas correspondentes ao usuário autenticado
+        instances = self.get_queryset().filter(uid__in=uids)
+        not_found_uids = set(
+            uids) - set(instances.values_list('uid', flat=True))
+
+        if not instances.exists():
+            return Response(
+                {"error": "Nenhuma campanha encontrada."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Usa uma transação para garantir consistência
+        with transaction.atomic():
+            deleted_count = instances.delete()[0]
+
+        # Retorna uma resposta detalhada
+        return Response(
+            {
+                "message": f"{deleted_count} campanha(s) excluída(s) com sucesso.",
+                # Lista de UUIDs não encontrados
+                "not_found": list(not_found_uids)
+            },
+            status=status.HTTP_200_OK
+        )
 
 
 @schemas['kwai_webhook_view']
