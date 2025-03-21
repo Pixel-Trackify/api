@@ -6,6 +6,6 @@ urlpatterns = [
          name='tutorial-list-create'),
     path('tutoriais/create/', views.TutorialCreateView.as_view(),
          name='tutorial-create'),
-    path('tutoriais/<int:pk>/',
+    path('tutoriais/<uuid:uid>/',
          views.TutorialRetrieveUpdateDestroyView.as_view(), name='tutorial-detail'),
 ]

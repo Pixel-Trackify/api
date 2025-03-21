@@ -31,9 +31,9 @@ class TutorialListView(generics.ListAPIView):
     serializer_class = TutorialSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
-    ordering_fields = ['id', 'title', 'description', 'created_at']
+    ordering_fields = ['id', 'title', 'description']
     ordering = ['id']
-    search_fields = ['id', 'title', 'description', 'created_at']
+    search_fields = ['id', 'title', 'description']
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -61,3 +61,4 @@ class TutorialRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Tutorial.objects.all()
     serializer_class = TutorialSerializer
     permission_classes = [IsAdminOrReadOnly]
+    lookup_field = 'uid'

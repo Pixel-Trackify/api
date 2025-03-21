@@ -1,11 +1,44 @@
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
-from .serializers import TransactionSerializer, IntegrationSerializer, IntegrationRequestSerializer
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample, OpenApiTypes
+from .serializers import TransactionSerializer, IntegrationSerializer, IntegrationRequestSerializer, DeleteMultipleSerializer
 
 schemas = {
     'integration_view_set': extend_schema_view(
         list=extend_schema(
-            description="Retorna as integrações do usuário autenticado.",
-            responses={200: IntegrationSerializer(many=True)}
+            summary="Listar integrações",
+            description=(
+                    "Endpoint para listar as integrações do usuário autenticado com suporte a paginação, ordenação e busca."
+            ),
+            tags=["Integrações"],
+            parameters=[
+                OpenApiParameter(
+                    name="page",
+                    description="Número da página para paginação.",
+                    required=False,
+                    type=OpenApiTypes.INT,
+                    location=OpenApiParameter.QUERY,
+                ),
+                OpenApiParameter(
+                    name="page_size",
+                    description="Número de itens por página.",
+                    required=False,
+                    type=OpenApiTypes.INT,
+                    location=OpenApiParameter.QUERY,
+                ),
+
+                OpenApiParameter(
+                    name="search",
+                    description=(
+                        "Palavra-chave para busca nos campos definidos: `id`, `title`, `description`, `created_at`. "
+                        "Exemplo: `?search=Python` para buscar integrações relacionadas a 'Python'."
+                    ),
+                    required=False,
+                    type=OpenApiTypes.STR,
+                    location=OpenApiParameter.QUERY,
+                ),
+            ],
+            responses={200: IntegrationSerializer(many=True)},
+
+
         ),
         create=extend_schema(
             description="Cria uma nova integração vinculada ao usuário autenticado.",
@@ -65,6 +98,40 @@ schemas = {
                 )
             ],
             responses={204: None}
+        ),
+        delete_multiple=extend_schema(
+            description="Permite deletar várias integrações enviando os UUIDs no corpo da requisição.",
+            request=DeleteMultipleSerializer,  # Use o serializer aqui
+            responses={
+                200: OpenApiTypes.OBJECT,
+
+            },
+            examples=[
+                OpenApiExample(
+                    "Exemplo de Requisição",
+                    value={
+                        "uids": [
+                            "54cc3376-3a92-4d39-8235-5d039e7df8d1",
+                            "65406f8a-80b2-4a9e-b3d2-f2475a976f6b"
+                        ]
+                    },
+                    request_only=True
+                ),
+                OpenApiExample(
+                    "Exemplo de Resposta",
+                    value={
+                        "message": "2 integração(ões) excluída(s) com sucesso.",
+                        "deleted_count": 2,
+                        "deleted_uids": [
+                            "54cc3376-3a92-4d39-8235-5d039e7df8d1",
+                            "65406f8a-80b2-4a9e-b3d2-f2475a976f6b"
+                        ],
+                        "not_found": []
+                    },
+                    response_only=True
+                )
+
+            ]
         )
     ),
     'integration_detail_view': extend_schema_view(
@@ -250,5 +317,21 @@ schemas = {
             ],
             responses={200: None}
         )
-    )
+    ),
+
+    'sunize_webhook_view': extend_schema_view(
+        post=extend_schema(
+            description="Processa notificações de transações do gateway de pagamento Sunize.",
+            parameters=[
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração associada ao webhook.",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
+            ],
+            responses={200: None}
+        )
+    ),
 }

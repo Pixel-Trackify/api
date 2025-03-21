@@ -1,5 +1,8 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, filters
+from rest_framework.decorators import action
 from django.urls import reverse
+from django.db import transaction
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -13,6 +16,7 @@ from .cloudfy_webhook import process_cloudfy_webhook
 from .tribopay_webhook import process_tribopay_webhook
 from .wolfpay_webhook import process_wolfpay_webhook
 from .westpay_webhook import process_westpay_webhook
+from .sunize_webhook import process_sunize_webhook
 import logging
 from .schema import schemas
 
@@ -27,20 +31,50 @@ class IntegrationViewSet(viewsets.ModelViewSet):
     queryset = Integration.objects.all()
     serializer_class = IntegrationSerializer
     permission_classes = [IsAuthenticated]
-    lookup_field = 'uid'  # Usar `uid` como identificador em vez de `id`
+    lookup_field = 'uid'
+    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
+    ordering_fields = ['created_at']
+    search_fields = ['name', 'created_at', 'gateway']
 
     def get_queryset(self):
         """
         Retorna as integrações do usuário autenticado.
         """
-        return self.queryset.filter(user=self.request.user)
+        queryset = self.queryset.filter(user=self.request.user)
+
+        return queryset
+
+    def list(self, request, *args, **kwargs):
+        """
+        Sobrescreve o método list para adicionar uma mensagem de erro
+        caso nenhum dado seja encontrado na busca.
+        """
+        queryset = self.filter_queryset(self.get_queryset())
+
+        # Verifica se o queryset está vazio
+        if not queryset.exists():
+            return Response(
+                {"detail": "Nenhuma campanha encontrada com os critérios de busca."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Caso contrário, retorna os resultados normalmente
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
     def get_object(self):
         """
         Sobrescreve o método para buscar a integração pelo campo `uid` em vez de `id`.
         """
-        uid = self.kwargs.get('pk')  # `pk` é o parâmetro padrão usado pelo DRF
-        return get_object_or_404(self.queryset, uid=uid, user=self.request.user)
+        obj = get_object_or_404(self.get_queryset(),
+                                uid=self.kwargs.get(self.lookup_field))
+
+        return obj
 
     def perform_create(self, serializer):
         """
@@ -48,7 +82,7 @@ class IntegrationViewSet(viewsets.ModelViewSet):
         """
         integration = serializer.save(user=self.request.user)
         webhook_url = self.build_webhook_url(integration)
-        logger.debug(f"Webhook URL gerada: {webhook_url}")
+
         return Response(
             {
                 "message": "Integração criada com sucesso.",
@@ -78,16 +112,60 @@ class IntegrationViewSet(viewsets.ModelViewSet):
             return Response(status=status.HTTP_403_FORBIDDEN)
         serializer.save()
 
+    def destroy(self, request, *args, **kwargs):
+        """
+        Permite deletar uma única integração pela `uid` na URL.
+        """
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response(
+            {"message": "Integração excluída com sucesso."},
+            status=status.HTTP_200_OK
+        )
+
     def perform_destroy(self, instance):
         """
         Deleta a integração pelo UUID se o usuário autenticado for o proprietário.
-        Retorna uma mensagem de sucesso.
         """
         if instance.user != self.request.user:
-            return Response(status=status.HTTP_403_FORBIDDEN)
+            raise PermissionDenied(
+                "Você não tem permissão para deletar esta integração.")
         instance.delete()
+
+    @action(detail=False, methods=['post'], url_path='delete-multiple')
+    def delete_multiple(self, request):
+        """
+        Permite deletar várias integrações enviando os UUIDs no corpo da requisição.
+        """
+        uids = request.data.get('uids', None)
+        if not uids:
+            return Response(
+                {"error": "Nenhum UUID fornecido."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Busca as integrações correspondentes ao usuário autenticado
+        instances = self.get_queryset().filter(uid__in=uids)
+        not_found_uids = set(
+            uids) - set(instances.values_list('uid', flat=True))
+
+        if not instances.exists():
+            return Response(
+                {"error": "Nenhuma integração encontrada para os UUIDs fornecidos."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Usa uma transação para garantir consistência
+        with transaction.atomic():
+            deleted_count = instances.delete()[0]
+
+        # Retorna uma resposta detalhada
         return Response(
-            {"message": "Integração excluída com sucesso."},
+            {
+                "message": f"{deleted_count} integração(ões) excluída(s) com sucesso.",
+                # Lista de UUIDs não encontrados
+                "not_found": list(not_found_uids)
+            },
             status=status.HTTP_200_OK
         )
 
@@ -185,8 +263,8 @@ class BaseWebhookView(APIView):
             Integration, uid=uid, deleted=False, status='active'
         )
 
-        # Valida se o gateway da integração corresponde ao gateway esperado
-        if integration.gateway != self.gateway_name:
+        # Valida se o gateway da integração corresponde ao gateway esperado (case insensitive)
+        if integration.gateway.lower() != self.gateway_name.lower():
             return Response(
                 {"error": f"Invalid gateway for this integration. Expected: {self.gateway_name}"},
                 status=status.HTTP_400_BAD_REQUEST
@@ -300,3 +378,14 @@ class WestPayWebhookView(BaseWebhookView):
     @property
     def process_function(self):
         return process_westpay_webhook
+
+
+@schemas['sunize_webhook_view']
+class SunizeWebhookView(BaseWebhookView):
+    @property
+    def gateway_name(self):
+        return 'Sunize'
+
+    @property
+    def process_function(self):
+        return process_sunize_webhook
