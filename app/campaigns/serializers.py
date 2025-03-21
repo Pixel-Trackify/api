@@ -1,4 +1,6 @@
 from rest_framework import serializers
+from collections import Counter
+from integrations.models import IntegrationRequest
 from .models import Campaign, CampaignView, Integration
 import logging
 
@@ -16,6 +18,8 @@ class CampaignSerializer(serializers.ModelSerializer):
             'invalid': "Valor inválido."
         }
     )
+    # Campo personalizado para estatísticas
+    stats = serializers.SerializerMethodField()
 
     class Meta:
         model = Campaign
@@ -23,9 +27,30 @@ class CampaignSerializer(serializers.ModelSerializer):
             'id', 'uid', 'integrations', 'user', 'source', 'title', 'CPM',
             'total_approved', 'total_pending', 'amount_approved', 'amount_pending',
             'total_ads', 'profit', 'ROI', 'total_views', 'total_clicks',
-            'created_at', 'updated_at'
+            'created_at', 'updated_at', 'stats'
         ]
         read_only_fields = ['id', 'uid', 'user', 'created_at', 'updated_at']
+
+    def get_stats(self, obj):
+        """
+        Calcula as estatísticas de métodos de pagamento (payment_method)
+        com base nas IntegrationRequests associadas à campanha.
+        """
+        # Obtém todas as integrações associadas à campanha
+        integrations = obj.integrations.all()
+
+        # Obtém todas as IntegrationRequests associadas às integrações
+        integration_requests = IntegrationRequest.objects.filter(
+            integration__in=integrations
+        )
+
+        # Conta os métodos de pagamento
+        payment_methods = integration_requests.values_list(
+            'payment_method', flat=True)
+        stats = Counter(payment_methods)
+
+        # Retorna as estatísticas no formato solicitado
+        return stats
 
     def validate_CPM(self, value):
         """Valida se o CPM é maior que 0"""
@@ -57,7 +82,8 @@ class CampaignSerializer(serializers.ModelSerializer):
             return campaign
         except Exception as e:
             logger.error(f"Erro ao criar a campanha: {e}")
-            raise serializers.ValidationError("Erro ao salvar a campanha no banco de dados.")
+            raise serializers.ValidationError(
+                "Erro ao salvar a campanha no banco de dados.")
 
     def update(self, instance, validated_data):
         """Atualiza uma campanha e associa as integrações"""

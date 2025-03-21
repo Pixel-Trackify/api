@@ -5,7 +5,7 @@ from .serializers import CampaignSerializer, CampaignViewSerializer
 schemas = {
     'campaign_view_set': extend_schema_view(
         list=extend_schema(
-            summary="Listar campanhas",
+            summary="Suporte a paginação, ordenação e busca.",
             description="Endpoint para listar as campanhas do usuário autenticado com suporte a paginação, ordenação e busca.",
             tags=["Campanhas"],
             parameters=[
@@ -44,7 +44,14 @@ schemas = {
                     location=OpenApiParameter.QUERY,
                 ),
             ],
-            responses={200: CampaignSerializer(many=True)},
+            responses={
+                200: CampaignSerializer(many=True),
+
+            },
+
+
+
+
         ),
         create=extend_schema(
             summary="Criar uma nova campanha",
@@ -94,14 +101,26 @@ schemas = {
             examples=[
                 OpenApiExample(
                     "Exemplo de Resposta",
-                    value={
-                        "uid": "123e4567-e89b-12d3-a456-426614174000",
-                        "title": "Campanha ZeroOne",
-                        "integrations": ["90490bae-7ebe-4f44-9ebf-ce81ee03e60f"],
-                        "CPM": 12,
-                        "source": "Kwai",
-                        "created_at": "2025-03-20T12:00:00Z"
-                    },
+                    value=[
+                        {
+                            "title": "Campanha Exemplo",
+                            "CPM": "50.00",
+                            "total_approved": 750,
+                            "total_pending": 926,
+                            "amount_approved": 12500.58,
+                            "amount_pending": 25010.85,
+                            "profit": 12500.58,
+                            "ROI": 75.49,
+                            "total_views": 83519,
+                            "total_clicks": 3023,
+                            "stats": {
+                                "boleto": 20,
+                                "pix": 50,
+                                "credit_card": 20,
+                                "credit_debit": 10
+                            }
+                        }
+                    ],
                     response_only=True,
                 )
             ],
