@@ -1,4 +1,5 @@
 from rest_framework import viewsets, status, filters
+from rest_framework.authentication import BasicAuthentication
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
@@ -71,6 +72,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
 @schemas['kwai_webhook_view']
 class KwaiWebhookView(APIView):
     permission_classes = [AllowAny]  # Permitir acesso público
+    authentication_classes = []
 
     def get(self, request, uid):
         action = request.query_params.get('action')
