@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import IntegrationViewSet, IntegrationDetailView, ZeroOneWebhookView, GhostsPayWebhookView, ParadisePagWebhookView, DisruptyWebhookView, WolfPayWebhookView, VegaCheckoutWebhookView, CloudFyWebhookView, TriboPayWebhookView, WestPayWebhookView, AvailableGatewaysView, SunizeWebhookView
+from .views import IntegrationViewSet, IntegrationDetailView, ZeroOneWebhookView, GhostsPayWebhookView, ParadisePagWebhookView, DisruptyWebhookView, WolfPayWebhookView, VegaCheckoutWebhookView, CloudFyWebhookView, TriboPayWebhookView, WestPayWebhookView, AvailableGatewaysView, SunizeWebhookView, GrapefyWebhookView
 
 router = DefaultRouter()
 router.register(r'integrations-user', IntegrationViewSet,
@@ -32,4 +32,7 @@ urlpatterns = [
          WestPayWebhookView.as_view(), name='westpay-webhook'),
     path('webhook/sunize/<uuid:uid>/',
          SunizeWebhookView.as_view(), name='sunize-webhook'),
+    path('webhook/grapefy/<uuid:uid>/',
+         GrapefyWebhookView.as_view(), name='grapefy-webhook'),
+
 ]

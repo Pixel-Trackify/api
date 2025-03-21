@@ -23,7 +23,9 @@ class Integration(models.Model):
         ('tribopay', 'TriboPay'),
         ('westpay', 'WestPay'),
         ('sunize', 'Sunize'),
-        
+        ('grapefy', 'Grapefy'),
+
+
     ])
     deleted = models.BooleanField(default=False)
     status = models.CharField(max_length=10, choices=[(

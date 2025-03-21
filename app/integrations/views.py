@@ -54,7 +54,7 @@ class IntegrationViewSet(viewsets.ModelViewSet):
         # Verifica se o queryset está vazio
         if not queryset.exists():
             return Response(
-                {"total":0,"detail": "Nenhuma campanha encontrada com os critérios de busca.","results":[]}
+                {"total": 0, "detail": "Nenhuma campanha encontrada com os critérios de busca.", "results": []}
             )
 
         # Caso contrário, retorna os resultados normalmente
@@ -388,3 +388,14 @@ class SunizeWebhookView(BaseWebhookView):
     @property
     def process_function(self):
         return process_sunize_webhook
+
+
+@schemas['grapefy_webhook_view']
+class GrapefyWebhookView(BaseWebhookView):
+    @property
+    def gateway_name(self):
+        return 'Grapefy'
+
+    @property
+    def process_function(self):
+        return process_zeroone_webhook

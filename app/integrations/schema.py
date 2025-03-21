@@ -334,4 +334,19 @@ schemas = {
             responses={200: None}
         )
     ),
+    'grapefy_webhook_view': extend_schema_view(
+        post=extend_schema(
+            description="Processo notificações de transações do gateway de pagamento Grapefy.",
+            parameters=[
+                OpenApiParameter(
+                    name="uid",
+                    description="UUID da integração associada ao webhook.",
+                    required=True,
+                    type=str,
+                    location=OpenApiParameter.PATH
+                )
+            ],
+            responses={200: None}
+        )
+    )
 }
