@@ -202,30 +202,69 @@ schemas = {
     ),
     'kwai_webhook_view': extend_schema_view(
         get=extend_schema(
+            summary="Atualizar campanha via webhook Kwai",
             description="Atualiza a campanha com base na ação recebida (view ou click).",
+            tags=["Webhooks"],
             parameters=[
                 OpenApiParameter(
                     name="uid",
-                    description="UID da campanha",
+                    description="UID da campanha a ser atualizada.",
                     required=True,
-                    type=str,
+                    type=OpenApiTypes.UUID,
                     location=OpenApiParameter.PATH
                 ),
                 OpenApiParameter(
                     name="action",
-                    description="Ação realizada (view ou click)",
+                    description="Ação realizada (view ou click).",
                     required=False,
-                    type=str,
-                    location=OpenApiParameter.QUERY
+                    type=OpenApiTypes.STR,
+                    location=OpenApiParameter.QUERY,
+                    enum=["view", "click"]
                 )
             ],
             responses={
-                200: CampaignViewSerializer,
-                400: OpenApiExample(
-                    "Erro de validação",
-                    value={"error": "Detalhes do erro"}
+                200: OpenApiTypes.OBJECT,
+
+            },
+            examples=[
+                OpenApiExample(
+                    "Exemplo de Requisição (View)",
+                    value={
+                        "url": "http://localhost:80/webhook/kwai/3b0a3cdd-b9d2-4e2a-8c32-352a65870e8a?action=view"
+                    },
+                    request_only=True,
+                ),
+
+                OpenApiExample(
+                    "Exemplo de Requisição (Click)",
+                    value={
+                        "url": "http://localhost:80/webhook/kwai/3b0a3cdd-b9d2-4e2a-8c32-352a65870e8a?action=click"
+                    },
+                    request_only=True,
+                ),
+                OpenApiExample(
+                    "Exemplo de Resposta (Sucesso)",
+                    value={
+                        "status": "success",
+                        "message": "Campaign updated successfully."
+                    },
+                    response_only=True,
+                ),
+                OpenApiExample(
+                    "Exemplo de Resposta (Erro de Validação - 400)",
+                    value={
+                        "error": "O parâmetro 'action' é obrigatório e deve ser 'view' ou 'click'."
+                    },
+                    response_only=True,
+                ),
+                OpenApiExample(
+                    "Exemplo de Resposta (Campanha Não Encontrada - 404)",
+                    value={
+                        "detail": "Not found."
+                    },
+                    response_only=True,
                 )
-            }
+            ]
         )
     )
 }
