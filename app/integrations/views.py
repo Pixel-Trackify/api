@@ -33,8 +33,8 @@ class IntegrationViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     lookup_field = 'uid'
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
-    ordering_fields = ['name', 'created_at']
-    search_fields = ['name', 'created_at']
+    ordering_fields = ['created_at']
+    search_fields = ['name', 'created_at', 'gateway']
 
     def get_queryset(self):
         """
