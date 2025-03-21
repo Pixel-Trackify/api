@@ -6,8 +6,44 @@ schemas = {
     'campaign_view_set': extend_schema_view(
         list=extend_schema(
             summary="Listar campanhas",
-            description="Endpoint para listar todas as campanhas associadas ao usuário autenticado.",
+            description="Endpoint para listar as campanhas do usuário autenticado com suporte a paginação, ordenação e busca.",
             tags=["Campanhas"],
+            parameters=[
+                OpenApiParameter(
+                    name="page",
+                    description="Número da página para paginação.",
+                    required=False,
+                    type=OpenApiTypes.INT,
+                    location=OpenApiParameter.QUERY,
+                ),
+                OpenApiParameter(
+                    name="page_size",
+                    description="Número de itens por página.",
+                    required=False,
+                    type=OpenApiTypes.INT,
+                    location=OpenApiParameter.QUERY,
+                ),
+                OpenApiParameter(
+                    name="ordering",
+                    description=(
+                        "Campo para ordenação. Use os campos disponíveis: `id`, `title`, `created_at`. "
+                        "Exemplo: `?ordering=title` para ordenar por título."
+                    ),
+                    required=False,
+                    type=OpenApiTypes.STR,
+                    location=OpenApiParameter.QUERY,
+                ),
+                OpenApiParameter(
+                    name="search",
+                    description=(
+                        "Palavra-chave para busca nos campos definidos: `id`, `title`, `description`, `created_at`. "
+                        "Exemplo: `?search=Campanha` para buscar campanhas relacionadas a 'Campanha'."
+                    ),
+                    required=False,
+                    type=OpenApiTypes.STR,
+                    location=OpenApiParameter.QUERY,
+                ),
+            ],
             responses={200: CampaignSerializer(many=True)},
         ),
         create=extend_schema(

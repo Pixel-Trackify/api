@@ -1,4 +1,4 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, filters
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
@@ -20,10 +20,36 @@ class CampaignViewSet(viewsets.ModelViewSet):
     serializer_class = CampaignSerializer
     permission_classes = [IsAuthenticated]
     lookup_field = 'uid'
+    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
+    ordering_fields = ['title', 'created_at']
+    search_fields = ['title', 'created_at']
 
     def get_queryset(self):
         """Retorna as campanhas do usuário autenticado"""
         return self.queryset.filter(user=self.request.user)
+
+    def list(self, request, *args, **kwargs):
+        """
+        Sobrescreve o método list para adicionar uma mensagem de erro
+        caso nenhum dado seja encontrado na busca.
+        """
+        queryset = self.filter_queryset(self.get_queryset())
+
+        # Verifica se o queryset está vazio
+        if not queryset.exists():
+            return Response(
+                {"detail": "Nenhuma campanha encontrada com os critérios de busca."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Caso contrário, retorna os resultados normalmente
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
     def perform_create(self, serializer):
         """Vincula automaticamente o usuário logado à campanha"""
