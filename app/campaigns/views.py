@@ -38,8 +38,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
         # Verifica se o queryset está vazio
         if not queryset.exists():
             return Response(
-                {"detail": "Nenhuma campanha encontrada com os critérios de busca."},
-                status=status.HTTP_404_NOT_FOUND
+                {"total": 0, "detail": "Nenhuma campanha encontrada com os critérios de busca.", "results": []}
             )
 
         # Caso contrário, retorna os resultados normalmente
