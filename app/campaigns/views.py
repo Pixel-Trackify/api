@@ -150,9 +150,10 @@ class KwaiWebhookView(APIView):
         if serializer.is_valid():
             serializer.save()
 
+            '''
             # Atualizar os campos da campanha
             price_unit = campaign.CPM / 1000
-            campaign.total_ads += price_unit
+            campaign.total_ads += price_unit'''
 
             if action == 'view':
                 campaign.total_views += 1
