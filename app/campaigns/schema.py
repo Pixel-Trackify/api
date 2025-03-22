@@ -63,22 +63,41 @@ schemas = {
                 OpenApiExample(
                     "Exemplo de Requisição",
                     value={
-                        "title": "Campanha ZeroOne",
-                        "integrations": ["90490bae-7ebe-4f44-9ebf-ce81ee03e60f"],
+                        "title": "Campanha zeroone",
+                        "description": "Descrição da nova campanha",
                         "CPM": 12,
-                        "source": "Kwai"
+                        "integrations": ["846ec04e-2d7b-4343-83f8-dd36776401eb"]
                     },
                     request_only=True,
                 ),
                 OpenApiExample(
                     "Exemplo de Resposta",
                     value={
-                        "uid": "123e4567-e89b-12d3-a456-426614174000",
-                        "title": "Campanha ZeroOne",
-                        "integrations": ["90490bae-7ebe-4f44-9ebf-ce81ee03e60f"],
-                        "CPM": 12,
+                        "id": 9,
+                        "uid": "57c111f3-02b9-4006-b95c-68b1d1b04351",
+                        "integrations": [
+                            "846ec04e-2d7b-4343-83f8-dd36776401eb"
+                        ],
+                        "user": "6f4191cb-0943-4854-a307-cda83b99126e",
                         "source": "Kwai",
-                        "created_at": "2025-03-20T12:00:00Z"
+                        "title": "Campanha zeroone",
+                        "CPM": "50.00",
+                        "total_approved": 0,
+                        "total_pending": 0,
+                        "amount_approved": "0.00",
+                        "amount_pending": "0.00",
+                        "total_ads": 0,
+                        "profit": "0.00",
+                        "ROI": "0.00",
+                        "total_views": 0,
+                        "total_clicks": 0,
+                        "created_at": "2025-03-22T15:19:19.225450-03:00",
+                        "updated_at": "2025-03-22T15:19:19.236355-03:00",
+                        "stats": {
+                            "PIX": 2,
+                            "credit_card": 1,
+                            "credit_debit": 1,
+                            "BOLETO": 1, }
                     },
                     response_only=True,
                 )
