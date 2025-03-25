@@ -2,6 +2,7 @@ Django>=4.2.1,<4.3
 psycopg2-binary>=2.9.6,<2.10
 djangorestframework==3.15.2
 djangorestframework-simplejwt==5.4
+drf-spectacular==0.28.0
 django-filter==24.3
 dj-rest-auth==7.0.1
 django-allauth==65.3.1
@@ -10,3 +11,5 @@ ua-parser==1.0.1
 ua-parser-builtins==0.18.0.post1
 user-agents==2.2.0
 python-dotenv==1.0.0
+requests==2.32.3
+django-cors-headers==4.7.0

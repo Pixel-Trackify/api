@@ -11,7 +11,6 @@ urlpatterns = [
     path('', include(router.urls)),
 
     # Endpoint manual para criação de assinaturas
-    path('subscriptions/', UserSubscriptionCreateView.as_view(),
-         name='subscription-create'),
+    path('subscriptions/', UserSubscriptionCreateView.as_view(), name='subscription-create'),
 
 ]

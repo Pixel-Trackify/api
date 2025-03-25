@@ -29,7 +29,7 @@ try:
     load_dotenv(dotenv_path)
 except Exception as e:
     raise ValueError(f'Error loading .env file: {e}')
-    
+
 if not os.getenv('SECRET_KEY'):
     raise ValueError('SECRET_KEY not found in environment variables')
 
@@ -41,16 +41,21 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'change-me')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = bool(int(os.getenv('DEBUG', 0)))
-
-ALLOWED_HOSTS = [
+CORS_ALLOWED_ORIGINS = [
     h.strip() for h in os.getenv('ALLOWED_HOSTS', '').split(',')
     if h.strip()
 ]
-
-
-# Application definition
+ALLOWED_HOSTS = [
+    h.replace('http://', '').replace('https://', '').strip()
+    for h in os.getenv('ALLOWED_HOSTS', '').split(',')
+    if h.strip()
+]
+# Permitir todos as origens
+CORS_ALLOW_ALL_ORIGINS = True if os.getenv(
+    'CORS_ALLOW_ALL_ORIGINS', "false") == 'true' else False
 
 INSTALLED_APPS = [
+    'corsheaders',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -62,12 +67,13 @@ INSTALLED_APPS = [
     'allauth',
     'dj_rest_auth',
     'dj_rest_auth.registration',
-    
+    'drf_spectacular',
+
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'rest_framework',
     'rest_framework.authtoken',
-    
+
     'django_filters',
     'accounts',
     'plans',
@@ -75,6 +81,7 @@ INSTALLED_APPS = [
     'tutorials',
     'campaigns',
     'integrations',
+    'payments',
 ]
 
 SITE_ID = 1
@@ -83,6 +90,7 @@ SITE_ID = 1
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -128,9 +136,9 @@ DATABASES = {
 
 
 AUTHENTICATION_BACKENDS = [
-    
-  
-    
+
+
+
 ]
 
 
@@ -185,29 +193,34 @@ LOGGING = {
             'format': '{levelname} {asctime} {module} {message}',
             'style': '{',
         },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
     },
     'handlers': {
-        'security_file': {
+        'file': {
             'level': 'DEBUG',
-            'class': 'logging.handlers.TimedRotatingFileHandler',
-            'filename': os.path.join('auth.log'),  # Caminho absoluto
-            'when': 'midnight',
-            'backupCount': 7,
+            'class': 'logging.FileHandler',
+            'filename': 'debug.log',
             'formatter': 'verbose',
-            'encoding': 'utf-8',
         },
-        'console': {  # Novo handler para debug no terminal
+        'console': {
             'level': 'DEBUG',
             'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
+            'formatter': 'simple',
         },
     },
     'loggers': {
-        'accounts.views': {
-            # Incluído console para debug
-            'handlers': ['security_file', 'console'],
-            'level': 'DEBUG',  # Alterado para DEBUG para capturar logs de depuração
-            'propagate': True,  # Propaga logs para outros handlers se necessário
+        'django': {
+            'handlers': ['file', 'console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'payments': {
+            'handlers': ['file', 'console'],
+            'level': 'DEBUG',
+            'propagate': True,
         },
     },
 }
@@ -235,7 +248,17 @@ REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',
     ),
+
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+
+    'DEFAULT_PAGINATION_CLASS': 'project.pagination.DefaultPagination',
+    'PAGE_SIZE': 10,  # Tamanho padrão da página
+    'DEFAULT_FILTER_BACKENDS': [
+        'rest_framework.filters.OrderingFilter',
+    ],
 }
+
+ 
 
 # Configurações do JWT
 SIMPLE_JWT = {
@@ -243,20 +266,26 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
-    'ALGORITHM': 'HS256',                           
+    'ALGORITHM': 'HS256',
     'SIGNING_KEY': os.getenv('SECRET_KEY', 'change-me'),
     "AUTH_HEADER_TYPES": ("Bearer",),
     "USER_ID_FIELD": "uid",
     "USER_ID_CLAIM": "user_uid",
 }
 
-
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'API Pixel Trackify ',
+    'DESCRIPTION': 'Endpoints da API Pixel Trackify',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+}
 
 
 # Configuração do Django Allauth
 
 
-ACCOUNT_AUTHENTICATION_METHOD = 'email'  # "email" para login com email, "username" para usuário
+# "email" para login com email, "username" para usuário
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
 ACCOUNT_EMAIL_REQUIRED = True  # O email é obrigatório
 ACCOUNT_USERNAME_REQUIRED = False  # Desativa username padrão do Django
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None  # Define que não há campo de username
@@ -266,7 +295,6 @@ ACCOUNT_ADAPTER = 'allauth.account.adapter.DefaultAccountAdapter'
 ACCOUNT_RATE_LIMITS = {
     'login_failed': f"{os.getenv('MAX_LOGIN_ATTEMPTS', '5')}/{int(os.getenv('LOCKOUT_DURATION_MINUTES', '5')) * 60}s",
 }
-
 
 
 # Configurações de validação de senha
@@ -279,3 +307,13 @@ PASSWORD_REQUIRE_UPPERCASE = bool(os.getenv(
     'PASSWORD_REQUIRE_UPPERCASE', default=True))
 PASSWORD_REQUIRE_SPECIAL_CHAR = bool(os.getenv(
     'PASSWORD_REQUIRE_SPECIAL_CHAR', default=True))
+
+
+# Configurações do Fire Banking
+# pela URL correta da API do Fire Banking
+FIRE_BANKING_API_URL = 'https://api.firebanking.com.br'
+# chave de API do Fire Banking
+FIRE_BANKING_API_KEY = os.getenv('FIRE_BANKING_API_KEY')
+
+REQUIRE_EMAIL_CONFIRMATION = os.getenv(
+    "REQUIRE_EMAIL_CONFIRMATION", "True") == "True"

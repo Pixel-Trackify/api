@@ -28,6 +28,8 @@ jobs:
         sed -i 's|APP_PORT_SSL=.*|APP_PORT_SSL=${{ secrets.APP_PORT_SSL }}|' .env
         sed -i 's|APP_DOMAIN=.*|APP_DOMAIN=${{ secrets.APP_DOMAIN }}|' .env
         sed -i 's|APP_AMBIENT=.*|APP_AMBIENT=${{ secrets.APP_AMBIENT }}|' .env
+        sed -i 's|FIRE_BANKING_API_KEY=.*|FIRE_BANKING_API_KEY=${{ secrets.FIRE_BANKING_API_KEY }}|' .env
+        sed -i 's|CORS_ALLOW_ALL_ORIGINS=.*|CORS_ALLOW_ALL_ORIGINS=${{ secrets.CORS_ALLOW_ALL_ORIGINS }}|' .env
 
     - name: Deploy to Server via SCP
       uses: appleboy/scp-action@master

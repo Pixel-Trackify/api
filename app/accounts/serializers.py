@@ -11,19 +11,19 @@ from django.conf import settings
 from plans.models import Plan, UserSubscription
 from django.utils import timezone
 from datetime import timedelta
-
+import uuid
 
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     confirm_password = serializers.CharField(write_only=True, required=True)
-    plan_id = serializers.IntegerField(
-        write_only=True, required=False)  # Novo campo opcional
+    plan_uid = serializers.UUIDField(
+        write_only=True, required=False)  # Usar UID em vez de ID
 
     class Meta:
         model = Usuario
         fields = ['uid', 'email', 'cpf', 'name', 'password',
-                  'confirm_password', 'date_joined', 'plan_id']
+                  'confirm_password', 'date_joined', 'plan_uid']
         read_only_fields = ['date_joined']
 
     def validate(self, data):
@@ -31,31 +31,33 @@ class RegisterSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"password": "As senhas não coincidem."})
 
+         # Valida a senha usando o PasswordValidator
+        password_validator = PasswordValidator()
+        password_validator(data['password'])
+
         # Valida se o plano existe, se fornecido
-        plan_id = data.get('plan_id')
-        if plan_id and not Plan.objects.filter(id=plan_id).exists():
+        plan_uid = data.get('plan_uid')
+        if plan_uid and not Plan.objects.filter(uid=plan_uid).exists():
             raise serializers.ValidationError(
-                {"plan_id": "Plano não encontrado."})
+                {"plan_uid": "Plano não encontrado."})
 
         return data
 
     def create(self, validated_data):
         # Remove o campo extra antes de criar o usuário
         validated_data.pop('confirm_password')
-        # Obtém o ID do plano se fornecido
-        plan_id = validated_data.pop('plan_id', None)
+        # Obtém o UID do plano se fornecido
+        plan_uid = validated_data.pop('plan_uid', None)
 
         user = Usuario.objects.create_user(**validated_data)
 
         # Se o usuário escolheu um plano, cria a assinatura
-        if plan_id:
-            plan = Plan.objects.get(id=plan_id)
-            UserSubscription.objects.create(user=user, plan=plan, end_date=timezone.now(
-            ) + timedelta(days=30))  # Exemplo: plano dura 30 dias
+        if plan_uid:
+            plan = Plan.objects.get(uid=plan_uid)
+            UserSubscription.objects.create(user=user, plan=plan, start_date=timezone.now(
+            ), end_date=timezone.now() + timedelta(days=30), is_active=True)
 
         return user
-
-
 
     def validate_db(self, attrs):
         """
@@ -118,7 +120,6 @@ class RegisterSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("CPF inválido.")
         return cpf
 
-    
     @staticmethod
     def validar_cpf(cpf):
         # Remove todos os caracteres não numéricos
@@ -148,8 +149,6 @@ class RegisterSerializer(serializers.ModelSerializer):
 
         # Valida os dígitos verificadores
         return cpf[-2:] == f"{digito_1}{digito_2}"
-
-
 
 
 class PasswordValidator:
@@ -241,14 +240,13 @@ class LoginSerializer(serializers.Serializer):
         elif identifier.isdigit() and len(identifier) in [11, 14]:  # CPF
             lookup_field = "cpf"
         else:
-            raise serializers.ValidationError("Informe um email ou CPF válido.")
+            raise serializers.ValidationError(
+                "Informe um email ou CPF válido.")
 
         try:
             user = User.objects.get(**{lookup_field: identifier})
         except User.DoesNotExist:
             raise serializers.ValidationError("Credenciais inválidas.")
-
-       
 
         # Sempre verifica a senha, mesmo que o usuário esteja bloqueado
         correct_password = user.check_password(password)
@@ -269,7 +267,6 @@ class LoginSerializer(serializers.Serializer):
         attrs["user"] = user
         return attrs
 
-
         attrs["user"] = user
         return attrs
 
@@ -277,17 +274,8 @@ class LoginSerializer(serializers.Serializer):
 class PlanSerializer(serializers.ModelSerializer):
     class Meta:
         model = Plan
-        fields = ['id', 'name', 'description',
+        fields = ['id', 'uid', 'name', 'description',
                   'price', 'duration', 'duration_value']
-
-
-class UserProfileSerializer(serializers.ModelSerializer):
-    account_type = PlanSerializer()
-
-    class Meta:
-        model = Usuario
-        fields = ['uid', 'name', 'email', 'cpf',
-                  'account_type', 'date_joined', 'is_active', 'is_staff']
 
 
 class UserSubscriptionSerializer(serializers.ModelSerializer):
@@ -298,37 +286,45 @@ class UserSubscriptionSerializer(serializers.ModelSerializer):
         fields = ['plan', 'start_date', 'end_date', 'is_active']
 
 
+class UserProfileSerializer(serializers.ModelSerializer):
+    active_plan = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Usuario
+        fields = ['uid', 'name', 'email', 'cpf', 'date_joined',
+                  'is_active', 'active_plan']
+
+    def get_active_plan(self, obj):
+        active_subscription = obj.subscriptions.filter(is_active=True).first()
+        if active_subscription:
+            return PlanSerializer(active_subscription.plan).data
+        return None
+
 
 class UpdateUserPlanSerializer(serializers.Serializer):
-    plan_id = serializers.IntegerField(write_only=True)
+    plan_uid = serializers.UUIDField(write_only=True)
 
-    def validate_plan_id(self, plan_id):
-        if not Plan.objects.filter(id=plan_id).exists():
+    def validate_plan_uid(self, plan_uid):
+        if not Plan.objects.filter(uid=plan_uid).exists():
             raise serializers.ValidationError("Plano não encontrado.")
-        return plan_id
+        return plan_uid
 
     def update(self, instance, validated_data):
-        plan = Plan.objects.get(id=validated_data['plan_id'])
+        plan = Plan.objects.get(uid=validated_data['plan_uid'])
 
         # Desativar a assinatura anterior
         UserSubscription.objects.filter(
             user=instance, is_active=True).update(is_active=False)
 
-        # Criar uma nova assinatura
-        UserSubscription.objects.create(
-            user=instance,
-            plan=plan,
-            start_date=timezone.now(),
-            is_active=True
-        )
+        # Criar nova assinatura
+        UserSubscription.objects.create(user=instance, plan=plan, start_date=timezone.now(
+        ), end_date=timezone.now() + timedelta(days=30), is_active=True)
 
         # Atualizar o tipo de conta do usuário
         instance.account_type = plan
         instance.save()
 
         return instance
-
-
 
 
 class ChangePasswordSerializer(serializers.Serializer):
@@ -358,5 +354,3 @@ class ChangePasswordSerializer(serializers.Serializer):
         password_validator(new_password)
 
         return data
-
-

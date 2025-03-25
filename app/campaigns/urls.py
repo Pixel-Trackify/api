@@ -7,5 +7,6 @@ router.register(r'campaigns', CampaignViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('webhook/kwai/<str:uid>/', KwaiWebhookView.as_view(), name='kwai-webhook'),
+    path('webhook/kwai/<uuid:uid>/',
+         KwaiWebhookView.as_view(), name='kwai-webhook'),
 ]

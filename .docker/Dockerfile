@@ -1,11 +1,6 @@
 FROM python:3.11.3-alpine3.18
-LABEL mantainer="mmmatheus013gmail.com"
-
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
 
 COPY app /app
-COPY .docker/scripts /scripts
 
 WORKDIR /app
 
@@ -17,12 +12,10 @@ RUN apk update && \
     /venv/bin/pip install --upgrade pip && \
     /venv/bin/pip install uwsgi && \
     /venv/bin/pip install -r /app/requirements.txt && \
-    adduser --disabled-password --no-create-home duser && \
-    chown -R duser:duser /scripts && \
-    chmod -R +x /scripts
+    adduser --disabled-password --no-create-home duser
 
 ENV PATH="/scripts:/venv/bin:$PATH"
 
 USER duser
 
-CMD ["commands.sh"]
+CMD ["uwsgi", "--http", ":8000", "--module", "project.wsgi", "--master", "--processes", "4", "--threads", "2"]

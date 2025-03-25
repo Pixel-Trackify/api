@@ -1,5 +1,5 @@
 from django.db import models
-from integrations.models import Integration
+from integrations.models import Integration, User
 import uuid
 
 
@@ -7,6 +7,7 @@ class Campaign(models.Model):
     id = models.AutoField(primary_key=True)
     uid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     integrations = models.ManyToManyField(Integration, related_name='campaigns')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='campaigns', default=1)
     source = models.CharField(max_length=100, default='Kwai')
     title = models.CharField(max_length=255)
     CPM = models.DecimalField(max_digits=10, decimal_places=2)
@@ -29,14 +30,12 @@ class Campaign(models.Model):
         return self.title
 
 class CampaignView(models.Model):
-    campaign = models.ForeignKey(
-        Campaign, on_delete=models.CASCADE, related_name='views')
+    campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE, related_name='views')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     user_agent = models.TextField()
     ip_address = models.GenericIPAddressField()
     action = models.CharField(max_length=10)  # 'view' ou 'click'
-
 
     class Meta:
         db_table = 'campaign_views'

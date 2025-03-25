@@ -1,6 +1,6 @@
 # API de Autenticação e Gerenciamento de Usuários Django
 
-Este projeto é uma API baseada em Django para autenticação e gerenciamento de usuários, com autenticação JWT, registro de usuários, login, logout, gerenciamento de planos e capacidades de filtragem de usuários.
+Este projeto é uma aplicação Django que fornece uma API para gerenciar autenticação de usuários, campanhas publicitárias, integrações, planos e assinaturas.
 
 ## Funcionalidades
 
@@ -10,6 +10,10 @@ Este projeto é uma API baseada em Django para autenticação e gerenciamento de
 - Modelo de usuário personalizado com rastreamento de tentativas de login e bloqueio de conta
 - Gerenciamento de planos de usuários
 - Interface administrativa para gerenciamento de usuários
+- Criação e gerenciamento de campanhas publicitárias
+- Integração com plataformas externas
+- Gerenciamento de assinaturas e transações
+- Processamento de webhooks
 
 ## Requisitos
 
@@ -27,7 +31,7 @@ Este projeto é uma API baseada em Django para autenticação e gerenciamento de
 2. **Crie e configure as variáveis de ambiente:**
     Copie o arquivo de exemplo de ambiente e atualize os valores conforme necessário.
     ```sh
-    cp dotenv_files/.env-example dotenv_files/.env
+    cp .env-example .env
     ```
 
 3. **Executando o Projeto:**
@@ -44,6 +48,31 @@ Este projeto é uma API baseada em Django para autenticação e gerenciamento de
 4. **Acesse a aplicação:**
     A API estará disponível em `http://127.0.0.1:8000`.
 
+
+## Executando Testes
+
+Para executar os testes, use o seguinte comando:
+```sh
+docker compose run --rm django-command-runner python manage.py test
+```
+
+## Executando Migrações de Tabela
+
+Para executar o migrate, use o seguinte comando:
+```sh
+docker compose run --rm django-command-runner python manage.py migrate
+```
+
+## Certbot SSL
+
+Para obter e renovar certificados SSL usando Certbot, utilize o seguinte comando:
+
+```sh
+docker compose run --rm certbot certonly --webroot -w /app/data/certbot -d api.onetracking.io --non-interactive --agree-tos --email webmaster@onetracking.io
+```
+
+Este comando irá gerar certificados SSL para o domínio `api.onetracking.io` e armazená-los no diretório especificado.
+
 ## Instruções para Importar a Coleção no Postman
 
 - Abra o Postman.
@@ -54,51 +83,26 @@ Este projeto é uma API baseada em Django para autenticação e gerenciamento de
 
 ## Endpoints da API
 
-### Autenticação
+Desenvolvimento: 
 
-- `POST /api/authentication/token/`: Obter par de tokens JWT
-- `POST /api/authentication/token/refresh/`: Atualizar token JWT
-- `POST /api/authentication/token/verify/`: Verificar token JWT
+`http://127.0.0.1:8000/api/docs/swagger/`
 
-### Gerenciamento de Usuários
+Produção: 
 
-- `POST /api/auth/login/`: Login do usuário
-- `POST /api/auth/logout/`: Logout do usuário
-- `POST /api/auth/register-accounts/`: Registrar um novo usuário
-- `GET /api/auth/users/`: Listar todos os usuários (somente admin)
-- `GET /api/auth/profile/`: Visualizar perfil do usuário autenticado
-- `PUT /api/auth/profile/`: Atualizar perfil do usuário autenticado
-- `POST /api/auth/change-password/`: Alterar senha do usuário autenticado
-- `POST /api/auth/update-plan/`: Atualizar plano do usuário
-- `GET /api/auth/my-plan/`: Visualizar plano do usuário autenticado
-- `GET /api/auth/subscription-history/`:  Retorna o histórico de assinaturas do usuário autenticado.
+`https://api.onetracking.io/api/docs/swagger/`
 
-- `GET /auth/accounts/<int:pk>`: Recuperar, atualizar ou excluir uma conta de usuário
-- `GET /auth/filter-users/`: Filtrar, buscar e ordenar usuários
+## Segurança
 
-### Gerenciamento de Planos
+A API utiliza autenticação baseada em JWT (JSON Web Tokens) para proteger os endpoints. Certifique-se de incluir o token JWT no cabeçalho `Authorization` para todas as requisições que requerem autenticação.
 
-- `GET /api/plans/`: Listar todos os planos
-- `POST /api/plans/`: Criar um novo plano (somente admin)
-- `GET /api/plans/<int:pk>`: Recuperar, atualizar ou excluir um plano (somente admin)
+## Contribuição
 
-### Gerenciamento de Tutoriais
-
-- `GET /api/tutoriais/`: Lista todos os tutoriais disponíveis.
-- `POST /api/tutoriais/`: Cria um novo tutorial (somente para administradores).
-- `GET /api/tutoriais/<int:pk>/`: Recupera, atualiza ou exclui um tutorial específico (somente para administradores).
-
-## Executando Testes
-
-Para executar os testes, use o seguinte comando:
-```sh
-docker compose run django-command-runner python manage.py test
-```
+1. **Fork o repositório**
+2. **Crie uma branch para sua feature (`git checkout -b feature/nova-feature`)**
+3. **Commit suas mudanças (`git commit -m 'Adiciona nova feature'`)**
+4. **Push para a branch (`git push origin feature/nova-feature`)**
+5. **Abra um Pull Request**
 
 ## Licença
 
-Este projeto está licenciado sob a Licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
-
-## Contribuindo
-
-Contribuições são bem-vindas! Por favor, abra uma issue ou envie um pull request para quaisquer alterações.
+Este projeto está licenciado sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.

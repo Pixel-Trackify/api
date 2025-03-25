@@ -16,11 +16,25 @@ from rest_framework import generics
 import logging
 from .models import Usuario, LoginLog
 from plans.models import Plan, UserSubscription
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.test import RequestFactory
+from payments.views import CreatePaymentView
 from .filters import UsuarioFilter
 import user_agents
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema
+from project.pagination import DefaultPagination
+import uuid
+import os
+from .schema import (
+    register_view_schema, user_profile_view_schema, change_password_view_schema,
+    get_users_view_schema, account_retrieve_update_destroy_view_schema,
+    filter_users_view_schema, login_view_schema, logout_view_schema,
+    update_user_plan_view_schema, user_plan_view_schema, user_subscription_history_view_schema
+)
 
 
+@register_view_schema
 class RegisterView(APIView):
     """
     View para registrar um novo usuário.
@@ -30,17 +44,61 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
+
+         # Verificar se a confirmação de e-mail é necessária
+            require_email_confirmation = os.getenv(
+                "REQUIRE_EMAIL_CONFIRMATION", "True") == "True"
+
+            if not require_email_confirmation:
+                # Gerar tokens JWT
+                refresh = RefreshToken.for_user(user)
+
+                # Registrar o log de login
+                ip_address = request.META.get('REMOTE_ADDR')
+                user_agent_string = request.META.get('HTTP_USER_AGENT', '')
+                user_agent = user_agents.parse(user_agent_string)
+                device = f"{user_agent.device.family} {user_agent.device.brand} {user_agent.device.model}"
+                browser = f"{user_agent.browser.family} {user_agent.browser.version_string}"
+                token = str(refresh.access_token)
+
+                LoginLog.objects.create(
+                    user=user,
+                    ip_address=ip_address,
+                    device=device,
+                    browser=browser,
+                    login_time=timezone.now(),
+                    token=token
+                )
+
+                logger.info(
+                    f"Usuário {user.email} registrado e logado com sucesso.")
+
+                return Response({
+                    "message": "Usuário registrado com sucesso!",
+                    "user": {
+                        "uid": user.uid,
+                        "name": user.name,
+                        "email": user.email
+                    },
+                    "require_email_confirmation": require_email_confirmation,
+                    "refresh": str(refresh),
+                    "access": str(refresh.access_token),
+                }, status=status.HTTP_201_CREATED)
+
             return Response({
                 "message": "Usuário registrado com sucesso!",
                 "user": {
                     "uid": user.uid,
                     "name": user.name,
                     "email": user.email
-                }
+                },
+                "require_email_confirmation": require_email_confirmation
             }, status=status.HTTP_201_CREATED)
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@user_profile_view_schema
 class UserProfileView(APIView):
     """
     Endpoint para visualizar e atualizar o perfil do usuário autenticado.
@@ -59,6 +117,7 @@ class UserProfileView(APIView):
         return Response(serializer.data)
 
 
+@change_password_view_schema
 class ChangePasswordView(APIView):
     """
     Endpoint para alterar a senha do usuário autenticado.
@@ -74,21 +133,17 @@ class ChangePasswordView(APIView):
         return Response({"message": "Senha alterada com sucesso."}, status=status.HTTP_200_OK)
 
 
-class StandardResultsSetPagination(PageNumberPagination):
-    page_size = 10
-    page_size_query_param = 'page_size'
-    max_page_size = 100
-
-
+@get_users_view_schema
 class GetUsersView(generics.ListAPIView):
     # Apenas administradores podem listar usuários
     permission_classes = [IsAdminUser]
     queryset = Usuario.objects.all().order_by("uid")
-    serializer_class = RegisterSerializer
+    serializer_class = UserProfileSerializer
     # Usando a paginação personalizada
-    pagination_class = StandardResultsSetPagination
+    pagination_class = DefaultPagination
 
 
+@account_retrieve_update_destroy_view_schema
 class AccountRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     """
     View para detalhar, atualizar ou excluir a conta do usuário.
@@ -136,6 +191,7 @@ class AccountRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         )
 
 
+@filter_users_view_schema
 class FilterUsersView(generics.ListAPIView):
     """
     View para listar, filtrar, pesquisar e ordenar usuários.
@@ -145,7 +201,7 @@ class FilterUsersView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     queryset = Usuario.objects.all().order_by("uid")
     serializer_class = RegisterSerializer
-    pagination_class = StandardResultsSetPagination
+    pagination_class = DefaultPagination
 
     # Configuração dos backends de filtro, pesquisa e ordenação
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
@@ -158,7 +214,9 @@ class FilterUsersView(generics.ListAPIView):
 logger = logging.getLogger('accounts')  # Logger para a aplicação de accounts
 
 
+@login_view_schema
 class LoginView(APIView):
+
     def post(self, request, *args, **kwargs):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -202,6 +260,7 @@ class LoginView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+@logout_view_schema
 class LogoutView(APIView):
     # Apenas usuários autenticados podem fazer logout
     permission_classes = [IsAuthenticated]
@@ -245,6 +304,7 @@ class LogoutView(APIView):
             )
 
 
+@update_user_plan_view_schema
 class UpdateUserPlanView(APIView):
     """
     Endpoint para atualizar o plano do usuário autenticado.
@@ -258,6 +318,7 @@ class UpdateUserPlanView(APIView):
         return Response({"message": "Plano atualizado com sucesso."}, status=status.HTTP_200_OK)
 
 
+@user_plan_view_schema
 class UserPlanView(APIView):
     """Retorna o plano do usuário autenticado"""
     permission_classes = [IsAuthenticated]
@@ -269,8 +330,10 @@ class UserPlanView(APIView):
             return Response({"message": "Nenhum plano ativo encontrado."}, status=404)
 
         plan_data = PlanSerializer(subscription.plan).data
+        return Response(plan_data)
 
 
+@user_subscription_history_view_schema
 class UserSubscriptionHistoryView(APIView):
     """
     Retorna o histórico de assinaturas do usuário autenticado.

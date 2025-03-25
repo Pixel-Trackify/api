@@ -59,29 +59,27 @@ services:
       - ./data/certbot/conf:/etc/letsencrypt
       - ./data/certbot/www:/app/data/certbot
       - ./data/certbot/log:/var/log/letsencrypt
-    environment:
-      - APP_DOMAIN=${APP_DOMAIN:-localhost}
-    entrypoint: /bin/sh -c 'trap exit TERM; while :; do certbot certonly --webroot -w /app/data/certbot -d ${APP_DOMAIN:-localhost} --non-interactive --agree-tos --email webmaster@${APP_DOMAIN:-localhost}; sleep 12h & wait $${!}; done'
     networks:
       - app_network
 
   django-command-runner:
     build:
       context: .
-      dockerfile: .docker/Dockerfile
-    environment:
-      - APP_AMBIENT=${APP_AMBIENT:-development}
+      dockerfile: .docker/migrate.dockerfile
     volumes:
       - ./app:/app
       - ./.env:/app/.env
     networks:
       - app_network
-    entrypoint: ["/scripts/entrypoint.sh"]
 
   psql:
     image: postgres:13-alpine
     ports:
-      - "5432:5432"
+      - "${DATABASE_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: ${DATABASE_USER:-postgres}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      POSTGRES_DB: ${DATABASE_NAME:-postgres}
     volumes:
       - ./data/postgres/data:/var/lib/postgresql/data/
     networks:

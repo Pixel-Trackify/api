@@ -2,8 +2,10 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('tutoriais/', views.TutorialListCreateView.as_view(),
+    path('tutoriais/', views.TutorialListView.as_view(),
          name='tutorial-list-create'),
-    path('tutoriais/<int:pk>/',
+    path('tutoriais/create/', views.TutorialCreateView.as_view(),
+         name='tutorial-create'),
+    path('tutoriais/<uuid:uid>/',
          views.TutorialRetrieveUpdateDestroyView.as_view(), name='tutorial-detail'),
 ]
