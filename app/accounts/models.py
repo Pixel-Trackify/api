@@ -31,6 +31,7 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     cpf = models.CharField(max_length=11, unique=True)
     date_joined = models.DateTimeField(auto_now_add=True)
     account_type = models.ForeignKey(Plan, on_delete=models.SET_NULL, null=True, blank=True)
+    avatar = models.URLField(max_length=500, null=True, blank=True)
 
     # Controle de tentativas de login
     login_attempts = models.PositiveIntegerField( default=0)  # Campo para tentativas

@@ -23,7 +23,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Usuario
         fields = ['uid', 'email', 'cpf', 'name', 'password',
-                  'confirm_password', 'date_joined', 'plan_uid']
+                  'confirm_password', 'date_joined', 'plan_uid', 'avatar']
         read_only_fields = ['date_joined']
 
     def validate(self, data):
@@ -50,6 +50,11 @@ class RegisterSerializer(serializers.ModelSerializer):
         plan_uid = validated_data.pop('plan_uid', None)
 
         user = Usuario.objects.create_user(**validated_data)
+        avatar = validated_data.pop('avatar', None)
+        if avatar:
+            user.avatar = avatar
+            user.save()
+        return user
 
         # Se o usuário escolheu um plano, cria a assinatura
         if plan_uid:
@@ -291,7 +296,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Usuario
-        fields = ['uid', 'name', 'email', 'cpf', 'date_joined',
+        fields = ['uid', 'name', 'email', 'cpf', 'avatar', 'date_joined',
                   'is_active', 'active_plan']
 
     def get_active_plan(self, obj):
