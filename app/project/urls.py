@@ -15,8 +15,8 @@ urlpatterns = [
     path('', include('integrations.urls')),
     path('', include('payments.urls')),
     #path('', index, name='index'),
-    #path('api/schema/', SpectacularAPIView.as_view(),
-        # name='schema'),  # URL para gerar o esquema OpenAPI
+    path('api/schema/', SpectacularAPIView.as_view(),
+         name='schema'),  # URL para gerar o esquema OpenAPI
     # URLs para visualizações da documentação
     path('api/docs/swagger/',
          SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
