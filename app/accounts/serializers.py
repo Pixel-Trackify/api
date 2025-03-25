@@ -296,7 +296,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Usuario
-        fields = ['uid', 'name', 'email', 'cpf', 'avatar', 'date_joined']
+        fields = ['uid', 'name', 'email', 'cpf',
+                  'avatar', 'date_joined', 'active_plan']
 
     def get_active_plan(self, obj):
         active_subscription = obj.subscriptions.filter(is_active=True).first()

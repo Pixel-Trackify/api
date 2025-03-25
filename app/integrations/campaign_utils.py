@@ -1,6 +1,7 @@
 from campaigns.models import Campaign
 from django.db.models import Sum
 from integrations.models import IntegrationRequest
+from decimal import Decimal
 
 
 def map_payment_status(status, gateway):
@@ -128,12 +129,14 @@ def recalculate_campaigns(integration):
         amount_chargeback = integration_requests.filter(status='CHARGEBACK').aggregate(
             Sum('amount'))['amount__sum'] or 0
 
-        # Calcula o total de anúncios com base em visualizações e cliques
-        total_ads = (campaign.total_views or 0) + (campaign.total_clicks or 0)
+        # CPU é igual ao CPM
+        price_unit = Decimal(campaign.CPM) / Decimal(1000)
+
+        # Atualiza o total de anúncios somando o CPU
+        campaign.total_ads += price_unit
 
         # Calcula o custo total com base no CPM e nas visualizações
-        # CPM é o custo por mil impressões, então dividimos por 1000
-        cost = (campaign.total_views * campaign.CPM) / 1000
+        cost = campaign.total_views 
 
         # Calcula o lucro (profit) considerando o valor aprovado e o custo
         profit = amount_approved - cost - amount_refunded - amount_chargeback
@@ -150,7 +153,6 @@ def recalculate_campaigns(integration):
         campaign.amount_pending = amount_pending
         campaign.amount_refunded = amount_refunded
         campaign.amount_chargeback = amount_chargeback
-        campaign.total_ads = total_ads  # Atualiza o total_ads com base em views e clicks
         campaign.profit = profit  # Atualiza o lucro calculado
         campaign.ROI = roi  # Atualiza o ROI calculado
         campaign.save()
