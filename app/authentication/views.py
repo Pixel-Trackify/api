@@ -4,10 +4,13 @@ from rest_framework import status
 from rest_framework_simplejwt.tokens import UntypedToken
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from django.contrib.auth import get_user_model
+from .schema import custom_token_verify_schema
+
 
 User = get_user_model()
 
 
+@custom_token_verify_schema
 class CustomTokenVerifyView(TokenVerifyView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -24,7 +27,8 @@ class CustomTokenVerifyView(TokenVerifyView):
                 "user": {
                     "uid": user.uid,
                     "name": user.name,
-                    "email": user.email
+                    "email": user.email,
+                    "avatar": user.avatar
                 }
             }, status=status.HTTP_200_OK)
         except (InvalidToken, TokenError) as e:
