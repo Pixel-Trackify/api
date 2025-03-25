@@ -55,15 +55,37 @@ schemas = {
         ),
         create=extend_schema(
             summary="Criar uma nova campanha",
-            description="Endpoint para criar uma nova campanha vinculada ao usuário autenticado.",
+            description=(
+                "Endpoint para criar uma nova campanha vinculada ao usuário autenticado. "
+                "Não é permitido usar gateways que já estão em uso por outras campanhas."
+            ),
             tags=["Campanhas"],
             request=CampaignSerializer,
-            responses={201: CampaignSerializer},
+            responses={
+                201: CampaignSerializer,
+                400: {
+                    "type": "object",
+                    "properties": {
+                        "integrations": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "example": "O gateway 'ZeroOne' já está em uso."
+                            }
+                        }
+                    },
+                    "example": {
+                        "integrations": [
+                            "O gateway 'ZeroOne' já está em uso."
+                        ]
+                    }
+                }
+            },
             examples=[
                 OpenApiExample(
                     "Exemplo de Requisição",
                     value={
-                        "title": "Campanha zeroone",
+                        "title": "Campanha ZeroOne",
                         "description": "Descrição da nova campanha",
                         "CPM": 12,
                         "integrations": ["846ec04e-2d7b-4343-83f8-dd36776401eb"]
@@ -71,7 +93,7 @@ schemas = {
                     request_only=True,
                 ),
                 OpenApiExample(
-                    "Exemplo de Resposta",
+                    "Exemplo de Resposta (Sucesso)",
                     value={
                         "id": 9,
                         "uid": "57c111f3-02b9-4006-b95c-68b1d1b04351",
@@ -80,7 +102,7 @@ schemas = {
                         ],
                         "user": "6f4191cb-0943-4854-a307-cda83b99126e",
                         "source": "Kwai",
-                        "title": "Campanha zeroone",
+                        "title": "Campanha ZeroOne",
                         "CPM": "50.00",
                         "total_approved": 0,
                         "total_pending": 0,
@@ -93,16 +115,21 @@ schemas = {
                         "total_clicks": 0,
                         "created_at": "2025-03-22T15:19:19.225450-03:00",
                         "updated_at": "2025-03-22T15:19:19.236355-03:00",
-                        "stats": {
-                            "PIX": 2,
-                            "credit_card": 1,
-                            "credit_debit": 1,
-                            "BOLETO": 1, }
+                    },
+                    response_only=True,
+                ),
+                OpenApiExample(
+                    "Exemplo de Resposta (Erro - Gateway em Uso)",
+                    value={
+                        "integrations": [
+                            "O gateway 'ZeroOne' já está em uso."
+                        ]
                     },
                     response_only=True,
                 )
             ],
         ),
+
         retrieve=extend_schema(
             summary="Recuperar uma campanha",
             description="Endpoint para recuperar os detalhes de uma campanha específica usando o UUID como identificador.",

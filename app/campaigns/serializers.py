@@ -59,37 +59,43 @@ class CampaignSerializer(serializers.ModelSerializer):
         return value
 
     def validate_integrations(self, value):
-        """Valida se todas as integrações pertencem ao usuário autenticado"""
-        user = self.context['request'].user
-        invalid_integrations = [
-            integration for integration in value if integration.user != user
-        ]
-        if invalid_integrations:
-            raise serializers.ValidationError(
-                "Integrações não encontrada."
-            )
+        """Valida se as integrações estão disponíveis"""
+        for integration in value:
+            if integration.in_use:
+                raise serializers.ValidationError(
+                    f"O gateway '{integration.name}' já está em uso."
+                )
         return value
 
     def create(self, validated_data):
         """Cria uma campanha e associa as integrações"""
-        logger.debug(f"Dados validados no serializer: {validated_data}")
         integrations = validated_data.pop('integrations', [])
-        try:
-            campaign = Campaign.objects.create(**validated_data)
-            logger.debug(f"Campanha criada no banco de dados: {campaign}")
-            campaign.integrations.set(integrations)
-            logger.debug(f"Integrações associadas: {integrations}")
-            return campaign
-        except Exception as e:
-            logger.error(f"Erro ao criar a campanha: {e}")
-            raise serializers.ValidationError(
-                "Erro ao salvar a campanha no banco de dados.")
+        campaign = Campaign.objects.create(**validated_data)
+        campaign.integrations.set(integrations)
+
+        # Atualiza o campo `in_use` das integrações associadas
+        for integration in integrations:
+            integration.in_use = True
+            integration.save()
+
+        return campaign
 
     def update(self, instance, validated_data):
         """Atualiza uma campanha e associa as integrações"""
         integrations = validated_data.pop('integrations', None)
-        if integrations is not None:
+        if integrations:
+            # Atualiza o campo `in_use` das integrações antigas
+            for integration in instance.integrations.all():
+                integration.in_use = False
+                integration.save()
+
+            # Atualiza o campo `in_use` das novas integrações
+            for integration in integrations:
+                integration.in_use = True
+                integration.save()
+
             instance.integrations.set(integrations)
+
         return super().update(instance, validated_data)
 
 
