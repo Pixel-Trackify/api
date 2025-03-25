@@ -129,11 +129,11 @@ def recalculate_campaigns(integration):
             Sum('amount'))['amount__sum'] or 0
 
         # Calcula o total de anúncios com base em visualizações e cliques
-        total_ads = campaign.total_views + campaign.total_clicks
+        total_ads = (campaign.total_views or 0) + (campaign.total_clicks or 0)
 
-        # Calcula o custo total com base no CPM e nos cliques
+        # Calcula o custo total com base no CPM e nas visualizações
         # CPM é o custo por mil impressões, então dividimos por 1000
-        cost = (campaign.total_clicks * campaign.CPM) / 1000
+        cost = (campaign.total_views * campaign.CPM) / 1000
 
         # Calcula o lucro (profit) considerando o valor aprovado e o custo
         profit = amount_approved - cost - amount_refunded - amount_chargeback

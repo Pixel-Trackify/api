@@ -2,12 +2,14 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from django.urls import reverse
 from django.db import transaction
+from django.db.models import Q
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.shortcuts import get_object_or_404
 from .models import Integration, IntegrationRequest
+from campaigns.models import Campaign
 from .serializers import IntegrationSerializer, IntegrationRequestSerializer
 from .zeroone_webhook import process_zeroone_webhook
 from .disrupty_webhook import process_disrupty_webhook
@@ -222,15 +224,19 @@ class IntegrationRequestListView(APIView):
 
 
 class AvailableGatewaysView(APIView):
-    """
-    Endpoint para listar os gateways disponíveis para integração.
-    """
-    permission_classes = [AllowAny]  # Permitir acesso público
+    def get(self, request, campaign_id=None):
+        if campaign_id:
+            # Inclui o gateway da campanha atual na listagem
+            campaign = Campaign.objects.get(id=campaign_id)
+            gateways = Integration.objects.filter(
+                Q(in_use=False) | Q(id=campaign.integration.id)
+            )
+        else:
+            # Lista apenas os gateways não utilizados
+            gateways = Integration.objects.filter(in_use=False)
 
-    def get(self, request):
-        gateways = [{"id": key, "name": value}
-                    for key, value in Integration._meta.get_field('gateway').choices]
-        return Response(gateways)
+        # Retorna os gateways disponíveis
+        return Response([{"id": g.id, "name": g.name, "gateway": g.gateway} for g in gateways])
 
 
 class BaseWebhookView(APIView):
