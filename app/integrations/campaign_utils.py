@@ -109,12 +109,7 @@ def recalculate_campaigns(integration):
     # Obtém todas as campanhas associadas à integração
     campaigns = Campaign.objects.filter(integrations=integration)
     for campaign in campaigns:
-        # Calcula o preço por unidade (price_unit) com base no CPM
-        price_unit = Decimal(campaign.CPM) / 1000
-
-        # Atualiza o total de anúncios com base no número total de views e clicks
-        total_ads = price_unit * (campaign.total_views + campaign.total_clicks)
-        campaign.total_ads = total_ads
+        total_ads = Decimal(campaign.total_ads)
 
         # Obtém todas as requisições de integração associadas à integração
         integration_requests = IntegrationRequest.objects.filter(
@@ -137,10 +132,10 @@ def recalculate_campaigns(integration):
             Sum('amount'))['amount__sum'] or 0
 
         # Calcula o lucro (profit) considerando o valor aprovado e o custo
-        profit = amount_approved - total_ads
+        profit = Decimal(amount_approved) - total_ads
 
         # Calcula o ROI (taxa de conversão)
-        roi = ((amount_approved - total_ads) / total_ads) * \
+        roi = ((Decimal(amount_approved) - total_ads) / Decimal(total_ads)) * \
             100 if total_ads > 0 else 0
 
         # Atualiza os campos da campanha com os novos valores calculados
