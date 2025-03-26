@@ -14,6 +14,7 @@ from user_agents import parse
 import datetime
 import logging
 from .schema import schemas
+from decimal import Decimal
 
 logger = logging.getLogger(__name__)
 
@@ -160,7 +161,11 @@ class KwaiWebhookView(APIView):
             elif action == 'click':
                 campaign.total_clicks += 1
 
+            price_unit = Decimal(campaign.CPM) / 1000
+            campaign.total_ads = Decimal(campaign.total_ads) + price_unit
             campaign.save()
+            
+            # RECALCULAR CAMPANHAS
 
             logger.debug(
                 f"Campaign {campaign.id} updated: Total Ads: {campaign.total_ads}, Total Views: {campaign.total_views}, Total Clicks: {campaign.total_clicks}")
