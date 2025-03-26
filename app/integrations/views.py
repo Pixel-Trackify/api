@@ -224,19 +224,26 @@ class IntegrationRequestListView(APIView):
 
 
 class AvailableGatewaysView(APIView):
+    permission_classes = [AllowAny]
+
     def get(self, request, campaign_id=None):
         if campaign_id:
             # Inclui o gateway da campanha atual na listagem
-            campaign = Campaign.objects.get(id=campaign_id)
-            gateways = Integration.objects.filter(
-                Q(in_use=False) | Q(id=campaign.integration.id)
-            )
+            try:
+                campaign = Campaign.objects.get(id=campaign_id)
+                gateways = Integration.objects.filter(
+                    Q(in_use=False) | Q(id=campaign.integration.id)
+                )
+                response = [{"id": g.id, "name": g.name,
+                             "gateway": g.gateway} for g in gateways]
+            except Campaign.DoesNotExist:
+                return Response({"error": "Campaign not found."}, status=404)
         else:
-            # Lista apenas os gateways não utilizados
-            gateways = Integration.objects.filter(in_use=False)
+            # Lista todas as opções do campo 'gateway'
+            response = [{"id": key, "name": value}
+                        for key, value in Integration._meta.get_field('gateway').choices]
 
-        # Retorna os gateways disponíveis
-        return Response([{"id": g.id, "name": g.name, "gateway": g.gateway} for g in gateways])
+        return Response(response)
 
 
 class BaseWebhookView(APIView):
