@@ -2,13 +2,11 @@
 from rest_framework.views import APIView
 from rest_framework.exceptions import NotFound
 from rest_framework_simplejwt.exceptions import TokenError
-from django.http import Http404
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import RegisterSerializer, LoginSerializer, UserUpdateSerializer, UpdateUserPlanSerializer, UserProfileSerializer, ChangePasswordSerializer, UserSubscriptionSerializer, PlanSerializer
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.exceptions import NotFound
@@ -17,20 +15,19 @@ import logging
 from .models import Usuario, LoginLog
 from plans.models import Plan, UserSubscription
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.test import RequestFactory
-from payments.views import CreatePaymentView
 from .filters import UsuarioFilter
 import user_agents
 from django.utils import timezone
-from drf_spectacular.utils import extend_schema
+from django.conf import settings
 from project.pagination import DefaultPagination
-import uuid
 import os
+import boto3
+from botocore.exceptions import NoCredentialsError, PartialCredentialsError
 from .schema import (
     register_view_schema, user_profile_view_schema, change_password_view_schema,
     get_users_view_schema, account_retrieve_update_destroy_view_schema,
     filter_users_view_schema, login_view_schema, logout_view_schema,
-    update_user_plan_view_schema, user_plan_view_schema, user_subscription_history_view_schema
+    update_user_plan_view_schema, user_plan_view_schema, user_subscription_history_view_schema, upload_avatar_view_schema
 )
 
 
@@ -45,7 +42,7 @@ class RegisterView(APIView):
         if serializer.is_valid():
             user = serializer.save()
 
-         # Verificar se a confirmação de e-mail é necessária
+            # Verificar se a confirmação de e-mail é necessária
             require_email_confirmation = os.getenv(
                 "REQUIRE_EMAIL_CONFIRMATION", "True") == "True"
 
@@ -78,7 +75,8 @@ class RegisterView(APIView):
                     "user": {
                         "uid": user.uid,
                         "name": user.name,
-                        "email": user.email
+                        "email": user.email,
+                        "avatar": user.avatar
                     },
                     "require_email_confirmation": require_email_confirmation,
                     "refresh": str(refresh),
@@ -90,7 +88,8 @@ class RegisterView(APIView):
                 "user": {
                     "uid": user.uid,
                     "name": user.name,
-                    "email": user.email
+                    "email": user.email,
+                    "avatar": user.avatar
                 },
                 "require_email_confirmation": require_email_confirmation
             }, status=status.HTTP_201_CREATED)
@@ -344,3 +343,88 @@ class UserSubscriptionHistoryView(APIView):
         subscriptions = UserSubscription.objects.filter(user=request.user)
         serializer = UserSubscriptionSerializer(subscriptions, many=True)
         return Response(serializer.data)
+
+
+@upload_avatar_view_schema
+class UploadAvatarView(APIView):
+    """
+    Endpoint para fazer upload do avatar para o bucket S3.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        avatar_file = request.FILES.get('avatar')
+        if not avatar_file:
+            return Response({"error": "Nenhum arquivo enviado."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Valida o tamanho do arquivo (10MB)
+        max_size_mb = 10
+        if avatar_file.size > max_size_mb * 1024 * 1024:
+            return Response(
+                {"error": f"O arquivo excede o tamanho máximo permitido de {max_size_mb}MB."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Verifica se o nome do arquivo é válido
+        if not avatar_file.name:
+            return Response(
+                {"error": "O arquivo enviado não possui um nome válido."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Configura o cliente S3
+        try:
+            s3 = boto3.client(
+                's3',
+                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                region_name=settings.AWS_DEFAULT_REGION
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Erro ao configurar o cliente S3: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        # Verifica se as configurações do S3 estão corretas
+        if not settings.AWS_BUCKET or not settings.AWS_DEFAULT_REGION:
+            return Response(
+                {"error": "Configurações do AWS S3 estão ausentes ou inválidas."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        # Define o caminho do arquivo no bucket
+        avatar_folder = "avatars/"
+        file_path = f"{avatar_folder}{request.user.uid}/{avatar_file.name}"
+
+        try:
+            # Faz o upload do arquivo para o S3
+            s3.upload_fileobj(
+                avatar_file,
+                settings.AWS_BUCKET,
+                file_path,
+                ExtraArgs={'ContentType': avatar_file.content_type,
+                           'ACL': 'public-read'}
+            )
+
+            # Gera a URL pública do arquivo
+            avatar_url = f"https://{settings.AWS_BUCKET}.s3.{settings.AWS_DEFAULT_REGION}.amazonaws.com/{file_path}"
+
+            # Atualiza o campo avatar do usuário
+            request.user.avatar = avatar_url
+            request.user.save()
+
+            return Response(
+                {"message": "Avatar enviado com sucesso.", "avatar_url": avatar_url},
+                status=status.HTTP_200_OK
+            )
+        except (NoCredentialsError, PartialCredentialsError):
+            return Response(
+                {"error": "Erro de credenciais do AWS S3. Verifique as configurações."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Erro ao fazer upload do avatar: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

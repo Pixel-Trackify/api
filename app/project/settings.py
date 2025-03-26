@@ -74,6 +74,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
 
+    'storages',
+
     'django_filters',
     'accounts',
     'plans',
@@ -258,12 +260,11 @@ REST_FRAMEWORK = {
     ],
 }
 
- 
 
 # Configurações do JWT
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'ALGORITHM': 'HS256',
@@ -317,3 +318,13 @@ FIRE_BANKING_API_KEY = os.getenv('FIRE_BANKING_API_KEY')
 
 REQUIRE_EMAIL_CONFIRMATION = os.getenv(
     "REQUIRE_EMAIL_CONFIRMATION", "True") == "True"
+
+AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+AWS_BUCKET = os.getenv('AWS_BUCKET')
+AWS_DEFAULT_REGION = os.getenv('AWS_DEFAULT_REGION', 'sa-east-1')
+AWS_S3_CUSTOM_DOMAIN = f'{AWS_BUCKET}.s3.amazonaws.com'
+
+
+# Configuração para uploads
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'

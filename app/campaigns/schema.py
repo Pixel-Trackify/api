@@ -1,5 +1,5 @@
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample, OpenApiTypes
-from .serializers import CampaignSerializer, CampaignViewSerializer
+from .serializers import CampaignSerializer, CampaignViewSerializer, PaginationMetadataSerializer
 
 
 schemas = {
@@ -44,26 +44,41 @@ schemas = {
                     location=OpenApiParameter.QUERY,
                 ),
             ],
-            responses={
-                200: CampaignSerializer(many=True),
-
-            },
-
-
-
-
+            responses={200: PaginationMetadataSerializer},
         ),
         create=extend_schema(
             summary="Criar uma nova campanha",
-            description="Endpoint para criar uma nova campanha vinculada ao usuário autenticado.",
+            description=(
+                "Endpoint para criar uma nova campanha vinculada ao usuário autenticado. "
+                "Não é permitido usar gateways que já estão em uso por outras campanhas."
+            ),
             tags=["Campanhas"],
             request=CampaignSerializer,
-            responses={201: CampaignSerializer},
+            responses={
+                201: CampaignSerializer,
+                400: {
+                    "type": "object",
+                    "properties": {
+                        "integrations": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "example": "O gateway 'ZeroOne' já está em uso."
+                            }
+                        }
+                    },
+                    "example": {
+                        "integrations": [
+                            "O gateway 'ZeroOne' já está em uso."
+                        ]
+                    }
+                }
+            },
             examples=[
                 OpenApiExample(
                     "Exemplo de Requisição",
                     value={
-                        "title": "Campanha zeroone",
+                        "title": "Campanha ZeroOne",
                         "description": "Descrição da nova campanha",
                         "CPM": 12,
                         "integrations": ["846ec04e-2d7b-4343-83f8-dd36776401eb"]
@@ -71,7 +86,7 @@ schemas = {
                     request_only=True,
                 ),
                 OpenApiExample(
-                    "Exemplo de Resposta",
+                    "Exemplo de Resposta (Sucesso)",
                     value={
                         "id": 9,
                         "uid": "57c111f3-02b9-4006-b95c-68b1d1b04351",
@@ -80,29 +95,36 @@ schemas = {
                         ],
                         "user": "6f4191cb-0943-4854-a307-cda83b99126e",
                         "source": "Kwai",
-                        "title": "Campanha zeroone",
-                        "CPM": "50.00",
+                        "title": "Cursinho",
+                        "CPM": "3.70",
                         "total_approved": 0,
                         "total_pending": 0,
                         "amount_approved": "0.00",
                         "amount_pending": "0.00",
-                        "total_ads": 0,
-                        "profit": "0.00",
-                        "ROI": "0.00",
+                        "total_ads": "0.00000000",
+                        "profit": "0.00000",
+                        "ROI": "0.00000",
                         "total_views": 0,
                         "total_clicks": 0,
-                        "created_at": "2025-03-22T15:19:19.225450-03:00",
-                        "updated_at": "2025-03-22T15:19:19.236355-03:00",
-                        "stats": {
-                            "PIX": 2,
-                            "credit_card": 1,
-                            "credit_debit": 1,
-                            "BOLETO": 1, }
+                        "created_at": "2025-03-26T16:52:09.109455-03:00",
+                        "updated_at": "2025-03-26T16:52:09.132047-03:00",
+                        "stats": {}
+
+                    },
+                    response_only=True,
+                ),
+                OpenApiExample(
+                    "Exemplo de Resposta (Erro - Gateway em Uso)",
+                    value={
+                        "integrations": [
+                            "O gateway 'ZeroOne' já está em uso."
+                        ]
                     },
                     response_only=True,
                 )
             ],
         ),
+
         retrieve=extend_schema(
             summary="Recuperar uma campanha",
             description="Endpoint para recuperar os detalhes de uma campanha específica usando o UUID como identificador.",
@@ -122,22 +144,27 @@ schemas = {
                     "Exemplo de Resposta",
                     value=[
                         {
-                            "title": "Campanha Exemplo",
-                            "CPM": "50.00",
-                            "total_approved": 750,
-                            "total_pending": 926,
-                            "amount_approved": 12500.58,
-                            "amount_pending": 25010.85,
-                            "profit": 12500.58,
-                            "ROI": 75.49,
-                            "total_views": 83519,
-                            "total_clicks": 3023,
-                            "stats": {
-                                "boleto": 20,
-                                "pix": 50,
-                                "credit_card": 20,
-                                "credit_debit": 10
-                            }
+                            "id": 9,
+                            "uid": "57c111f3-02b9-4006-b95c-68b1d1b04351",
+                            "integrations": [
+                                "846ec04e-2d7b-4343-83f8-dd36776401eb"
+                            ],
+                            "user": "6f4191cb-0943-4854-a307-cda83b99126e",
+                            "source": "Kwai",
+                            "title": "Cursinho",
+                            "CPM": "3.70",
+                            "total_approved": 0,
+                            "total_pending": 0,
+                            "amount_approved": "0.00",
+                            "amount_pending": "0.00",
+                            "total_ads": "0.00000000",
+                            "profit": "0.00000",
+                            "ROI": "0.00000",
+                            "total_views": 0,
+                            "total_clicks": 0,
+                            "created_at": "2025-03-26T16:52:09.109455-03:00",
+                            "updated_at": "2025-03-26T16:52:09.132047-03:00",
+                            "stats": {}
                         }
                     ],
                     response_only=True,

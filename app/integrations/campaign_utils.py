@@ -1,6 +1,7 @@
 from campaigns.models import Campaign
 from django.db.models import Sum
 from integrations.models import IntegrationRequest
+from decimal import Decimal
 
 
 def map_payment_status(status, gateway):
@@ -108,6 +109,13 @@ def recalculate_campaigns(integration):
     # Obtém todas as campanhas associadas à integração
     campaigns = Campaign.objects.filter(integrations=integration)
     for campaign in campaigns:
+        # Calcula o preço por unidade (price_unit) com base no CPM
+        price_unit = Decimal(campaign.CPM) / 1000
+
+        # Atualiza o total de anúncios com base no número total de views e clicks
+        total_ads = price_unit * (campaign.total_views + campaign.total_clicks)
+        campaign.total_ads = total_ads
+
         # Obtém todas as requisições de integração associadas à integração
         integration_requests = IntegrationRequest.objects.filter(
             integration=integration)
@@ -128,18 +136,12 @@ def recalculate_campaigns(integration):
         amount_chargeback = integration_requests.filter(status='CHARGEBACK').aggregate(
             Sum('amount'))['amount__sum'] or 0
 
-        # Calcula o total de anúncios com base em visualizações e cliques
-        total_ads = campaign.total_views + campaign.total_clicks
-
-        # Calcula o custo total com base no CPM e nos cliques
-        # CPM é o custo por mil impressões, então dividimos por 1000
-        cost = (campaign.total_clicks * campaign.CPM) / 1000
-
         # Calcula o lucro (profit) considerando o valor aprovado e o custo
-        profit = amount_approved - cost - amount_refunded - amount_chargeback
+        profit = amount_approved - total_ads
 
         # Calcula o ROI (taxa de conversão)
-        roi = (profit / amount_approved) * 100 if amount_approved > 0 else 0
+        roi = ((amount_approved - total_ads) / total_ads) * \
+            100 if total_ads > 0 else 0
 
         # Atualiza os campos da campanha com os novos valores calculados
         campaign.total_approved = total_approved
@@ -150,7 +152,6 @@ def recalculate_campaigns(integration):
         campaign.amount_pending = amount_pending
         campaign.amount_refunded = amount_refunded
         campaign.amount_chargeback = amount_chargeback
-        campaign.total_ads = total_ads  # Atualiza o total_ads com base em views e clicks
         campaign.profit = profit  # Atualiza o lucro calculado
         campaign.ROI = roi  # Atualiza o ROI calculado
         campaign.save()

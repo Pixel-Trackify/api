@@ -27,6 +27,7 @@ class Integration(models.Model):
 
 
     ])
+    in_use = models.BooleanField(default=False) 
     deleted = models.BooleanField(default=False)
     status = models.CharField(max_length=10, choices=[(
         'active', 'Active'), ('inactive', 'Inactive')], default='active')
