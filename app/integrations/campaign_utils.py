@@ -130,19 +130,18 @@ def recalculate_campaigns(integration):
             Sum('amount'))['amount__sum'] or 0
 
         # CPU é igual ao CPM
-        price_unit = Decimal(campaign.CPM) / Decimal(1000)
+        price_unit = Decimal(campaign.CPM) / 1000
 
         # Atualiza o total de anúncios somando o CPU
-        campaign.total_ads += price_unit
-
-        # Calcula o custo total com base no CPM e nas visualizações
-        cost = campaign.total_views 
+        new_total_ads = campaign.total_ads + price_unit
+        campaign.total_ads = new_total_ads
 
         # Calcula o lucro (profit) considerando o valor aprovado e o custo
-        profit = amount_approved - cost - amount_refunded - amount_chargeback
+        profit = amount_approved - new_total_ads
 
         # Calcula o ROI (taxa de conversão)
-        roi = (profit / amount_approved) * 100 if amount_approved > 0 else 0
+        roi = ((amount_approved - new_total_ads) / new_total_ads) * \
+            100 if new_total_ads > 0 else 0
 
         # Atualiza os campos da campanha com os novos valores calculados
         campaign.total_approved = total_approved
