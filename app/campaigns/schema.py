@@ -144,22 +144,27 @@ schemas = {
                     "Exemplo de Resposta",
                     value=[
                         {
-                            "title": "Campanha Exemplo",
-                            "CPM": "50.00",
-                            "total_approved": 750,
-                            "total_pending": 926,
-                            "amount_approved": 12500.58,
-                            "amount_pending": 25010.85,
-                            "profit": 12500.58,
-                            "ROI": 75.49,
-                            "total_views": 83519,
-                            "total_clicks": 3023,
-                            "stats": {
-                                "boleto": 20,
-                                "pix": 50,
-                                "credit_card": 20,
-                                "credit_debit": 10
-                            }
+                            "id": 9,
+                            "uid": "57c111f3-02b9-4006-b95c-68b1d1b04351",
+                            "integrations": [
+                                "846ec04e-2d7b-4343-83f8-dd36776401eb"
+                            ],
+                            "user": "6f4191cb-0943-4854-a307-cda83b99126e",
+                            "source": "Kwai",
+                            "title": "Cursinho",
+                            "CPM": "3.70",
+                            "total_approved": 0,
+                            "total_pending": 0,
+                            "amount_approved": "0.00",
+                            "amount_pending": "0.00",
+                            "total_ads": "0.00000000",
+                            "profit": "0.00000",
+                            "ROI": "0.00000",
+                            "total_views": 0,
+                            "total_clicks": 0,
+                            "created_at": "2025-03-26T16:52:09.109455-03:00",
+                            "updated_at": "2025-03-26T16:52:09.132047-03:00",
+                            "stats": {}
                         }
                     ],
                     response_only=True,
