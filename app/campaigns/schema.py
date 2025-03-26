@@ -1,5 +1,5 @@
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample, OpenApiTypes
-from .serializers import CampaignSerializer, CampaignViewSerializer
+from .serializers import CampaignSerializer, CampaignViewSerializer, PaginationMetadataSerializer
 
 
 schemas = {
@@ -44,14 +44,7 @@ schemas = {
                     location=OpenApiParameter.QUERY,
                 ),
             ],
-            responses={
-                200: CampaignSerializer(many=True),
-
-            },
-
-
-
-
+            responses={200: PaginationMetadataSerializer},
         ),
         create=extend_schema(
             summary="Criar uma nova campanha",
@@ -102,19 +95,21 @@ schemas = {
                         ],
                         "user": "6f4191cb-0943-4854-a307-cda83b99126e",
                         "source": "Kwai",
-                        "title": "Campanha ZeroOne",
-                        "CPM": "50.00",
+                        "title": "Cursinho",
+                        "CPM": "3.70",
                         "total_approved": 0,
                         "total_pending": 0,
                         "amount_approved": "0.00",
                         "amount_pending": "0.00",
-                        "total_ads": 0,
-                        "profit": "0.00",
-                        "ROI": "0.00",
+                        "total_ads": "0.00000000",
+                        "profit": "0.00000",
+                        "ROI": "0.00000",
                         "total_views": 0,
                         "total_clicks": 0,
-                        "created_at": "2025-03-22T15:19:19.225450-03:00",
-                        "updated_at": "2025-03-22T15:19:19.236355-03:00",
+                        "created_at": "2025-03-26T16:52:09.109455-03:00",
+                        "updated_at": "2025-03-26T16:52:09.132047-03:00",
+                        "stats": {}
+
                     },
                     response_only=True,
                 ),

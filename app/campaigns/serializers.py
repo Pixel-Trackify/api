@@ -110,3 +110,11 @@ class CampaignViewSerializer(serializers.ModelSerializer):
         fields = ['id', 'campaign', 'user_agent',
                   'ip_address', 'action', 'created_at', 'updated_at']
         read_only_fields = ['created_at', 'updated_at']
+
+
+
+class PaginationMetadataSerializer(serializers.Serializer):
+    count = serializers.IntegerField()
+    next = serializers.URLField(allow_null=True)
+    previous = serializers.URLField(allow_null=True)
+    results = serializers.ListField(child=serializers.DictField(), default=[])
