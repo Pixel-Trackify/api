@@ -109,6 +109,13 @@ def recalculate_campaigns(integration):
     # Obtém todas as campanhas associadas à integração
     campaigns = Campaign.objects.filter(integrations=integration)
     for campaign in campaigns:
+        # Calcula o preço por unidade (price_unit) com base no CPM
+        price_unit = Decimal(campaign.CPM) / 1000
+
+        # Atualiza o total de anúncios com base no número total de views e clicks
+        total_ads = price_unit * (campaign.total_views + campaign.total_clicks)
+        campaign.total_ads = total_ads
+
         # Obtém todas as requisições de integração associadas à integração
         integration_requests = IntegrationRequest.objects.filter(
             integration=integration)
@@ -129,19 +136,12 @@ def recalculate_campaigns(integration):
         amount_chargeback = integration_requests.filter(status='CHARGEBACK').aggregate(
             Sum('amount'))['amount__sum'] or 0
 
-        # CPU é igual ao CPM
-        price_unit = Decimal(campaign.CPM) / 1000
-
-        # Atualiza o total de anúncios somando o CPU
-        new_total_ads = campaign.total_ads + price_unit
-        campaign.total_ads = new_total_ads
-
         # Calcula o lucro (profit) considerando o valor aprovado e o custo
-        profit = amount_approved - new_total_ads
+        profit = amount_approved - total_ads
 
         # Calcula o ROI (taxa de conversão)
-        roi = ((amount_approved - new_total_ads) / new_total_ads) * \
-            100 if new_total_ads > 0 else 0
+        roi = ((amount_approved - total_ads) / total_ads) * \
+            100 if total_ads > 0 else 0
 
         # Atualiza os campos da campanha com os novos valores calculados
         campaign.total_approved = total_approved

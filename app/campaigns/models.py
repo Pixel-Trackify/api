@@ -20,8 +20,8 @@ class Campaign(models.Model):
     amount_pending = models.DecimalField(
         max_digits=10, decimal_places=2, default=0)
     total_ads = models.DecimalField(max_digits=13, decimal_places=8, default=0)
-    profit = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    ROI = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    profit = models.DecimalField(max_digits=15, decimal_places=5, default=0)
+    ROI = models.DecimalField(max_digits=15, decimal_places=5, default=0)
     total_views = models.IntegerField(default=0)
     total_clicks = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
