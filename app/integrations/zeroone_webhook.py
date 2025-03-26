@@ -35,6 +35,7 @@ def process_zeroone_webhook(data, integration):
         if not payment_id or not status or not payment_method or not amount:
             raise ValueError("Missing required fields")
 
+        amount = Decimal(amount) / 100  # Converte o valor de centavos para real
         # Cria um registro de requisição de integração
         IntegrationRequest.objects.create(
             integration=integration,
@@ -49,6 +50,40 @@ def process_zeroone_webhook(data, integration):
             created_at=data.get('createdAt', timezone.now()),
             updated_at=data.get('updatedAt', timezone.now())
         )
+        # PEGAR A CAMPANHA
+        # EXECUTAR ESSA SQL OU O MODEL DO DJANGO
+        """
+        select campaigns.* from integrations 
+        inner join
+            campaigns_integrations on campaigns_integrations.integration_id = integrations.id
+        inner join 
+            campaigns on campaigns.id = campaigns_integrations.campaign_id 
+        where integrations.uid = '06636a1c-e3bc-4868-a385-2f023dc8d052'
+        """
+        # campain = SQL DE CIMA;
+        """
+        
+        if status == 'APPROVED':
+            campain.total_approved += 1
+            campain.amount_approved += amount
+         
+        if status == 'PENDING':
+            campain.total_pending += 1
+            campain.amount_pending += amount
+            
+        campain.save()
+        
+        RECALCULAR PROFIT E ROI
+        
+        """
+        
+        
+        # ATUALIZAR INFORMAÇÕES DESSA CAMPANHA
+        # - total_approved
+        # - total_pending
+        # - amount_approved
+        # - amount_pending 
+        
 
         # Recalcula as campanhas associadas à integração
         recalculate_campaigns(integration)
