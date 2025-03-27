@@ -11,9 +11,11 @@ from .models import Campaign, CampaignView
 from integrations.models import Integration
 from .serializers import CampaignSerializer, CampaignViewSerializer
 from user_agents import parse
+from integrations.campaign_utils import recalculate_campaigns
 import datetime
 import logging
 from .schema import schemas
+from decimal import Decimal
 
 logger = logging.getLogger(__name__)
 
@@ -135,7 +137,6 @@ class KwaiWebhookView(APIView):
 
         # Capturar User-Agent e IP
         user_agent_string = request.META.get('HTTP_USER_AGENT', 'unknown')
-        user_agent = parse(user_agent_string)
         ip_address = request.META.get(
             'HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR'))
 
@@ -150,17 +151,24 @@ class KwaiWebhookView(APIView):
         if serializer.is_valid():
             serializer.save()
 
-            '''
             # Atualizar os campos da campanha
-            price_unit = campaign.CPM / 1000
-            campaign.total_ads += price_unit'''
-
             if action == 'view':
                 campaign.total_views += 1
             elif action == 'click':
                 campaign.total_clicks += 1
 
+            # Atualiza o total_ads com base no CPM
+            price_unit = Decimal(campaign.CPM) / 1000
+            campaign.total_ads = Decimal(campaign.total_ads) + price_unit
             campaign.save()
+
+            # Calcula os valores necessários para recalculate_campaigns
+            total_ads = campaign.total_ads
+            amount_approved = campaign.amount_approved
+
+            # Recalcular profit e ROI para todas as integrações associadas
+            for integration in campaign.integrations.all():
+                recalculate_campaigns(campaign, total_ads, amount_approved)
 
             logger.debug(
                 f"Campaign {campaign.id} updated: Total Ads: {campaign.total_ads}, Total Views: {campaign.total_views}, Total Clicks: {campaign.total_clicks}")

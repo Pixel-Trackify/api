@@ -1,5 +1,6 @@
 from .models import Integration, IntegrationRequest, Transaction, IntegrationSample
-from .campaign_utils import recalculate_campaigns, map_payment_status
+from .campaign_utils import recalculate_campaigns
+from .campaign_operations import get_campaign_by_integration, update_campaign_fields, map_payment_status
 import logging
 from django.utils import timezone
 
@@ -52,7 +53,13 @@ def process_tribopay_webhook(data, integration):
             updated_at=data.get('updated_at', timezone.now())
         )
 
-        # Recalcula as campanhas associadas à integração
+        # Obtém a campanha associada à integração
+        campaign = get_campaign_by_integration(integration)
+
+        # Atualiza os campos da campanha com base no status
+        update_campaign_fields(campaign, status, amount, gateway)
+
+        # Recalcula os lucros e ROI da campanha
         recalculate_campaigns(integration)
 
     except Exception as e:

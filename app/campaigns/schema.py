@@ -108,7 +108,12 @@ schemas = {
                         "total_clicks": 0,
                         "created_at": "2025-03-26T16:52:09.109455-03:00",
                         "updated_at": "2025-03-26T16:52:09.132047-03:00",
-                        "stats": {}
+                        "stats": {
+                                "pix": 0,
+                                "credit_card": 0,
+                                "credit_debit": 0,
+                                "boleto": 0
+                        }
 
                     },
                     response_only=True,
@@ -164,7 +169,12 @@ schemas = {
                             "total_clicks": 0,
                             "created_at": "2025-03-26T16:52:09.109455-03:00",
                             "updated_at": "2025-03-26T16:52:09.132047-03:00",
-                            "stats": {}
+                            "stats": {
+                                "pix": 0,
+                                "credit_card": 0,
+                                "credit_debit": 0,
+                                "boleto": 0
+                            }
                         }
                     ],
                     response_only=True,

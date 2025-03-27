@@ -17,11 +17,13 @@ from plans.models import Plan, UserSubscription
 from rest_framework_simplejwt.tokens import RefreshToken
 from .filters import UsuarioFilter
 import user_agents
+import uuid
 from django.utils import timezone
 from django.conf import settings
 from project.pagination import DefaultPagination
 import os
 import boto3
+from datetime import datetime
 from botocore.exceptions import NoCredentialsError, PartialCredentialsError
 from .schema import (
     register_view_schema, user_profile_view_schema, change_password_view_schema,
@@ -365,13 +367,6 @@ class UploadAvatarView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Verifica se o nome do arquivo é válido
-        if not avatar_file.name:
-            return Response(
-                {"error": "O arquivo enviado não possui um nome válido."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
         # Configura o cliente S3
         try:
             s3 = boto3.client(
@@ -393,9 +388,13 @@ class UploadAvatarView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-        # Define o caminho do arquivo no bucket
+        # Define o caminho do arquivo no bucket com data e nome aleatório
         avatar_folder = "avatars/"
-        file_path = f"{avatar_folder}{request.user.uid}/{avatar_file.name}"
+        # Data e hora no formato YYYYMMDDHHMMSS
+        current_date = datetime.now().strftime("%Y%m%d%H%M%S")
+        # Nome com data e extensão original
+        random_filename = f"{current_date}_{uuid.uuid4().hex}{os.path.splitext(avatar_file.name)[1]}"
+        file_path = f"{avatar_folder}{request.user.uid}/{random_filename}"
 
         try:
             # Faz o upload do arquivo para o S3
