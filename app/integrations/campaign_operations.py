@@ -1,7 +1,7 @@
 import logging
 from campaigns.models import Campaign
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('django')
 
 
 def map_payment_status(status, gateway):
@@ -133,15 +133,12 @@ def update_campaign_fields(campaign, status, amount, gateway):
         None
     """
     try:
-        # Mapeia o status recebido para o status interno do sistema
-        mapped_status = map_payment_status(status, gateway)
-
         # Atualiza os campos da campanha com base no status mapeado
-        if mapped_status == 'APPROVED':
+        if status == 'APPROVED':
             campaign.total_approved += 1
             campaign.amount_approved += amount
 
-        elif mapped_status == 'PENDING':
+        elif status == 'PENDING':
             campaign.total_pending += 1
             campaign.amount_pending += amount
 
