@@ -1,5 +1,6 @@
-from .models import Integration, IntegrationRequest, Transaction, IntegrationSample
-from .campaign_utils import recalculate_campaigns, map_payment_status
+from .models import Integration, IntegrationRequest, IntegrationSample
+from .campaign_utils import recalculate_campaigns
+from .campaign_operations import get_campaign_by_integration, update_campaign_fields, map_payment_status
 import logging
 from django.utils import timezone
 
@@ -56,7 +57,13 @@ def process_sunize_webhook(data, integration):
         logger.info(
             f"IntegrationRequest criada com sucesso: {integration_request.id}")
 
-        # Recalcula as campanhas associadas à integração
+        # Obtém a campanha associada à integração
+        campaign = get_campaign_by_integration(integration)
+
+        # Atualiza os campos da campanha com base no status
+        update_campaign_fields(campaign, status, amount, gateway)
+
+        # Recalcula os lucros e ROI da campanha
         recalculate_campaigns(integration)
 
     except Exception as e:
