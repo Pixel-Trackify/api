@@ -46,6 +46,8 @@ services:
       dockerfile: .docker/Dockerfile
     expose:
       - "8000"
+    environment:
+      - APP_AMBIENT=${APP_AMBIENT:-development}
     volumes:
       - ./app:/app
       - ./.env:/app/.env
