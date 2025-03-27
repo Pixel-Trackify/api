@@ -58,7 +58,8 @@ def process_vega_checkout_webhook(data, integration):
         update_campaign_fields(campaign, status, amount, gateway)
 
         # Recalcula os lucros e ROI da campanha
-        recalculate_campaigns(integration)
+        recalculate_campaigns(campaign, campaign.total_ads,
+                              campaign.amount_approved)
 
     except Exception as e:
         logger.error(f"Error processing transaction: {e}", exc_info=True)

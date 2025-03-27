@@ -67,7 +67,8 @@ def process_westpay_webhook(data, integration):
         update_campaign_fields(campaign, status, amount, gateway)
 
         # Recalcula os lucros e ROI da campanha
-        recalculate_campaigns(integration)
+        recalculate_campaigns(campaign, campaign.total_ads,
+                              campaign.amount_approved)
 
         logger.info(
             f"Integration request {'created' if created else 'updated'}: {integration_request}")
