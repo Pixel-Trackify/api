@@ -3,6 +3,7 @@ from .campaign_utils import recalculate_campaigns
 from .campaign_operations import get_campaign_by_integration, update_campaign_fields, map_payment_status
 import logging
 from django.utils import timezone
+from decimal import Decimal
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,7 @@ def process_vega_checkout_webhook(data, integration):
         if not transaction_id or not status or not payment_method or not amount:
             raise ValueError("Missing required fields")
 
+        amount = Decimal(amount) / 100 # Converte o valor de centavos para real
         # Cria um registro de requisição de integração
         IntegrationRequest.objects.create(
             integration=integration,
