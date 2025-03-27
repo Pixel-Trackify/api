@@ -5,7 +5,7 @@ from .campaign_operations import get_campaign_by_integration, update_campaign_fi
 from .campaign_utils import recalculate_campaigns
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('django')
 
 
 def process_zeroone_webhook(data, integration):

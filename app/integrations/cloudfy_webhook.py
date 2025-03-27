@@ -4,7 +4,7 @@ from .campaign_operations import get_campaign_by_integration, update_campaign_fi
 import logging
 from django.utils import timezone
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('django')
 
 
 def process_cloudfy_webhook(data, integration):

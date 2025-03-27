@@ -17,7 +17,7 @@ import logging
 from .schema import schemas
 from decimal import Decimal
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('django')
 
 
 @schemas['campaign_view_set']

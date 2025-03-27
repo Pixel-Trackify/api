@@ -4,10 +4,10 @@ import logging
 from datetime import datetime
 from accounts.models import User
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('django')
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('django')
 
 
 def create_pix_payment(amount, cpf, idempotency_key, user, plan):

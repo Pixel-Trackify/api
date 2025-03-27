@@ -5,7 +5,7 @@ from .models import Campaign, CampaignView, Integration
 import logging
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('django')
 
 
 class CampaignSerializer(serializers.ModelSerializer):

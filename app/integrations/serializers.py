@@ -3,7 +3,7 @@ from .models import Integration, Transaction, IntegrationRequest
 from django.urls import reverse
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('django')
 
 
 class IntegrationSerializer(serializers.ModelSerializer):

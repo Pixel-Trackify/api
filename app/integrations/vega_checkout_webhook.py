@@ -5,7 +5,7 @@ import logging
 from django.utils import timezone
 from decimal import Decimal
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('django')
 
 
 def process_vega_checkout_webhook(data, integration):
@@ -55,7 +55,6 @@ def process_vega_checkout_webhook(data, integration):
 
         # Obtém a campanha associada à integração
         campaign = get_campaign_by_integration(integration)
-
         # Atualiza os campos da campanha com base no status
         update_campaign_fields(campaign, status, amount, gateway)
 

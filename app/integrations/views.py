@@ -22,7 +22,7 @@ from .sunize_webhook import process_sunize_webhook
 import logging
 from .schema import schemas
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('django')
 
 
 @schemas['integration_view_set']
