@@ -2,7 +2,9 @@ from .models import Integration, IntegrationRequest, IntegrationSample
 from .campaign_utils import recalculate_campaigns
 from .campaign_operations import get_campaign_by_integration, update_campaign_fields, map_payment_status
 from django.utils import timezone
+from decimal import Decimal
 import logging
+import os
 
 logger = logging.getLogger('django')
 
@@ -37,18 +39,23 @@ def process_westpay_webhook(data, integration):
         if not transaction_id or not status or not payment_method or not amount:
             raise ValueError("Missing required fields")
 
-        logger.info(
-            f"Attempting to update or create integration request with ID: {transaction_id}")
-
         # Mapeia o status específico do gateway para um status geral
-        mapped_status = map_payment_status(status, 'WestPay')
-
+        status = map_payment_status(status, 'WestPay')
+        if status == 'UNKNOWN':
+            raise ValueError(f"Unknown status received: {status}")
+        
+        # Obtém a campanha associada à integração
+        campaign = get_campaign_by_integration(integration)
+        if not campaign:
+            raise ValueError(f"No campaign associated with integration: {integration.id}")
+        
+        amount = Decimal(amount) / 100 # Converte o valor de centavos para real
         # Atualiza ou cria a requisição de integração com base no transaction_id
         integration_request, created = IntegrationRequest.objects.update_or_create(
             payment_id=transaction_id,
             defaults={
                 'integration': integration,
-                'status': mapped_status,
+                'status': status,
                 'payment_method': payment_method,
                 'amount': amount,
                 'phone': customer.get('phone'),
@@ -59,21 +66,13 @@ def process_westpay_webhook(data, integration):
                 'updated_at': timezone.now()
             }
         )
-
-        # Obtém a campanha associada à integração
-        campaign = get_campaign_by_integration(integration)
-
+        operation_type = 'insert' if created else 'update'
         # Atualiza os campos da campanha com base no status
-        update_campaign_fields(campaign, status, amount, gateway)
+        update_campaign_fields(integration_request, operation_type, campaign, status, amount, gateway)
 
         # Recalcula os lucros e ROI da campanha
-        recalculate_campaigns(campaign, campaign.total_ads,
-                              campaign.amount_approved)
-
-        logger.info(
-            f"Integration request {'created' if created else 'updated'}: {integration_request}")
-
+        recalculate_campaigns(campaign, campaign.total_ads, campaign.amount_approved)
     except Exception as e:
-        logger.error(
-            f"Error processing integration request: {e}", exc_info=True)
+        if bool(int(os.getenv('DEBUG', 0))):
+            logger.error(f"Error processing integration request: {e}", exc_info=True)
         raise

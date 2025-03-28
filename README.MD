@@ -60,6 +60,7 @@ docker compose run --rm django-command-runner python manage.py test
 
 Para executar o migrate, use o seguinte comando:
 ```sh
+docker compose run --rm django-command-runner python manage.py makemigrations
 docker compose run --rm django-command-runner python manage.py migrate
 ```
 
