@@ -43,36 +43,40 @@ def process_westpay_webhook(data, integration):
         status = map_payment_status(status, 'WestPay')
         if status == 'UNKNOWN':
             raise ValueError(f"Unknown status received: {status}")
-        
+
         # Obtém a campanha associada à integração
         campaign = get_campaign_by_integration(integration)
         if not campaign:
-            raise ValueError(f"No campaign associated with integration: {integration.id}")
-        
-        amount = Decimal(amount) / 100 # Converte o valor de centavos para real
+            raise ValueError(
+                f"No campaign associated with integration: {integration.id}")
+
+        # Converte o valor de centavos para real
+        amount = Decimal(amount) / 100
         # Atualiza ou cria a requisição de integração com base no transaction_id
+        # Cria um registro de requisição de integração
         integration_request, created = IntegrationRequest.objects.update_or_create(
+            integration=integration,
+            status=status,
             payment_id=transaction_id,
-            defaults={
-                'integration': integration,
-                'status': status,
-                'payment_method': payment_method,
-                'amount': amount,
-                'phone': customer.get('phone'),
-                'name': customer.get('name'),
-                'email': customer.get('email'),
-                'response': response,
-                'created_at': transaction_data.get('createdAt', timezone.now()),
-                'updated_at': timezone.now()
-            }
+            payment_method=payment_method,
+            amount=amount,
+            phone=customer.get('phone'),
+            name=customer.get('name'),
+            email=customer.get('email'),
+            response=response,
+            created_at=data.get('created_at', timezone.now()),
+            updated_at=data.get('updated_at', timezone.now())
         )
         operation_type = 'insert' if created else 'update'
         # Atualiza os campos da campanha com base no status
-        update_campaign_fields(integration_request, operation_type, campaign, status, amount, gateway)
+        update_campaign_fields(
+            integration_request, operation_type, campaign, status, amount, gateway)
 
         # Recalcula os lucros e ROI da campanha
-        recalculate_campaigns(campaign, campaign.total_ads, campaign.amount_approved)
+        recalculate_campaigns(campaign, campaign.total_ads,
+                              campaign.amount_approved)
     except Exception as e:
         if bool(int(os.getenv('DEBUG', 0))):
-            logger.error(f"Error processing integration request: {e}", exc_info=True)
+            logger.error(
+                f"Error processing integration request: {e}", exc_info=True)
         raise

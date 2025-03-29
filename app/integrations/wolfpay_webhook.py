@@ -4,6 +4,7 @@ from .campaign_operations import get_campaign_by_integration, update_campaign_fi
 import logging
 from django.utils import timezone
 import os
+from decimal import Decimal
 
 logger = logging.getLogger('django')
 
@@ -48,6 +49,8 @@ def process_wolfpay_webhook(data, integration):
         if not campaign:
             raise ValueError(f"No campaign associated with integration: {integration.id}")
         
+
+        amount = Decimal(amount) / 100
         # Cria um registro de requisição de integração
         integration_request, created = IntegrationRequest.objects.update_or_create(
             integration=integration,
