@@ -5,7 +5,7 @@ from .serializers import CampaignSerializer, CampaignViewSerializer, PaginationM
 schemas = {
     'campaign_view_set': extend_schema_view(
         list=extend_schema(
-            summary="Suporte a paginação, ordenação e busca.",
+            summary="Listar campanhas com suporte a paginação, ordenação e busca.",
             description="Endpoint para listar as campanhas do usuário autenticado com suporte a paginação, ordenação e busca.",
             tags=["Campanhas"],
             parameters=[
@@ -44,7 +44,126 @@ schemas = {
                     location=OpenApiParameter.QUERY,
                 ),
             ],
-            responses={200: PaginationMetadataSerializer},
+            responses={
+                200: {
+                    "type": "object",
+                    "properties": {
+                        "count": {"type": "integer", "example": 3},
+                        "next": {"type": "string", "example": "http://localhost:8000/campaigns/?page=2"},
+                        "previous": {"type": "string", "example": None},
+                        "results": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "uid": {"type": "string", "example": "7201a40f-c432-42f7-b875-0d77077990ab"},
+                                    "title": {"type": "string", "example": "Campanha ZeroOne"},
+                                    "description": {"type": "string", "example": "Descrição da campanha"},
+                                    "CPM": {"type": "number", "example": 12.0},
+                                    "created_at": {"type": "string", "example": "2025-03-31T10:00:00Z"},
+                                },
+                            },
+                        },
+                    },
+                },
+                404: {
+                    "type": "object",
+                    "properties": {
+                        "detail": {"type": "string", "example": "Nenhuma campanha encontrada com os critérios de busca."},
+                    },
+                },
+            },
+            examples=[
+                OpenApiExample(
+                    "Exemplo de Requisição com Ordenação",
+                    value={
+                        "url": "http://localhost:8000/campaigns/?ordering=title"
+                    },
+                    request_only=True,
+                ),
+                OpenApiExample(
+                    "Exemplo de Requisição com Paginação",
+                    value={
+                        "url": "http://localhost:8000/campaigns/?page=2&page_size=1"
+                    },
+                    request_only=True,
+                ),
+                OpenApiExample(
+                    "Exemplo de Requisição com Busca",
+                    value={
+                        "url": "http://localhost:8000/campaigns/?search=Campanha"
+                    },
+                    request_only=True,
+                ),
+                OpenApiExample(
+                    "Exemplo de Resposta (Ordenação)",
+                    value={
+                        "count": 3,
+                        "next": 'null',
+                        "previous": 'null',
+                        "results": [
+                            {
+                                "uid": "e0522530-bf1f-4df0-9a1a-8a3ca25e4cf1",
+                                "title": "Campanha 2",
+                                "description": "Descrição da campanha 2",
+                                "CPM": 15.0,
+                                "created_at": "2025-03-30T10:00:00Z"
+                            },
+                            {
+                                "uid": "7201a40f-c432-42f7-b875-0d77077990ab",
+                                "title": "Campanha ZeroOne",
+                                "description": "Descrição da campanha",
+                                "CPM": 12.0,
+                                "created_at": "2025-03-31T10:00:00Z"
+                            }
+                        ]
+                    },
+                    response_only=True,
+                ),
+                OpenApiExample(
+                    "Exemplo de Resposta (Paginação)",
+                    value={
+                        "count": 3,
+                        "next": "http://localhost:8000/campaigns/?page=3&page_size=1",
+                        "previous": "http://localhost:8000/campaigns/?page=1&page_size=1",
+                        "results": [
+                            {
+                                "uid": "e0522530-bf1f-4df0-9a1a-8a3ca25e4cf1",
+                                "title": "Campanha 2",
+                                "description": "Descrição da campanha 2",
+                                "CPM": 15.0,
+                                "created_at": "2025-03-30T10:00:00Z"
+                            }
+                        ]
+                    },
+                    response_only=True,
+                ),
+                OpenApiExample(
+                    "Exemplo de Resposta (Busca)",
+                    value={
+                        "count": 2,
+                        "next": 'null',
+                        "previous": 'null',
+                        "results": [
+                            {
+                                "uid": "7201a40f-c432-42f7-b875-0d77077990ab",
+                                "title": "Campanha ZeroOne",
+                                "description": "Descrição da campanha",
+                                "CPM": 12.0,
+                                "created_at": "2025-03-31T10:00:00Z"
+                            },
+                            {
+                                "uid": "e0522530-bf1f-4df0-9a1a-8a3ca25e4cf1",
+                                "title": "Campanha 2",
+                                "description": "Descrição da campanha 2",
+                                "CPM": 15.0,
+                                "created_at": "2025-03-30T10:00:00Z"
+                            }
+                        ]
+                    },
+                    response_only=True,
+                ),
+            ],
         ),
         create=extend_schema(
             summary="Criar uma nova campanha",
@@ -101,13 +220,24 @@ schemas = {
                         "total_pending": 0,
                         "amount_approved": "0.00",
                         "amount_pending": "0.00",
-                        "total_ads": "0.00000000",
-                        "profit": "0.00000",
-                        "ROI": "0.00000",
+                        "total_abandoned": 0,
+                        "amount_abandoned": "0.00",
+                        "total_canceled": 0,
+                        "amount_canceled": "0.00",
+                        "total_refunded": 0,
+                        "amount_refunded": "0.00",
+                        "total_rejected": 0,
+                        "amount_rejected": "0.00",
+                        "total_chargeback": 0,
+                        "amount_chargeback": "0.00",
+                        "total_ads": "0.00620000",
+                        "profit": "0",
+                        "ROI": "0",
                         "total_views": 0,
                         "total_clicks": 0,
                         "created_at": "2025-03-26T16:52:09.109455-03:00",
                         "updated_at": "2025-03-26T16:52:09.132047-03:00",
+
                         "stats": {
                                 "pix": 0,
                                 "credit_card": 0,
@@ -162,9 +292,19 @@ schemas = {
                             "total_pending": 0,
                             "amount_approved": "0.00",
                             "amount_pending": "0.00",
-                            "total_ads": "0.00000000",
-                            "profit": "0.00000",
-                            "ROI": "0.00000",
+                            "total_abandoned": 0,
+                            "amount_abandoned": "0.00",
+                            "total_canceled": 0,
+                            "amount_canceled": "0.00",
+                            "total_refunded": 0,
+                            "amount_refunded": "0.00",
+                            "total_rejected": 0,
+                            "amount_rejected": "0.00",
+                            "total_chargeback": 0,
+                            "amount_chargeback": "0.00",
+                            "total_ads": "0.000000",
+                            "profit": "0",
+                            "ROI": "0",
                             "total_views": 0,
                             "total_clicks": 0,
                             "created_at": "2025-03-26T16:52:09.109455-03:00",

@@ -81,4 +81,5 @@ jobs:
           script: |
             cd ${{ secrets.SSH_TARGET }}
             docker compose build --no-cache django-command-runner
+            docker compose run --rm django-command-runner python manage.py makemigrations
             docker compose run --rm django-command-runner python manage.py migrate

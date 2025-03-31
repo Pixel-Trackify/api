@@ -1,7 +1,8 @@
 import logging
+import os
 from campaigns.models import Campaign
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('django')
 
 
 def map_payment_status(status, gateway):
@@ -14,6 +15,15 @@ def map_payment_status(status, gateway):
 
     Returns:
         str: Status mapeado para o sistema interno.
+    """
+    # Precisa ter apenas esses 6 status
+    """
+    APPROVED: Vendas aprovada.
+    PENDING: Vendas pendentes
+    REFUNDED: Vendas reembolsadas.
+    REJECTED: Vendas recusada.
+    ABANDONED: Vendas cancelada ou abandonada.
+    CHARGEBACK: Vendas contestadas
     """
     status_mapping = {
         'CloudFy': {
@@ -29,9 +39,9 @@ def map_payment_status(status, gateway):
             'refused': 'REJECTED',
             'charge_back': 'CHARGEBACK',
             'refunded': 'REFUNDED',
-            'expired': 'PENDING',
+            'expired': 'ABANDONED',
             'in_process': 'PENDING',
-            'in_dispute': 'PENDING'
+            'in_dispute': 'CHARGEBACK'
         },
         'Disrupty': {
             'processing': 'PENDING',
@@ -71,8 +81,8 @@ def map_payment_status(status, gateway):
             'waiting_payment': 'PENDING',
             'paid': 'APPROVED',
             'refused': 'REJECTED',
-            'canceled': 'REJECTED',
-            'expired': 'PENDING',
+            'canceled': 'ABANDONED',
+            'expired': 'ABANDONED',
             'refunded': 'REFUNDED',
             'chargedback': 'CHARGEBACK',
             'in_protest': 'CHARGEBACK'
@@ -90,10 +100,10 @@ def map_payment_status(status, gateway):
         'Sunize': {
             "SALE_APPROVED": "APPROVED",
             "PIX_GENERATED": "PENDING",
-            "SALE_REFUND": "refunded",
-            "SALE_REJECTED": "rejected",
-            "ABANDONED_CART": "abandoned",
-            "BANK_SLIP_GENERATED": "pending"
+            "SALE_REFUND": "REFUNDED",
+            "SALE_REJECTED": "REJECTED",
+            "ABANDONED_CART": "ABANDONED",
+            "BANK_SLIP_GENERATED": "PENDING"
         }
     }
 
@@ -119,7 +129,7 @@ def get_campaign_by_integration(integration):
     return campaign
 
 
-def update_campaign_fields(campaign, status, amount, gateway):
+def update_campaign_fields(integration, operation_type, campaign, status, amount, gateway):
     """
     Atualiza os campos da campanha com base no status e no valor.
 
@@ -132,22 +142,73 @@ def update_campaign_fields(campaign, status, amount, gateway):
     Returns:
         None
     """
+    
+    if bool(int(os.getenv('DEBUG', 0))):
+        logger.info(f"Atualizando campos da campanha: {campaign.uid}, Status: {status}, Gateway: {gateway}")
+        
     try:
-        # Mapeia o status recebido para o status interno do sistema
-        mapped_status = map_payment_status(status, gateway)
+        
+        # Obter o status antigo da campanha
+        old_status = integration.status
+        old_amount = integration.amount
+        
+        # Decrementar os campos da campanha com base no status antigo (para evitar duplicação)
+        if operation_type == 'update':
+            if old_status == 'APPROVED':
+                campaign.total_approved -= 1
+                campaign.amount_approved -= old_amount
 
-        # Atualiza os campos da campanha com base no status mapeado
-        if mapped_status == 'APPROVED':
+            if old_status == 'PENDING':
+                campaign.total_pending -= 1
+                campaign.amount_pending -= old_amount
+
+            if old_status == 'REFUNDED':
+                campaign.total_refunded -= 1
+                campaign.amount_refunded -= old_amount
+
+            if old_status == 'REJECTED':
+                campaign.total_rejected -= 1
+                campaign.amount_rejected -= old_amount
+
+            if old_status == 'CHARGEBACK':
+                campaign.total_chargeback -= 1
+                campaign.amount_chargeback -= old_amount
+
+            if old_status == 'ABANDONED':
+                campaign.total_abandoned -= 1
+                campaign.amount_abandoned -= old_amount
+        
+        # Incrementar os campos da campanha com base no status mapeado
+        if status == 'APPROVED':
             campaign.total_approved += 1
             campaign.amount_approved += amount
 
-        elif mapped_status == 'PENDING':
+        if status == 'PENDING':
             campaign.total_pending += 1
             campaign.amount_pending += amount
+            
+        if status == 'REFUNDED':
+            campaign.total_refunded += 1
+            campaign.amount_refunded += amount
 
+        if status == 'REJECTED':
+            campaign.total_rejected += 1
+            campaign.amount_rejected += amount
+            
+        if status == 'CHARGEBACK':
+            campaign.total_chargeback += 1
+            campaign.amount_chargeback += amount
+            
+        if status == 'ABANDONED':
+            campaign.total_abandoned += 1
+            campaign.amount_abandoned += amount
+        
+        if status == 'CANCELED':
+            campaign.total_canceled += 1
+            campaign.amount_canceled += amount
+            
         # Salva as alterações na campanha
         campaign.save()
-
     except Exception as e:
         logger.error(
             f"Erro ao atualizar os campos da campanha: {e}", exc_info=True)

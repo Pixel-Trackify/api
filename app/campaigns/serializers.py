@@ -5,7 +5,7 @@ from .models import Campaign, CampaignView, Integration
 import logging
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('django')
 
 
 class CampaignSerializer(serializers.ModelSerializer):
@@ -25,7 +25,7 @@ class CampaignSerializer(serializers.ModelSerializer):
         model = Campaign
         fields = [
             'id', 'uid', 'integrations', 'user', 'source', 'title', 'CPM',
-            'total_approved', 'total_pending', 'amount_approved', 'amount_pending',
+            'total_approved', 'total_pending', 'amount_approved', 'amount_pending', 'total_abandoned', 'amount_abandoned', 'total_canceled', 'amount_canceled', 'total_refunded', 'amount_refunded', 'total_rejected', 'amount_rejected', 'total_chargeback', 'amount_chargeback',
             'total_ads', 'profit', 'ROI', 'total_views', 'total_clicks',
             'created_at', 'updated_at', 'stats'
         ]
@@ -110,7 +110,6 @@ class CampaignViewSerializer(serializers.ModelSerializer):
         fields = ['id', 'campaign', 'user_agent',
                   'ip_address', 'action', 'created_at', 'updated_at']
         read_only_fields = ['created_at', 'updated_at']
-
 
 
 class PaginationMetadataSerializer(serializers.Serializer):

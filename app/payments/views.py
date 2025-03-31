@@ -17,7 +17,7 @@ import requests
 from .schema import schemas
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('django')
 
 
 @schemas['create_payment_view']

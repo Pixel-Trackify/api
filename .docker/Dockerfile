@@ -18,4 +18,9 @@ ENV PATH="/scripts:/venv/bin:$PATH"
 
 USER duser
 
-CMD ["uwsgi", "--http", ":8000", "--module", "project.wsgi", "--master", "--processes", "4", "--threads", "2"]
+CMD ["sh", "-c", "echo APP_AMBIENT in Django is set to: $APP_AMBIENT && \
+    if [ \"$APP_AMBIENT\" = \"production\" ]; then \
+        uwsgi --http :8000 --module project.wsgi --master --processes 4 --threads 2; \
+    else \
+        python manage.py runserver 0.0.0.0:8000; \
+    fi;"]
