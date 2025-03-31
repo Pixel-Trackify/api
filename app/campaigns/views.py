@@ -32,7 +32,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Retorna as campanhas do usuário autenticado"""
-        return self.queryset.filter(user=self.request.user)
+        return self.queryset.filter(user=self.request.user).prefetch_related('integrations')
 
     def list(self, request, *args, **kwargs):
         """
