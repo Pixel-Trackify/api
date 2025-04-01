@@ -28,7 +28,8 @@ class CustomTokenVerifyView(TokenVerifyView):
                     "uid": user.uid,
                     "name": user.name,
                     "email": user.email,
-                    "avatar": user.avatar
+                    "avatar": user.avatar,
+                    "role": "admin" if user.is_superuser else "user",
                 }
             }, status=status.HTTP_200_OK)
         except (InvalidToken, TokenError) as e:
