@@ -16,6 +16,7 @@ import datetime
 import logging
 from .schema import schemas
 from decimal import Decimal
+import os
 
 logger = logging.getLogger('django')
 
@@ -156,6 +157,17 @@ class KwaiWebhookView(APIView):
                 campaign.total_views += 1
             elif action == 'click':
                 campaign.total_clicks += 1
+                
+            # NOVA TABELA campaign_views_ads
+            """
+                - id (int)
+                - campaign_id (int)                  (default 0)
+                - views (int)                        (default 0)
+                - clicks (int)                       (default 0)
+                - total_ads (float 8 casas decimais) (default 0)
+                - date (date Y-m-d)
+            """    
+                
 
             # Atualiza o total_ads com base no CPM
             price_unit = Decimal(campaign.CPM) / 1000
@@ -166,12 +178,31 @@ class KwaiWebhookView(APIView):
             total_ads = campaign.total_ads
             amount_approved = campaign.amount_approved
 
-            # Recalcular profit e ROI para todas as integrações associadas
-            for integration in campaign.integrations.all():
-                recalculate_campaigns(campaign, total_ads, amount_approved)
+            """
+            SELECT * FROM campaign_views_ads
+                WHERE campaign_id = campaign.id
+                AND date = date.now()
+                
+            campaign_views_ads = SQL DE CIMA
+            
+            campaign_views_ads.total_ads += price_unit    
+            if action == 'view':
+                campaign_views_ads.views += 1
+            elif action == 'click':
+                campaign_views_ads.clicks += 1
+            
+            
+            SE NÂO EXISTIR CADASTRAR
+            SE EXISTIR SÒ INCREMENTAR
+        
+            """
 
-            logger.debug(
-                f"Campaign {campaign.id} updated: Total Ads: {campaign.total_ads}, Total Views: {campaign.total_views}, Total Clicks: {campaign.total_clicks}")
+            # Recalcular profit e ROI da campanha
+            recalculate_campaigns(campaign, total_ads, amount_approved)
+
+            if bool(int(os.getenv('DEBUG', 0))):
+                logger.debug(
+                    f"Campaign {campaign.id} updated: Total Ads: {campaign.total_ads}, Total Views: {campaign.total_views}, Total Clicks: {campaign.total_clicks}")
 
             return Response({"status": "success", "message": "Campaign updated successfully."})
         else:
