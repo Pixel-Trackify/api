@@ -6,7 +6,7 @@ from botocore.exceptions import NoCredentialsError, PartialCredentialsError
 from django.conf import settings
 
 
-def upload_to_s3(file, user, folder="support_attachments/"):
+def upload_to_s3(file, user, folder="goals/"):
     """
     Faz o upload do arquivo para o Bucket S3 e retorna a URL pública.
     """
