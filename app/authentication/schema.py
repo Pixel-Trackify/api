@@ -18,7 +18,12 @@ custom_token_verify_schema = extend_schema(
                         "uid": {"type": "string", "example": "7c0fa97f-89d8-427f-a54a-ee9409ce0acb"},
                         "name": {"type": "string", "example": "João Gomes"},
                         "email": {"type": "string", "example": "joao.gomes@gmail.com"},
-                        "avatar": {"type": "string", "example": "https://example.com/avatar.jpg"}
+                        "avatar": {"type": "string", "example": "https://example.com/avatar.jpg"},
+                        "profit": 25515.04,
+                        "goals": {
+                            "min": 0,
+                            "max": 500000
+                        }
                     }
                 }
             }
@@ -52,7 +57,12 @@ custom_token_verify_schema = extend_schema(
                     "uid": "7c0fa97f-89d8-427f-a54a-ee9409ce0acb",
                     "name": "João Gomes",
                     "email": "joao.gomes@gmail.com",
-                    "avatar": "https://example.com/avatar.jpg"
+                    "avatar": "https://example.com/avatar.jpg",
+                    "profit": 25515.04,
+                    "goals": {
+                        "min": 0,
+                        "max": 500000
+                    }
                 }
             },
             response_only=True

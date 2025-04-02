@@ -22,6 +22,19 @@ class CustomTokenVerifyView(TokenVerifyView):
             user_uid = token['user_uid']
             user = User.objects.get(uid=user_uid)
 
+            # Obter o profit do usuário
+            user_profit = user.profit
+
+            # Determinar a regra da meta com base no range de faturamento
+            goal_rule = Goal.objects.filter(
+                min__lte=user_profit, max__gte=user_profit).first()
+
+            # Construir o objeto goals com min e max
+            goals_data = {
+                "min": goal_rule.min if goal_rule else None,
+                "max": goal_rule.max if goal_rule else None,
+            }
+
             return Response({
                 "message": "Token is valid",
                 "user": {
@@ -30,6 +43,8 @@ class CustomTokenVerifyView(TokenVerifyView):
                     "email": user.email,
                     "avatar": user.avatar,
                     "role": "admin" if user.is_superuser else "user",
+                    "profit": user_profit,
+                    "goals": goals_data,
                 }
             }, status=status.HTTP_200_OK)
         except (InvalidToken, TokenError) as e:
