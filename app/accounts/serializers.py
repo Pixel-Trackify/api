@@ -246,12 +246,13 @@ class LoginSerializer(serializers.Serializer):
             lookup_field = "cpf"
         else:
             raise serializers.ValidationError(
-                {"message":"Informe um email ou CPF válido."})
+                {"message": "Informe um email ou CPF válido."})
 
         try:
             user = User.objects.get(**{lookup_field: identifier})
         except User.DoesNotExist:
-            raise serializers.ValidationError({"message": "As credenciais fornecidas estão incorretas. Verifique e tente novamente."})
+            raise serializers.ValidationError(
+                {"message": "As credenciais fornecidas estão incorretas. Verifique e tente novamente."})
 
         # Sempre verifica a senha, mesmo que o usuário esteja bloqueado
         correct_password = user.check_password(password)
@@ -263,11 +264,12 @@ class LoginSerializer(serializers.Serializer):
             # Se a senha estiver errada e o usuário já estiver bloqueado, mantém o bloqueio
             if user.is_locked():
                 raise serializers.ValidationError(
-                    {"message":"Muitas tentativas. Tente novamente mais tarde."})
+                    {"message": "Muitas tentativas. Tente novamente mais tarde."})
 
             # Incrementa as tentativas e bloqueia se necessário
             user.increment_login_attempts()
-            raise serializers.ValidationError({"message": "As credenciais fornecidas estão incorretas. Verifique e tente novamente."})
+            raise serializers.ValidationError(
+                {"message": "As credenciais fornecidas estão incorretas. Verifique e tente novamente."})
 
         attrs["user"] = user
         return attrs
@@ -294,7 +296,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Usuario
         fields = ['uid', 'name', 'email', 'cpf',
-                  'avatar', 'date_joined', 'active_plan']
+                  'avatar', 'date_joined', 'active_plan', 'profit']
 
     def get_active_plan(self, obj):
         active_subscription = obj.subscriptions.filter(is_active=True).first()

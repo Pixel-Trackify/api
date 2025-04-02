@@ -1,23 +1,12 @@
-from django.contrib.auth.signals import user_login_failed
+from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.utils.timezone import now
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
+from campaigns.models import Campaign  # Importar o modelo Campaign corretamente
 
 
-@receiver(user_login_failed)
-def register_failed_login(sender, credentials, **kwargs):
-    identifier = credentials.get("identifier")
-
-    if not identifier:
-        return
-
-    user = None
-    if "@" in identifier:
-        user = User.objects.filter(email=identifier).first()
-    elif identifier.isdigit() and len(identifier) in [11, 14]:
-        user = User.objects.filter(cpf=identifier).first()
-
-    if user:
-        user.increment_login_attempts()
+@receiver(post_save, sender=Campaign)
+def update_user_profit(sender, instance, **kwargs):
+    """
+    Atualiza o profit do usuário sempre que uma campanha for salva.
+    """
+    if instance.user:  # Certifique-se de que a campanha está associada a um usuário
+        instance.user.recalculate_profit()

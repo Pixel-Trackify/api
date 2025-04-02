@@ -6,6 +6,7 @@ from django.db import transaction
 from django.contrib.auth import get_user_model
 from plans.models import Plan
 import uuid
+from django.db.models import Sum
 
 
 class UsuarioManager(BaseUserManager):
@@ -25,17 +26,31 @@ class UsuarioManager(BaseUserManager):
 
 
 class Usuario(AbstractBaseUser, PermissionsMixin):
-    uid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    uid = models.UUIDField(
+        primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=150)
     email = models.EmailField(unique=True)
     cpf = models.CharField(max_length=11, unique=True)
     date_joined = models.DateTimeField(auto_now_add=True)
-    account_type = models.ForeignKey(Plan, on_delete=models.SET_NULL, null=True, blank=True)
+    account_type = models.ForeignKey(
+        Plan, on_delete=models.SET_NULL, null=True, blank=True)
     avatar = models.URLField(max_length=500, null=True, blank=True)
+    profit = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
+
+    def recalculate_profit(self):
+        """
+        Recalcula o valor total de profit com base nas campanhas associadas.
+        """
+        total_profit = self.campaigns.aggregate(
+            Sum('profit'))['profit__sum'] or 0
+        self.profit = total_profit
+        self.save()
 
     # Controle de tentativas de login
-    login_attempts = models.PositiveIntegerField( default=0)  # Campo para tentativas
-    locked_until = models.DateTimeField(null=True, blank=True)  # Campo para bloqueio
+    login_attempts = models.PositiveIntegerField(
+        default=0)  # Campo para tentativas
+    locked_until = models.DateTimeField(
+        null=True, blank=True)  # Campo para bloqueio
 
     # Garantir que o usuário possa ser desativado
     is_active = models.BooleanField(default=True)
@@ -43,15 +58,11 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
 
     objects = UsuarioManager()
 
-
-
     USERNAME_FIELD = "email"  # Mudança para compatibilidade com django-allauth
     REQUIRED_FIELDS = ["cpf", "name"]
 
     class Meta:
         db_table = 'users'
-
-
 
     def __str__(self):
         return self.email or self.cpf
@@ -92,7 +103,3 @@ class LoginLog(models.Model):
 
     def __str__(self):
         return f"LoginLog(user={self.user.email}, ip_address={self.ip_address}, device={self.device}, browser={self.browser}, login_time={self.login_time})"
-
-
-
-
