@@ -14,6 +14,7 @@ urlpatterns = [
     path('', include('campaigns.urls')),
     path('', include('integrations.urls')),
     path('', include('payments.urls')),
+    path('', include('support.urls')),
     #path('', index, name='index'),
     path('api/schema/', SpectacularAPIView.as_view(),
          name='schema'),  # URL para gerar o esquema OpenAPI
