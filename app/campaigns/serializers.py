@@ -3,6 +3,7 @@ from collections import Counter
 from integrations.models import IntegrationRequest
 from .models import Campaign, CampaignView, Integration
 import logging
+from django.urls import reverse
 from django.db.models import Sum
 from datetime import datetime, timedelta
 

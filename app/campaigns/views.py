@@ -17,6 +17,7 @@ import logging
 from .schema import schemas
 from decimal import Decimal
 import os
+from django.urls import reverse
 
 logger = logging.getLogger('django')
 
@@ -59,14 +60,29 @@ class CampaignViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """Vincula automaticamente o usuário logado à campanha"""
-        logger.debug(
-            f"Dados recebidos no serializer: {serializer.validated_data}")
         serializer.save(user=self.request.user)
 
-        # Salva a campanha vinculada ao usuário e à integração
-        logger.debug(
-            f"Dados recebidos no serializer: {serializer.validated_data}")
-        serializer.save(user=self.request.user)
+    def create(self, request, *args, **kwargs):
+        """Sobrescreve o método create para incluir as URLs do webhook na resposta"""
+        response = super().create(request, *args, **kwargs)
+
+        # Recuperar a campanha criada
+        campaign = Campaign.objects.get(uid=response.data['uid'])
+
+        # Construir as URLs do webhook dinamicamente
+        view_webhook_url = request.build_absolute_uri(
+            reverse("kwai-webhook", kwargs={"uid": campaign.uid})
+        ) + "?action=view"
+
+        click_webhook_url = request.build_absolute_uri(
+            reverse("kwai-webhook", kwargs={"uid": campaign.uid})
+        ) + "?action=click"
+
+        # Adicionar as URLs do webhook na resposta
+        response.data['view_webhook_url'] = view_webhook_url
+        response.data['click_webhook_url'] = click_webhook_url
+
+        return response
 
     def destroy(self, request, *args, **kwargs):
         """

@@ -243,7 +243,10 @@ schemas = {
                                 "credit_card": 0,
                                 "credit_debit": 0,
                                 "boleto": 0
-                        }
+                        },
+                        "overviews": [],
+                        "view_webhook_url": "http://localhost/webhook/kwai/1759be9f-f0f3-40ae-ad24-0e01c3b86e7f/?action=view",
+                        "click_webhook_url": "http://localhost/webhook/kwai/1759be9f-f0f3-40ae-ad24-0e01c3b86e7f/?action=click",
 
                     },
                     response_only=True,
