@@ -5,6 +5,7 @@ from datetime import datetime
 from botocore.exceptions import NoCredentialsError, PartialCredentialsError
 from django.conf import settings
 
+
 def upload_to_s3(file, user, folder="support_attachments/"):
     """
     Faz o upload do arquivo para o Bucket S3 e retorna a URL pública.
@@ -24,7 +25,7 @@ def upload_to_s3(file, user, folder="support_attachments/"):
     # Gera um nome de arquivo único com base na data atual e UUID
     current_date = datetime.now().strftime("%Y%m%d%H%M%S")
     random_filename = f"{current_date}_{uuid.uuid4().hex}{os.path.splitext(file.name)[1]}"
-    file_path = f"{folder}{user.email}/{random_filename}"
+    file_path = f"{folder}{user.uid}/{random_filename}"
 
     try:
         # Faz o upload do arquivo para o S3
@@ -41,6 +42,7 @@ def upload_to_s3(file, user, folder="support_attachments/"):
         file_url = f"https://{settings.AWS_BUCKET}.s3.{settings.AWS_DEFAULT_REGION}.amazonaws.com/{file_path}"
         return file_url
     except (NoCredentialsError, PartialCredentialsError):
-        raise Exception("Erro de credenciais do AWS S3. Verifique as configurações.")
+        raise Exception(
+            "Erro de credenciais do AWS S3. Verifique as configurações.")
     except Exception as e:
         raise Exception(f"Erro ao fazer upload do arquivo: {str(e)}")

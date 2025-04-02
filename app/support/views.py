@@ -98,7 +98,7 @@ class FileHandler:
 
         current_date = datetime.now().strftime("%Y%m%d%H%M%S")
         random_filename = f"{current_date}_{uuid.uuid4().hex}{os.path.splitext(file.name)[1]}"
-        file_path = f"{folder}{user.email}/{random_filename}"
+        file_path = f"{folder}{user.uid}/{random_filename}"
 
         try:
             s3.upload_fileobj(
