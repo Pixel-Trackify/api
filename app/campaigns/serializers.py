@@ -56,14 +56,11 @@ class CampaignSerializer(serializers.ModelSerializer):
         return stats
 
     def get_overviews(self, obj):
-        """
-        Calcula os dados diários (overviews) para a campanha com base no último mês.
-        """
         today = datetime.now().date()
         start_date = today - timedelta(days=30)
 
         # Obter despesas diárias (EXPENSE)
-        expenses = obj.expenses.filter(
+        expenses = obj.finance_logs.filter(
             date__gte=start_date,
             date__lte=today
         ).values('date').annotate(
@@ -71,30 +68,32 @@ class CampaignSerializer(serializers.ModelSerializer):
         )
 
         # Obter receitas diárias (REVENUE)
-        integrations = obj.integrations.all()  # Obter integrações relacionadas
+        integrations = obj.integrations.all()
         revenues = IntegrationRequest.objects.filter(
-            integration__in=integrations,  # Filtrar pelas integrações relacionadas
+            integration__in=integrations,
             status='APPROVED',
-            created_at__date__gte=start_date,
-            created_at__date__lte=today
-        ).values('created_at__date').annotate(
+            created_at__gte=start_date,
+            created_at__lte=today
+        ).values('created_at').annotate(
             total_revenue=Sum('amount')
         )
 
         # Combinar despesas e receitas
         overviews = []
         for expense in expenses:
-            overviews.append({
-                "type": "EXPENSE",
-                "value": expense['total_expense'],
-                "date": expense['date']
-            })
+            if 'total_expense' in expense and 'date' in expense:
+                overviews.append({
+                    "type": "EXPENSE",
+                    "value": expense['total_expense'],
+                    "date": expense['date']
+                })
         for revenue in revenues:
-            overviews.append({
-                "type": "REVENUE",
-                "value": revenue['total_revenue'],
-                "date": revenue['created_at__date']
-            })
+            if 'total_revenue' in revenue and 'created_at' in revenue:
+                overviews.append({
+                    "type": "REVENUE",
+                    "value": revenue['total_revenue'],
+                    "date": revenue['created_at']
+                })
 
         # Ordenar por data
         overviews.sort(key=lambda x: x['date'])
