@@ -179,19 +179,20 @@ class KwaiWebhookView(APIView):
 
             # Verifica se já existe um registro para a campanha e a data atual
             today = now().date()
-            expense_log, created = FinanceLogs.objects.get_or_create(
+            finance_log, created = FinanceLogs.objects.get_or_create(
                 campaign=campaign,
                 date=today,
-                defaults={'total_ads': Decimal('0.0'), 'views': 0, 'clicks': 0}
+                defaults={'total_ads': Decimal(
+                    '0.0'), 'total_views': 0, 'total_clicks': 0}
             )
 
             # Atualiza os valores na tabela expense_log
-            expense_log.total_ads += price_unit
+            finance_log.total_ads += price_unit
             if action == 'view':
-                expense_log.views += 1
+                finance_log.total_views += 1
             elif action == 'click':
-                expense_log.clicks += 1
-            expense_log.save()
+                finance_log.total_clicks += 1
+            finance_log.save()
 
             # Atualiza o total_ads na tabela Campaign
             campaign.total_ads += price_unit
