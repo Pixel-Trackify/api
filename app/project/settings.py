@@ -84,6 +84,8 @@ INSTALLED_APPS = [
     'campaigns',
     'integrations',
     'payments',
+    'support',
+    'goals',
 ]
 
 SITE_ID = 1

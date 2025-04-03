@@ -47,8 +47,11 @@ register_view_schema = extend_schema_view(
                     "password": "Password123!",
                     "confirm_password": "Password123!",
                     "plan_uid": "191663b0-d352-4f5e-a16c-91e83ecbd13a",  # Opcional
-                    "avatar": "https://seu-bucket.s3.amazonaws.com/caminho/para/avatar.jpg"  # Opcional
+                    # URL do avatar, # Opcional
+                    "avatar": "https://seu-bucket.s3.amazonaws.com/caminho/para/avatar.jpg",
+                    "profit": "0.0",
                 },
+
                 request_only=True,
             ),
             OpenApiExample(
@@ -99,7 +102,7 @@ user_profile_view_schema = extend_schema_view(
                     "cpf": "12345678901",
                     "avatar": "https://seu-bucket.s3.amazonaws.com/caminho/para/avatar.jpg",
                     "date_joined": "2025-03-25T12:00:00Z",
-                    "is_active": True,
+                    "profit": "0.0",
                     "active_plan": {
                         "id": 1,
                         "uid": "plan-uid-123",
@@ -141,7 +144,7 @@ user_profile_view_schema = extend_schema_view(
                     "cpf": "12345678901",
                     "avatar": "https://seu-bucket.s3.amazonaws.com/caminho/para/avatar.jpg",
                     "date_joined": "2025-03-25T12:00:00Z",
-                    "is_active": True,
+                    "profit": "0.0",
                     "active_plan": {
                         "id": 1,
                         "uid": "plan-uid-123",
