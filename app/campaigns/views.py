@@ -7,7 +7,7 @@ from rest_framework.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from .models import Campaign, Expense
+from .models import Campaign, FinanceLogs
 from integrations.models import Integration
 from .serializers import CampaignSerializer, CampaignViewSerializer
 from user_agents import parse
@@ -179,7 +179,7 @@ class KwaiWebhookView(APIView):
 
             # Verifica se já existe um registro para a campanha e a data atual
             today = now().date()
-            expense_log, created = Expense.objects.get_or_create(
+            expense_log, created = FinanceLogs.objects.get_or_create(
                 campaign=campaign,
                 date=today,
                 defaults={'total_ads': Decimal('0.0'), 'views': 0, 'clicks': 0}

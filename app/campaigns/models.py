@@ -87,17 +87,38 @@ class CampaignView(models.Model):
         return f"{self.campaign.title} - {self.action} - {self.created_at}"
 
 
-class Expense(models.Model):
+class FinanceLogs(models.Model):
+    id = models.AutoField(primary_key=True)
     campaign = models.ForeignKey(
-        'Campaign', on_delete=models.CASCADE, related_name='expenses')
-    views = models.IntegerField(default=0)
-    clicks = models.IntegerField(default=0)
-    total_ads = models.DecimalField(
-        max_digits=10, decimal_places=8, default=Decimal('0.0'))
+        'Campaign', on_delete=models.CASCADE, related_name='finance_logs', default=0
+    )
+    profit = models.DecimalField(max_digits=15, decimal_places=5, default=0)
+    ROI = models.DecimalField(max_digits=15, decimal_places=5, default=0)
+    total_views = models.IntegerField(default=0)
+    total_clicks = models.IntegerField(default=0)
+    total_ads = models.DecimalField(max_digits=13, decimal_places=8, default=0)
+    total_approved = models.IntegerField(default=0)
+    total_pending = models.IntegerField(default=0)
+    total_refunded = models.IntegerField(default=0)
+    total_abandoned = models.IntegerField(default=0)
+    total_chargeback = models.IntegerField(default=0)
+    total_rejected = models.IntegerField(default=0)
+    amount_approved = models.DecimalField(
+        max_digits=15, decimal_places=2, default=0)
+    amount_pending = models.DecimalField(
+        max_digits=15, decimal_places=2, default=0)
+    amount_refunded = models.DecimalField(
+        max_digits=15, decimal_places=2, default=0)
+    amount_rejected = models.DecimalField(
+        max_digits=15, decimal_places=2, default=0)
+    amount_chargeback = models.DecimalField(
+        max_digits=15, decimal_places=2, default=0)
+    amount_abandoned = models.DecimalField(
+        max_digits=15, decimal_places=2, default=0)
     date = models.DateField(auto_now_add=True)
 
     class Meta:
-        db_table = 'campaign_Expense'
+        db_table = 'finances_logs'
         # Garante que não existam duplicatas para a mesma campanha e data
         unique_together = ('campaign', 'date')
         indexes = [
@@ -106,4 +127,4 @@ class Expense(models.Model):
         ]
 
     def __str__(self):
-        return f"Expense for Campaign {self.campaign.id} on {self.date}"
+        return f"FinanceLogs for Campaign {self.campaign.id} on {self.date}"
