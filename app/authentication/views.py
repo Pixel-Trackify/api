@@ -5,6 +5,7 @@ from rest_framework_simplejwt.tokens import UntypedToken
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from django.contrib.auth import get_user_model
 from .schema import custom_token_verify_schema
+from goals.models import Goal
 
 
 User = get_user_model()
