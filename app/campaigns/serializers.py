@@ -6,6 +6,7 @@ import logging
 from django.urls import reverse
 from django.db.models import Sum
 from datetime import datetime, timedelta
+from django.utils import timezone
 
 logger = logging.getLogger('django')
 
@@ -56,7 +57,7 @@ class CampaignSerializer(serializers.ModelSerializer):
         return stats
 
     def get_overviews(self, obj):
-        today = datetime.now().date()
+        today = timezone.now().date()  # Use timezone-aware datetime
         start_date = today - timedelta(days=30)
 
         # Obter despesas diárias (EXPENSE)
@@ -69,11 +70,14 @@ class CampaignSerializer(serializers.ModelSerializer):
 
         # Obter receitas diárias (REVENUE)
         integrations = obj.integrations.all()
+
         revenues = IntegrationRequest.objects.filter(
-            integration__in=integrations,
+            integration__in=integrations,  # Filtrar pelas integrações relacionadas
             status='APPROVED',
-            created_at__gte=start_date,
-            created_at__lte=today
+            created_at__gte=timezone.make_aware(
+                datetime.combine(start_date, datetime.min.time())),
+            created_at__lte=timezone.make_aware(
+                datetime.combine(today, datetime.max.time()))
         ).values('created_at').annotate(
             total_revenue=Sum('amount')
         )
@@ -92,7 +96,7 @@ class CampaignSerializer(serializers.ModelSerializer):
                 overviews.append({
                     "type": "REVENUE",
                     "value": revenue['total_revenue'],
-                    "date": revenue['created_at']
+                    "date": revenue['created_at'].date()
                 })
 
         # Ordenar por data
