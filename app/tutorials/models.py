@@ -1,11 +1,16 @@
 from django.db import models
 import requests
+import uuid
+
 
 class Tutorial(models.Model):
+    uid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     youtube_url = models.URLField(max_length=200)
     thumbnail_url = models.URLField(max_length=200, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'tutorials'

@@ -1,11 +1,7 @@
-from django.urls import path
-from . import views
+from rest_framework.routers import DefaultRouter
+from .views import TutorialViewSet
 
-urlpatterns = [
-    path('tutoriais/', views.TutorialListView.as_view(),
-         name='tutorial-list-create'),
-    path('tutoriais/create/', views.TutorialCreateView.as_view(),
-         name='tutorial-create'),
-    path('tutoriais/<uuid:uid>/',
-         views.TutorialRetrieveUpdateDestroyView.as_view(), name='tutorial-detail'),
-]
+router = DefaultRouter()
+router.register(r'tutorials', TutorialViewSet, basename='tutorial')
+
+urlpatterns = router.urls

@@ -6,7 +6,8 @@ import re
 class TutorialSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tutorial
-        fields = ['id', 'title', 'description', 'youtube_url', 'thumbnail_url']
+        fields = ['uid', 'title', 'description', 'youtube_url',
+                  'thumbnail_url', 'created_at', 'updated_at']
 
     def validate_youtube_url(self, value):
         youtube_regex = re.compile(
