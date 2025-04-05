@@ -7,7 +7,32 @@ tutorial_create_schema = extend_schema_view(
         summary="Criar um novo tutorial",
         description="Endpoint para criar um novo tutorial. Apenas administradores podem acessar.",
         tags=["Tutoriais"],
+        request=TutorialSerializer,
         responses={201: TutorialSerializer},
+        examples=[
+            OpenApiExample(
+                "Exemplo de Requisição",
+                value={
+                    "title": "Novo Tutorial",
+                    "description": "Descrição do novo tutorial",
+                    "youtube_url": "https://www.youtube.com/watch?v=example"
+                },
+                request_only=True,
+            ),
+            OpenApiExample(
+                "Exemplo de Resposta",
+                value={
+                    "uid": "123e4567-e89b-12d3-a456-426614174000",
+                    "title": "Novo Tutorial",
+                    "description": "Descrição do novo tutorial",
+                    "youtube_url": "https://www.youtube.com/watch?v=example",
+                    "thumbnail_url": "https://img.youtube.com/vi/example/default.jpg",
+                    "created_at": "2025-04-03T12:00:00Z",
+                    "updated_at": "2025-04-03T12:00:00Z"
+                },
+                response_only=True,
+            )
+        ],
     )
 )
 
@@ -91,7 +116,7 @@ tutorial_detail_schema = extend_schema_view(
         tags=["Tutoriais"],
         parameters=[
             OpenApiParameter(
-                name="uid",  # Alterado de 'id' para 'uid'
+                name="uid",
                 description="UUID do tutorial a ser recuperado.",
                 required=True,
                 type=OpenApiTypes.UUID,
@@ -152,42 +177,6 @@ tutorial_detail_schema = extend_schema_view(
             )
         ],
     ),
-    patch=extend_schema(
-        summary="Atualizar parcialmente um tutorial",
-        description="Endpoint para atualizar parcialmente os detalhes de um tutorial específico.",
-        tags=["Tutoriais"],
-        parameters=[
-            OpenApiParameter(
-                name="uid",
-                description="UUID do tutorial a ser atualizado parcialmente.",
-                required=True,
-                type=OpenApiTypes.UUID,
-                location=OpenApiParameter.PATH,
-            )
-        ],
-        request=TutorialSerializer,
-        responses={200: TutorialSerializer},
-        examples=[
-            OpenApiExample(
-                "Exemplo de Requisição",
-                value={
-                    "title": "Título Atualizado"
-                },
-                request_only=True,
-            ),
-            OpenApiExample(
-                "Exemplo de Resposta",
-                value={
-                    "uid": "123e4567-e89b-12d3-a456-426614174000",
-                    "title": "Título Atualizado",
-                    "description": "Descrição do Tutorial",
-                    "youtube_url": "https://www.youtube.com/watch?v=abc123",
-                    "thumbnail_url": "https://example.com/thumbnail.jpg"
-                },
-                response_only=True,
-            )
-        ],
-    ),
     delete=extend_schema(
         summary="Deletar um tutorial",
         description="Endpoint para deletar um tutorial específico.",
@@ -207,6 +196,84 @@ tutorial_detail_schema = extend_schema_view(
                 "Exemplo de Requisição",
                 value=None,
                 request_only=True,
+            )
+        ],
+    )
+)
+# Schema para deletar múltiplos tutoriais
+tutorial_delete_multiple_schema = extend_schema_view(
+    post=extend_schema(
+        summary="Deletar múltiplos tutoriais",
+        description="Endpoint para deletar vários tutoriais enviando os UUIDs no corpo da requisição. Apenas administradores podem acessar.",
+        tags=["Tutoriais"],
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {
+                    "uids": {
+                        "type": "array",
+                        "items": {"type": "string", "format": "uuid"},
+                        "description": "Lista de UUIDs dos tutoriais a serem deletados."
+                    }
+                },
+                "example": {
+                    "uids": [
+                        "123e4567-e89b-12d3-a456-426614174000",
+                        "123e4567-e89b-12d3-a456-426614174001"
+                    ]
+                }
+            }
+        },
+        responses={
+            200: {
+                "type": "object",
+                "properties": {
+                    "message": {"type": "string", "example": "2 tutorial(s) excluído(s) com sucesso."},
+                    "not_found": {
+                        "type": "array",
+                        "items": {"type": "string", "format": "uuid"},
+                        "example": ["123e4567-e89b-12d3-a456-426614174002"]
+                    }
+                }
+            },
+            400: {
+                "type": "object",
+                "properties": {
+                    "error": {"type": "string", "example": "Nenhum UUID fornecido."}
+                }
+            },
+            404: {
+                "type": "object",
+                "properties": {
+                    "error": {"type": "string", "example": "Nenhum tutorial encontrado."}
+                }
+            }
+        },
+        examples=[
+            OpenApiExample(
+                "Exemplo de Requisição",
+                value={
+                    "uids": [
+                        "123e4567-e89b-12d3-a456-426614174000",
+                        "123e4567-e89b-12d3-a456-426614174001"
+                    ]
+                },
+                request_only=True,
+            ),
+            OpenApiExample(
+                "Exemplo de Resposta Sucesso",
+                value={
+                    "message": "2 tutorial(s) excluído(s) com sucesso.",
+                    "not_found": []
+                },
+                response_only=True,
+            ),
+            OpenApiExample(
+                "Exemplo de Resposta Erro",
+                value={
+                    "error": "Nenhum UUID fornecido."
+                },
+                response_only=True,
             )
         ],
     )
