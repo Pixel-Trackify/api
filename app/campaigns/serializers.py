@@ -3,7 +3,8 @@ from collections import Counter
 from integrations.models import IntegrationRequest
 from .models import Campaign, CampaignView, Integration
 import logging
-
+from django.db.models import Sum
+from datetime import datetime, timedelta
 
 logger = logging.getLogger('django')
 
@@ -20,6 +21,7 @@ class CampaignSerializer(serializers.ModelSerializer):
     )
     # Campo personalizado para estatísticas
     stats = serializers.SerializerMethodField()
+    overviews = serializers.SerializerMethodField()
 
     class Meta:
         model = Campaign
@@ -27,7 +29,7 @@ class CampaignSerializer(serializers.ModelSerializer):
             'id', 'uid', 'integrations', 'user', 'source', 'title', 'CPM',
             'total_approved', 'total_pending', 'amount_approved', 'amount_pending', 'total_abandoned', 'amount_abandoned', 'total_canceled', 'amount_canceled', 'total_refunded', 'amount_refunded', 'total_rejected', 'amount_rejected', 'total_chargeback', 'amount_chargeback',
             'total_ads', 'profit', 'ROI', 'total_views', 'total_clicks',
-            'created_at', 'updated_at', 'stats'
+            'created_at', 'updated_at', 'stats', 'overviews'
         ]
         read_only_fields = ['id', 'uid', 'user', 'created_at', 'updated_at']
 
@@ -51,6 +53,51 @@ class CampaignSerializer(serializers.ModelSerializer):
 
         # Retorna as estatísticas no formato solicitado
         return stats
+
+    def get_overviews(self, obj):
+        """
+        Calcula os dados diários (overviews) para a campanha com base no último mês.
+        """
+        today = datetime.now().date()
+        start_date = today - timedelta(days=30)
+
+        # Obter despesas diárias (EXPENSE)
+        expenses = obj.expenses.filter(
+            date__gte=start_date,
+            date__lte=today
+        ).values('date').annotate(
+            total_expense=Sum('total_ads')
+        )
+
+        # Obter receitas diárias (REVENUE)
+        integrations = obj.integrations.all()  # Obter integrações relacionadas
+        revenues = IntegrationRequest.objects.filter(
+            integration__in=integrations,  # Filtrar pelas integrações relacionadas
+            status='APPROVED',
+            created_at__date__gte=start_date,
+            created_at__date__lte=today
+        ).values('created_at__date').annotate(
+            total_revenue=Sum('amount')
+        )
+
+        # Combinar despesas e receitas
+        overviews = []
+        for expense in expenses:
+            overviews.append({
+                "type": "EXPENSE",
+                "value": expense['total_expense'],
+                "date": expense['date']
+            })
+        for revenue in revenues:
+            overviews.append({
+                "type": "REVENUE",
+                "value": revenue['total_revenue'],
+                "date": revenue['created_at__date']
+            })
+
+        # Ordenar por data
+        overviews.sort(key=lambda x: x['date'])
+        return overviews
 
     def validate_CPM(self, value):
         """Valida se o CPM é maior que 0"""

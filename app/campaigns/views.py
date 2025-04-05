@@ -1,5 +1,5 @@
 from rest_framework import viewsets, status, filters
-from rest_framework.authentication import BasicAuthentication
+from django.utils.timezone import now
 from rest_framework.decorators import action
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -7,7 +7,7 @@ from rest_framework.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from .models import Campaign, CampaignView
+from .models import Campaign, Expense
 from integrations.models import Integration
 from .serializers import CampaignSerializer, CampaignViewSerializer
 from user_agents import parse
@@ -157,52 +157,38 @@ class KwaiWebhookView(APIView):
                 campaign.total_views += 1
             elif action == 'click':
                 campaign.total_clicks += 1
-                
-            # NOVA TABELA campaign_views_ads
-            """
-                - id (int)
-                - campaign_id (int)                  (default 0)
-                - views (int)                        (default 0)
-                - clicks (int)                       (default 0)
-                - total_ads (float 8 casas decimais) (default 0)
-                - date (date Y-m-d)
-            """    
-                
 
-            # Atualiza o total_ads com base no CPM
+            # Calcula o preço unitário com base no CPM
             price_unit = Decimal(campaign.CPM) / 1000
-            campaign.total_ads = Decimal(campaign.total_ads) + price_unit
+
+            # Verifica se já existe um registro para a campanha e a data atual
+            today = now().date()
+            expense_log, created = Expense.objects.get_or_create(
+                campaign=campaign,
+                date=today,
+                defaults={'total_ads': Decimal('0.0'), 'views': 0, 'clicks': 0}
+            )
+
+            # Atualiza os valores na tabela expense_log
+            expense_log.total_ads += price_unit
+            if action == 'view':
+                expense_log.views += 1
+            elif action == 'click':
+                expense_log.clicks += 1
+            expense_log.save()
+
+            # Atualiza o total_ads na tabela Campaign
+            campaign.total_ads += price_unit
             campaign.save()
 
-            # Calcula os valores necessários para recalculate_campaigns
-            total_ads = campaign.total_ads
-            amount_approved = campaign.amount_approved
-
-            """
-            SELECT * FROM campaign_views_ads
-                WHERE campaign_id = campaign.id
-                AND date = date.now()
-                
-            campaign_views_ads = SQL DE CIMA
-            
-            campaign_views_ads.total_ads += price_unit    
-            if action == 'view':
-                campaign_views_ads.views += 1
-            elif action == 'click':
-                campaign_views_ads.clicks += 1
-            
-            
-            SE NÂO EXISTIR CADASTRAR
-            SE EXISTIR SÒ INCREMENTAR
-        
-            """
-
             # Recalcular profit e ROI da campanha
-            recalculate_campaigns(campaign, total_ads, amount_approved)
+            recalculate_campaigns(
+                campaign, campaign.total_ads, campaign.amount_approved)
 
             if bool(int(os.getenv('DEBUG', 0))):
                 logger.debug(
-                    f"Campaign {campaign.id} updated: Total Ads: {campaign.total_ads}, Total Views: {campaign.total_views}, Total Clicks: {campaign.total_clicks}")
+                    f"Campaign {campaign.id} updated: Total Ads: {campaign.total_ads}, Total Views: {campaign.total_views}, Total Clicks: {campaign.total_clicks}"
+                )
 
             return Response({"status": "success", "message": "Campaign updated successfully."})
         else:
