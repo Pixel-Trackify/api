@@ -1,6 +1,7 @@
 from django.db import models
 from integrations.models import Integration, User
 import uuid
+from decimal import Decimal
 
 
 class Campaign(models.Model):
@@ -25,17 +26,23 @@ class Campaign(models.Model):
     total_views = models.IntegerField(default=0)
     total_clicks = models.IntegerField(default=0)
     total_abandoned = models.IntegerField(default=0)
-    amount_abandoned = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    amount_abandoned = models.DecimalField(
+        max_digits=15, decimal_places=2, default=0)
     total_canceled = models.IntegerField(default=0)
-    amount_canceled = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    amount_canceled = models.DecimalField(
+        max_digits=15, decimal_places=2, default=0)
     total_refunded = models.IntegerField(default=0)
-    amount_refunded = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    amount_refunded = models.DecimalField(
+        max_digits=15, decimal_places=2, default=0)
     total_rejected = models.IntegerField(default=0)
-    amount_rejected = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    amount_rejected = models.DecimalField(
+        max_digits=15, decimal_places=2, default=0)
     total_chargeback = models.IntegerField(default=0)
-    amount_chargeback = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    amount_chargeback = models.DecimalField(
+        max_digits=15, decimal_places=2, default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
 
     class Meta:
         db_table = 'campaigns'
@@ -78,3 +85,25 @@ class CampaignView(models.Model):
 
     def __str__(self):
         return f"{self.campaign.title} - {self.action} - {self.created_at}"
+
+
+class Expense(models.Model):
+    campaign = models.ForeignKey(
+        'Campaign', on_delete=models.CASCADE, related_name='expenses')
+    views = models.IntegerField(default=0)
+    clicks = models.IntegerField(default=0)
+    total_ads = models.DecimalField(
+        max_digits=10, decimal_places=8, default=Decimal('0.0'))
+    date = models.DateField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'campaign_Expense'
+        # Garante que não existam duplicatas para a mesma campanha e data
+        unique_together = ('campaign', 'date')
+        indexes = [
+            # Índice para consultas rápidas
+            models.Index(fields=['campaign', 'date']),
+        ]
+
+    def __str__(self):
+        return f"Expense for Campaign {self.campaign.id} on {self.date}"
