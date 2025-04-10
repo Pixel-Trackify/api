@@ -14,6 +14,18 @@ class Campaign(models.Model):
     source = models.CharField(max_length=100, default='Kwai')
     title = models.CharField(max_length=255)
     CPM = models.DecimalField(max_digits=10, decimal_places=2)
+    CPC = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True, default=None)
+    CPV = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True, default=None)
+
+    METHOD_CHOICES = [
+        ('CPM', 'CPM'),
+        ('CPC', 'CPC'),
+        ('CPV', 'CPV'),
+    ]
+    method = models.CharField(
+        max_length=3, choices=METHOD_CHOICES, null=True, blank=True, default=None)
     total_approved = models.IntegerField(default=0)
     total_pending = models.IntegerField(default=0)
     amount_approved = models.DecimalField(
@@ -42,7 +54,6 @@ class Campaign(models.Model):
         max_digits=15, decimal_places=2, default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
 
     class Meta:
         db_table = 'campaigns'
