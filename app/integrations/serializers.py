@@ -12,7 +12,7 @@ class IntegrationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Integration
         fields = ['id', 'uid', 'user', 'name', 'gateway',
-                  'deleted', 'status', 'created_at', 'updated_at', 'webhook_url']
+                  'deleted', 'status', 'created_at', 'updated_at', 'webhook_url', 'in_use']
         read_only_fields = ['id', 'uid', 'user', 'deleted',
                             'status', 'created_at', 'updated_at']
 
@@ -75,6 +75,3 @@ class DeleteMultipleSerializer(serializers.Serializer):
         child=serializers.UUIDField(),
         help_text="Lista de UUIDs das integrações a serem excluídas."
     )
-
-
-
