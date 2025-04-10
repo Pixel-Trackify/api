@@ -103,12 +103,52 @@ class CampaignSerializer(serializers.ModelSerializer):
         overviews.sort(key=lambda x: x['date'])
         return overviews
 
-    def validate_CPM(self, value):
-        """Valida se o CPM é maior que 0"""
-        if value <= 0:
-            raise serializers.ValidationError("O CPM deve ser maior que 0.")
-        return value
+    def validate_CPM_CPC_CPV(self, data):
+        """
+        Valida que apenas o campo correspondente ao método escolhido é obrigatório
+        e que o valor é maior que 0.
+        """
+        method = data.get('method')
+        CPM = data.get('CPM')
+        CPC = data.get('CPC')
+        CPV = data.get('CPV')
 
+        # Verifica se o campo correspondente ao método foi preenchido
+        if method == 'CPM':
+            if CPM is None:
+                raise serializers.ValidationError(
+                    {"CPM": "O campo CPM é obrigatório quando o método é 'CPM'."})
+            if CPM <= 0:
+                raise serializers.ValidationError(
+                    {"CPM": "O CPM deve ser maior que 0."})
+            if CPC is not None or CPV is not None:
+                raise serializers.ValidationError(
+                    {"detail": "Apenas o campo CPM deve ser preenchido quando o método é 'CPM'."})
+
+        elif method == 'CPC':
+            if CPC is None:
+                raise serializers.ValidationError(
+                    {"CPC": "O campo CPC é obrigatório quando o método é 'CPC'."})
+            if CPC <= 0:
+                raise serializers.ValidationError(
+                    {"CPC": "O CPC deve ser maior que 0."})
+            if CPM is not None or CPV is not None:
+                raise serializers.ValidationError(
+                    {"detail": "Apenas o campo CPC deve ser preenchido quando o método é 'CPC'."})
+
+        elif method == 'CPV':
+            if CPV is None:
+                raise serializers.ValidationError(
+                    {"CPV": "O campo CPV é obrigatório quando o método é 'CPV'."})
+            if CPV <= 0:
+                raise serializers.ValidationError(
+                    {"CPV": "O CPV deve ser maior que 0."})
+            if CPM is not None or CPC is not None:
+                raise serializers.ValidationError(
+                    {"detail": "Apenas o campo CPV deve ser preenchido quando o método é 'CPV'."})
+
+        return data
+    
     def validate_integrations(self, value):
         """Valida se as integrações estão disponíveis ou já associadas à campanha"""
 
