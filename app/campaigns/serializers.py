@@ -110,8 +110,15 @@ class CampaignSerializer(serializers.ModelSerializer):
         return value
 
     def validate_integrations(self, value):
-        """Valida se as integrações estão disponíveis"""
+        """Valida se as integrações estão disponíveis ou já associadas à campanha"""
+
+        instance = self.instance
+
         for integration in value:
+
+            if instance and integration in instance.integrations.all():
+                continue
+
             if integration.in_use:
                 raise serializers.ValidationError(
                     f"O gateway '{integration.name}' já está em uso."
