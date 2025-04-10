@@ -12,6 +12,7 @@ from integrations.models import Integration
 from .serializers import CampaignSerializer, CampaignViewSerializer
 from user_agents import parse
 from integrations.campaign_utils import recalculate_campaigns
+from .finance_log_utils import update_finance_logs
 import datetime
 import logging
 from .schema import schemas
@@ -177,22 +178,8 @@ class KwaiWebhookView(APIView):
             # Calcula o preço unitário com base no CPM
             price_unit = Decimal(campaign.CPM) / 1000
 
-            # Verifica se já existe um registro para a campanha e a data atual
-            today = now().date()
-            finance_log, created = FinanceLogs.objects.get_or_create(
-                campaign=campaign,
-                date=today,
-                defaults={'total_ads': Decimal(
-                    '0.0'), 'total_views': 0, 'total_clicks': 0}
-            )
-
             # Atualiza os valores na tabela expense_log
-            finance_log.total_ads += price_unit
-            if action == 'view':
-                finance_log.total_views += 1
-            elif action == 'click':
-                finance_log.total_clicks += 1
-            finance_log.save()
+            update_finance_logs(campaign)
 
             # Atualiza o total_ads na tabela Campaign
             campaign.total_ads += price_unit
