@@ -28,7 +28,7 @@ class CampaignSerializer(serializers.ModelSerializer):
     class Meta:
         model = Campaign
         fields = [
-            'id', 'uid', 'integrations', 'user', 'source', 'title', 'CPM',
+            'id', 'uid', 'integrations', 'user', 'source', 'title', 'CPM', 'CPC', 'CPV', 'method',
             'total_approved', 'total_pending', 'amount_approved', 'amount_pending', 'total_abandoned', 'amount_abandoned', 'total_canceled', 'amount_canceled', 'total_refunded', 'amount_refunded', 'total_rejected', 'amount_rejected', 'total_chargeback', 'amount_chargeback',
             'total_ads', 'profit', 'ROI', 'total_views', 'total_clicks',
             'created_at', 'updated_at', 'stats', 'overviews'
@@ -103,15 +103,62 @@ class CampaignSerializer(serializers.ModelSerializer):
         overviews.sort(key=lambda x: x['date'])
         return overviews
 
-    def validate_CPM(self, value):
-        """Valida se o CPM é maior que 0"""
-        if value <= 0:
-            raise serializers.ValidationError("O CPM deve ser maior que 0.")
-        return value
+    def validate_CPM_CPC_CPV(self, data):
+        """
+        Valida que apenas o campo correspondente ao método escolhido é obrigatório
+        e que o valor é maior que 0.
+        """
+        method = data.get('method')
+        CPM = data.get('CPM')
+        CPC = data.get('CPC')
+        CPV = data.get('CPV')
+
+        # Verifica se o campo correspondente ao método foi preenchido
+        if method == 'CPM':
+            if CPM is None:
+                raise serializers.ValidationError(
+                    {"CPM": "O campo CPM é obrigatório quando o método é 'CPM'."})
+            if CPM <= 0:
+                raise serializers.ValidationError(
+                    {"CPM": "O CPM deve ser maior que 0."})
+            if CPC is not None or CPV is not None:
+                raise serializers.ValidationError(
+                    {"detail": "Apenas o campo CPM deve ser preenchido quando o método é 'CPM'."})
+
+        elif method == 'CPC':
+            if CPC is None:
+                raise serializers.ValidationError(
+                    {"CPC": "O campo CPC é obrigatório quando o método é 'CPC'."})
+            if CPC <= 0:
+                raise serializers.ValidationError(
+                    {"CPC": "O CPC deve ser maior que 0."})
+            if CPM is not None or CPV is not None:
+                raise serializers.ValidationError(
+                    {"detail": "Apenas o campo CPC deve ser preenchido quando o método é 'CPC'."})
+
+        elif method == 'CPV':
+            if CPV is None:
+                raise serializers.ValidationError(
+                    {"CPV": "O campo CPV é obrigatório quando o método é 'CPV'."})
+            if CPV <= 0:
+                raise serializers.ValidationError(
+                    {"CPV": "O CPV deve ser maior que 0."})
+            if CPM is not None or CPC is not None:
+                raise serializers.ValidationError(
+                    {"detail": "Apenas o campo CPV deve ser preenchido quando o método é 'CPV'."})
+
+        return data
 
     def validate_integrations(self, value):
-        """Valida se as integrações estão disponíveis"""
+        """Valida se as integrações estão disponíveis ou já associadas à campanha"""
+
+        instance = self.instance
+
         for integration in value:
+
+            if instance and integration in instance.integrations.all():
+                continue
+
             if integration.in_use:
                 raise serializers.ValidationError(
                     f"O gateway '{integration.name}' já está em uso."
@@ -132,22 +179,30 @@ class CampaignSerializer(serializers.ModelSerializer):
         return campaign
 
     def update(self, instance, validated_data):
-        """Atualiza uma campanha e associa as integrações"""
+        """Atualiza uma campanha e associa as integrações, desativando as integrações removidas."""
         integrations = validated_data.pop('integrations', None)
-        if integrations:
-            # Atualiza o campo `in_use` das integrações antigas
-            for integration in instance.integrations.all():
+        if integrations is not None:
+
+            current_integrations = set(instance.integrations.all())
+            new_integrations = set(integrations)
+            removed_integrations = current_integrations - new_integrations
+
+            for integration in removed_integrations:
                 integration.in_use = False
                 integration.save()
 
-            # Atualiza o campo `in_use` das novas integrações
-            for integration in integrations:
+            for integration in new_integrations:
                 integration.in_use = True
                 integration.save()
 
             instance.integrations.set(integrations)
 
-        return super().update(instance, validated_data)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        instance.save()
+
+        return instance
 
 
 class CampaignViewSerializer(serializers.ModelSerializer):
