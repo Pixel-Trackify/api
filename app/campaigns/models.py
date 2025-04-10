@@ -70,6 +70,16 @@ class Campaign(models.Model):
         """
         Atualiza o campo `in_use` das integrações associadas ao salvar a campanha.
         """
+        if self.method == 'CPM':
+            self.CPC = None
+            self.CPV = None
+        elif self.method == 'CPC':
+            self.CPM = None
+            self.CPV = None
+        elif self.method == 'CPV':
+            self.CPM = None
+            self.CPC = None
+            
         super().save(*args, **kwargs)  # Salva a campanha primeiro
         # Atualiza o campo `in_use` para todas as integrações associadas
         for integration in self.integrations.all():
