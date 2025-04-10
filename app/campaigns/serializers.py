@@ -148,7 +148,7 @@ class CampaignSerializer(serializers.ModelSerializer):
                     {"detail": "Apenas o campo CPV deve ser preenchido quando o método é 'CPV'."})
 
         return data
-    
+
     def validate_integrations(self, value):
         """Valida se as integrações estão disponíveis ou já associadas à campanha"""
 
@@ -179,22 +179,30 @@ class CampaignSerializer(serializers.ModelSerializer):
         return campaign
 
     def update(self, instance, validated_data):
-        """Atualiza uma campanha e associa as integrações"""
+        """Atualiza uma campanha e associa as integrações, desativando as integrações removidas."""
         integrations = validated_data.pop('integrations', None)
-        if integrations:
-            # Atualiza o campo `in_use` das integrações antigas
-            for integration in instance.integrations.all():
+        if integrations is not None:
+
+            current_integrations = set(instance.integrations.all())
+            new_integrations = set(integrations)
+            removed_integrations = current_integrations - new_integrations
+
+            for integration in removed_integrations:
                 integration.in_use = False
                 integration.save()
 
-            # Atualiza o campo `in_use` das novas integrações
-            for integration in integrations:
+            for integration in new_integrations:
                 integration.in_use = True
                 integration.save()
 
             instance.integrations.set(integrations)
 
-        return super().update(instance, validated_data)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        instance.save()
+
+        return instance
 
 
 class CampaignViewSerializer(serializers.ModelSerializer):
