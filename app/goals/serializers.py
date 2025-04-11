@@ -20,7 +20,7 @@ class GoalSerializer(serializers.ModelSerializer):
         max_value = data.get('max', 0)
 
         
-        if min_value <= 0 or max_value <= 0:
+        if min_value < 0 or max_value <= 0:
             raise serializers.ValidationError(
                 "Os valores 'min' e 'max' devem ser maiores que 0.")
 
