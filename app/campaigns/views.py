@@ -131,6 +131,11 @@ class CampaignViewSet(viewsets.ModelViewSet):
 
         # Usa uma transação para garantir consistência
         with transaction.atomic():
+            # Atualiza o campo `in_use` das integrações associadas às campanhas
+            for campaign in instances:
+                for integration in campaign.integrations.all():
+                    integration.in_use = False
+                    integration.save()
             deleted_count = instances.delete()[0]
 
         # Retorna uma resposta detalhada
