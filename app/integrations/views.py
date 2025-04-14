@@ -19,6 +19,7 @@ from .tribopay_webhook import process_tribopay_webhook
 from .wolfpay_webhook import process_wolfpay_webhook
 from .westpay_webhook import process_westpay_webhook
 from .sunize_webhook import process_sunize_webhook
+from django.conf import settings
 import logging
 from .schema import schemas
 
@@ -95,14 +96,10 @@ class IntegrationViewSet(viewsets.ModelViewSet):
 
     def build_webhook_url(self, integration):
         """
-        Constrói a URL do webhook com base no gateway e no UID da integração.
+        Constrói a URL do webhook com base no domínio configurado no .env.
         """
-        return self.request.build_absolute_uri(
-            reverse(
-                f"{integration.gateway.lower()}-webhook",
-                kwargs={"uid": integration.uid},
-            )
-        )
+        base_url = settings.WEBHOOK_BASE_URL  # Obtém o domínio do .env
+        return f"{base_url}{integration.gateway.lower()}/{integration.uid}/"
 
     def perform_update(self, serializer):
         """
@@ -246,7 +243,7 @@ class AvailableGatewaysView(APIView):
         return Response(response)
 
 
-class BaseWebhookView(APIView):
+'''class BaseWebhookView(APIView):
     """
     Classe base para processar notificações de webhooks de gateways de pagamento.
     """
@@ -412,3 +409,4 @@ class GrapefyWebhookView(BaseWebhookView):
     @property
     def process_function(self):
         return process_zeroone_webhook
+'''

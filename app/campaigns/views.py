@@ -13,7 +13,7 @@ from .serializers import CampaignSerializer, CampaignViewSerializer
 from user_agents import parse
 from integrations.campaign_utils import recalculate_campaigns
 from .finance_log_utils import update_finance_logs
-import datetime
+from django.conf import settings
 import logging
 from .schema import schemas
 from decimal import Decimal
@@ -70,14 +70,12 @@ class CampaignViewSet(viewsets.ModelViewSet):
         # Recuperar a campanha criada
         campaign = Campaign.objects.get(uid=response.data['uid'])
 
-        # Construir as URLs do webhook dinamicamente
-        view_webhook_url = request.build_absolute_uri(
-            reverse("kwai-webhook", kwargs={"uid": campaign.uid})
-        ) + "?action=view"
+        # Usar o domínio configurado no .env
+        base_webhook_url = settings.WEBHOOK_BASE_URL
 
-        click_webhook_url = request.build_absolute_uri(
-            reverse("kwai-webhook", kwargs={"uid": campaign.uid})
-        ) + "?action=click"
+        # Construir as URLs do webhook
+        view_webhook_url = f"{base_webhook_url}{campaign.uid}/?action=view"
+        click_webhook_url = f"{base_webhook_url}{campaign.uid}/?action=click"
 
         # Adicionar as URLs do webhook na resposta
         response.data['view_webhook_url'] = view_webhook_url
@@ -170,7 +168,7 @@ class KwaiWebhookView(APIView):
             'ip_address': ip_address,
             'action': action
         }
-        serializer = CampaignViewSerializer(data=data)
+        '''serializer = CampaignViewSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
 
@@ -203,3 +201,4 @@ class KwaiWebhookView(APIView):
         else:
             logger.error(f"Error saving CampaignView: {serializer.errors}")
             return Response(serializer.errors, status=400)
+'''

@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import Integration, Transaction, IntegrationRequest
 from django.urls import reverse
+from django.conf import settings
 import logging
 
 logger = logging.getLogger('django')
@@ -41,17 +42,10 @@ class IntegrationSerializer(serializers.ModelSerializer):
 
     def get_webhook_url(self, obj):
         """
-        Gera a URL do webhook com base no gateway e no UID da integração.
+        Gera a URL do webhook com base no domínio configurado no .env, gateway e UID da integração.
         """
-        request = self.context.get('request')
-        if not request:
-            return None
-        return request.build_absolute_uri(
-            reverse(
-                f"{obj.gateway.lower()}-webhook",
-                kwargs={"uid": obj.uid},
-            )
-        )
+        base_url = settings.WEBHOOK_BASE_URL  # Obtém o domínio do .env
+        return f"{base_url}{obj.gateway.lower()}/{obj.uid}/"
 
 
 class TransactionSerializer(serializers.ModelSerializer):
