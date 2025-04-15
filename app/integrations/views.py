@@ -1,6 +1,5 @@
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
-from django.urls import reverse
 from django.db import transaction
 from django.db.models import Q
 from rest_framework.exceptions import PermissionDenied
@@ -11,14 +10,7 @@ from django.shortcuts import get_object_or_404
 from .models import Integration, IntegrationRequest
 from campaigns.models import Campaign
 from .serializers import IntegrationSerializer, IntegrationRequestSerializer
-from .zeroone_webhook import process_zeroone_webhook
-from .disrupty_webhook import process_disrupty_webhook
-from .vega_checkout_webhook import process_vega_checkout_webhook
-from .cloudfy_webhook import process_cloudfy_webhook
-from .tribopay_webhook import process_tribopay_webhook
-from .wolfpay_webhook import process_wolfpay_webhook
-from .westpay_webhook import process_westpay_webhook
-from .sunize_webhook import process_sunize_webhook
+from django.conf import settings
 import logging
 from .schema import schemas
 
@@ -95,14 +87,10 @@ class IntegrationViewSet(viewsets.ModelViewSet):
 
     def build_webhook_url(self, integration):
         """
-        Constrói a URL do webhook com base no gateway e no UID da integração.
+        Constrói a URL do webhook com base no domínio configurado no .env.
         """
-        return self.request.build_absolute_uri(
-            reverse(
-                f"{integration.gateway.lower()}-webhook",
-                kwargs={"uid": integration.uid},
-            )
-        )
+        base_url = settings.WEBHOOK_BASE_URL  # Obtém o domínio do .env
+        return f"{base_url}{integration.gateway.lower()}/{integration.uid}/"
 
     def perform_update(self, serializer):
         """
@@ -244,171 +232,3 @@ class AvailableGatewaysView(APIView):
                         for key, value in Integration._meta.get_field('gateway').choices]
 
         return Response(response)
-
-
-class BaseWebhookView(APIView):
-    """
-    Classe base para processar notificações de webhooks de gateways de pagamento.
-    """
-    permission_classes = [AllowAny]
-
-    @property
-    def gateway_name(self):
-        """
-        Propriedade que deve ser sobrescrita pelas subclasses para definir o nome do gateway.
-        """
-        raise NotImplementedError("Subclasses must define 'gateway_name'.")
-
-    @property
-    def process_function(self):
-        """
-        Propriedade que deve ser sobrescrita pelas subclasses para definir a função de processamento.
-        """
-        raise NotImplementedError("Subclasses must define 'process_function'.")
-
-    def post(self, request, uid):
-        """
-        Processa notificações de webhooks.
-        """
-        # Recupera a integração ativa
-        integration = get_object_or_404(
-            Integration, uid=uid, deleted=False, status='active'
-        )
-
-        # Valida se o gateway da integração corresponde ao gateway esperado (case insensitive)
-        if integration.gateway.lower() != self.gateway_name.lower():
-            return Response(
-                {"error": f"Invalid gateway for this integration. Expected: {self.gateway_name}"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # Processa o webhook
-        try:
-            self.process_function(request.data, integration)
-            return Response({"message": "Webhook processed successfully"}, status=status.HTTP_200_OK)
-        except ValueError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            logger.error(f"Error processing webhook: {e}", exc_info=True)
-            return Response({"error": "Error processing webhook"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-@schemas['zeroone_webhook_view']
-class ZeroOneWebhookView(BaseWebhookView):
-    @property
-    def gateway_name(self):
-        return 'ZeroOne'
-
-    @property
-    def process_function(self):
-        return process_zeroone_webhook
-
-
-@schemas['ghostspay_webhook_view']
-class GhostsPayWebhookView(BaseWebhookView):
-    @property
-    def gateway_name(self):
-        return 'GhostsPay'
-
-    @property
-    def process_function(self):
-        return process_zeroone_webhook
-
-
-@schemas['paradisepag_webhook_view']
-class ParadisePagWebhookView(BaseWebhookView):
-    @property
-    def gateway_name(self):
-        return 'ParadisePag'
-
-    @property
-    def process_function(self):
-        return process_zeroone_webhook
-
-
-@schemas['disrupty_webhook_view']
-class DisruptyWebhookView(BaseWebhookView):
-    @property
-    def gateway_name(self):
-        return 'Disrupty'
-
-    @property
-    def process_function(self):
-        return process_disrupty_webhook
-
-
-@schemas['wolfpay_webhook_view']
-class WolfPayWebhookView(BaseWebhookView):
-    @property
-    def gateway_name(self):
-        return 'WolfPay'
-
-    @property
-    def process_function(self):
-        return process_wolfpay_webhook
-
-
-@schemas['vegacheckout_webhook_view']
-class VegaCheckoutWebhookView(BaseWebhookView):
-    @property
-    def gateway_name(self):
-        return 'VegaCheckout'
-
-    @property
-    def process_function(self):
-        return process_vega_checkout_webhook
-
-
-@schemas['cloudfy_webhook_view']
-class CloudFyWebhookView(BaseWebhookView):
-    @property
-    def gateway_name(self):
-        return 'CloudFy'
-
-    @property
-    def process_function(self):
-        return process_cloudfy_webhook
-
-
-@schemas['tribopay_webhook_view']
-class TriboPayWebhookView(BaseWebhookView):
-    @property
-    def gateway_name(self):
-        return 'TriboPay'
-
-    @property
-    def process_function(self):
-        return process_tribopay_webhook
-
-
-@schemas['westpay_webhook_view']
-class WestPayWebhookView(BaseWebhookView):
-    @property
-    def gateway_name(self):
-        return 'WestPay'
-
-    @property
-    def process_function(self):
-        return process_westpay_webhook
-
-
-@schemas['sunize_webhook_view']
-class SunizeWebhookView(BaseWebhookView):
-    @property
-    def gateway_name(self):
-        return 'Sunize'
-
-    @property
-    def process_function(self):
-        return process_sunize_webhook
-
-
-@schemas['grapefy_webhook_view']
-class GrapefyWebhookView(BaseWebhookView):
-    @property
-    def gateway_name(self):
-        return 'Grapefy'
-
-    @property
-    def process_function(self):
-        return process_zeroone_webhook

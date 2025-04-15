@@ -13,7 +13,7 @@ from .serializers import CampaignSerializer, CampaignViewSerializer
 from user_agents import parse
 from integrations.campaign_utils import recalculate_campaigns
 from .finance_log_utils import update_finance_logs
-import datetime
+from django.conf import settings
 import logging
 from .schema import schemas
 from decimal import Decimal
@@ -70,14 +70,12 @@ class CampaignViewSet(viewsets.ModelViewSet):
         # Recuperar a campanha criada
         campaign = Campaign.objects.get(uid=response.data['uid'])
 
-        # Construir as URLs do webhook dinamicamente
-        view_webhook_url = request.build_absolute_uri(
-            reverse("kwai-webhook", kwargs={"uid": campaign.uid})
-        ) + "?action=view"
+        # Usar o domínio configurado no .env
+        base_webhook_url = settings.WEBHOOK_BASE_URL
 
-        click_webhook_url = request.build_absolute_uri(
-            reverse("kwai-webhook", kwargs={"uid": campaign.uid})
-        ) + "?action=click"
+        # Construir as URLs do webhook
+        view_webhook_url = f"{base_webhook_url}{campaign.uid}/?action=view"
+        click_webhook_url = f"{base_webhook_url}{campaign.uid}/?action=click"
 
         # Adicionar as URLs do webhook na resposta
         response.data['view_webhook_url'] = view_webhook_url
@@ -131,6 +129,11 @@ class CampaignViewSet(viewsets.ModelViewSet):
 
         # Usa uma transação para garantir consistência
         with transaction.atomic():
+            # Atualiza o campo `in_use` das integrações associadas às campanhas
+            for campaign in instances:
+                for integration in campaign.integrations.all():
+                    integration.in_use = False
+                    integration.save()
             deleted_count = instances.delete()[0]
 
         # Retorna uma resposta detalhada
@@ -142,59 +145,3 @@ class CampaignViewSet(viewsets.ModelViewSet):
             },
             status=status.HTTP_200_OK
         )
-
-
-@schemas['kwai_webhook_view']
-class KwaiWebhookView(APIView):
-    permission_classes = [AllowAny]  # Permitir acesso público
-    authentication_classes = []
-
-    def get(self, request, uid):
-        action = request.query_params.get('action')
-        campaign = get_object_or_404(Campaign, uid=uid)
-
-        # Capturar User-Agent e IP
-        user_agent_string = request.META.get('HTTP_USER_AGENT', 'unknown')
-        ip_address = request.META.get(
-            'HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR'))
-
-        # Criar uma entrada no CampaignView
-        data = {
-            'campaign': campaign.uid,
-            'user_agent': user_agent_string,
-            'ip_address': ip_address,
-            'action': action
-        }
-        serializer = CampaignViewSerializer(data=data)
-        if serializer.is_valid():
-            serializer.save()
-
-            # Atualizar os campos da campanha
-            if action == 'view':
-                campaign.total_views += 1
-            elif action == 'click':
-                campaign.total_clicks += 1
-
-            # Calcula o preço unitário com base no CPM
-            price_unit = Decimal(campaign.CPM) / 1000
-
-            # Atualiza os valores na tabela expense_log
-            update_finance_logs(campaign)
-
-            # Atualiza o total_ads na tabela Campaign
-            campaign.total_ads += price_unit
-            campaign.save()
-
-            # Recalcular profit e ROI da campanha
-            recalculate_campaigns(
-                campaign, campaign.total_ads, campaign.amount_approved)
-
-            if bool(int(os.getenv('DEBUG', 0))):
-                logger.debug(
-                    f"Campaign {campaign.id} updated: Total Ads: {campaign.total_ads}, Total Views: {campaign.total_views}, Total Clicks: {campaign.total_clicks}"
-                )
-
-            return Response({"status": "success", "message": "Campaign updated successfully."})
-        else:
-            logger.error(f"Error saving CampaignView: {serializer.errors}")
-            return Response(serializer.errors, status=400)

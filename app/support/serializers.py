@@ -3,10 +3,15 @@ from .models import Support, SupportReplyAttachment, SupportReply
 
 
 class SupportSerializer(serializers.ModelSerializer):
+    files = serializers.SerializerMethodField()
+
     class Meta:
         model = Support
-        fields = ['title', 'replies', 'description',
-                  'created_at', 'updated_at']
+        fields = ['uid', 'title', 'description',
+                  'created_at', 'updated_at', 'files']
+
+    def get_files(self, obj):
+        return [attachment.file for attachment in obj.attachments.all()]
 
 
 class SupportReplyAttachmentSerializer(serializers.ModelSerializer):
@@ -17,8 +22,9 @@ class SupportReplyAttachmentSerializer(serializers.ModelSerializer):
 
 
 class SupportReplySerializer(serializers.ModelSerializer):
-    attachments = SupportReplyAttachmentSerializer(many=True, read_only=True)
+    support_uid = serializers.CharField(source='support.uid', read_only=True)
 
     class Meta:
         model = SupportReply
-        exclude = ['id', 'user', 'role']  # Exclui os campos id e user
+        fields = ['uid', 'support_uid', 'description',
+                  'created_at']
