@@ -74,6 +74,7 @@ class SupportRepliesView(APIView):
     def get(self, request, uid):
         user = request.user
 
+        # Verifica se o ticket existe
         support = Support.objects.filter(uid=uid).first()
         if not support:
             return Response(
@@ -81,13 +82,17 @@ class SupportRepliesView(APIView):
                 status=200
             )
 
+        # Verifica permissões
         if not user.is_superuser and support.user != user:
             return Response(
                 {"total": 0, "detail": "Nenhum suporte encontrado.", "results": []},
                 status=200
             )
 
+        # Obtém as respostas associadas ao suporte
         replies = SupportReply.objects.filter(support=support)
+
+        # Serializa as respostas
         serializer = SupportReplySerializer(replies, many=True)
         return Response(
             {"total": replies.count(), "detail": "Respostas encontradas.",
@@ -97,20 +102,6 @@ class SupportRepliesView(APIView):
 
 
 class FileHandler:
-    @staticmethod
-    def validate_files(files, max_files=3, max_size_mb=15):
-        """
-        Valida a quantidade e o tamanho dos arquivos.
-        """
-        if len(files) > max_files:
-            raise ValueError(
-                f"Você pode anexar no máximo {max_files} arquivos.")
-
-        for file in files:
-            if file.size > max_size_mb * 1024 * 1024:
-                raise ValueError(
-                    f"O arquivo {file.name} excede o tamanho máximo permitido de {max_size_mb}MB.")
-
     @staticmethod
     def upload_to_s3(file, user, folder="support_attachments/"):
         """
@@ -140,10 +131,8 @@ class FileHandler:
                            'ACL': 'public-read'}
             )
             file_url = f"https://{settings.AWS_BUCKET}.s3.{settings.AWS_DEFAULT_REGION}.amazonaws.com/{file_path}"
+
             return file_url
-        except (NoCredentialsError, PartialCredentialsError):
-            raise Exception(
-                "Erro de credenciais do AWS S3. Verifique as configurações.")
         except Exception as e:
             raise Exception(f"Erro ao fazer upload do arquivo: {str(e)}")
 
@@ -164,22 +153,34 @@ class SupportCreateView(APIView):
 
         # Cria o ticket
         support = Support.objects.create(
-            user=user, title=title, description=description)
+            user=user, title=title, description=description
+        )
 
         # Upload de arquivos (opcional)
+        uploaded_files = []
         if files:
             try:
-                FileHandler.validate_files(files)
                 for file in files:
+                    # Faz o upload do arquivo para o S3
                     file_url = FileHandler.upload_to_s3(file, user)
-                    SupportReplyAttachment.objects.create(
-                        support=support, file=file_url)
-            except ValueError as e:
-                return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+                    # Salva o link no banco de dados
+                    attachment = SupportReplyAttachment.objects.create(
+                        support=support, file=file_url
+                    )
+
+                    # Adiciona o link à lista de arquivos retornados
+                    uploaded_files.append(file_url)
             except Exception as e:
+
                 return Response({"error": f"Erro ao fazer upload do arquivo: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        return Response({"message": "Ticket criado com sucesso.", "uid": support.uid}, status=status.HTTP_201_CREATED)
+        # Retorna a resposta com os links dos arquivos
+        return Response({
+            "message": "Ticket criado com sucesso.",
+            "uid": support.uid,
+            "files": uploaded_files  # Links dos arquivos enviados
+        }, status=status.HTTP_201_CREATED)
 
 
 @schemas['support_reply_create_view']
@@ -196,7 +197,7 @@ class SupportReplyCreateView(APIView):
 
         # Verifica permissões
         if not user.is_superuser and support.user != user:
-            return Response({"error": "Ticket de suporte não encontrado."}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"error": "Você não tem permissão para responder a este ticket."}, status=status.HTTP_403_FORBIDDEN)
 
         # Obtém os dados da requisição
         description = request.data.get('description')
@@ -211,22 +212,33 @@ class SupportReplyCreateView(APIView):
 
         # Cria a resposta
         reply = SupportReply.objects.create(
-            support=support, user=user, role=role, description=description)
+            support=support, user=user, role=role, description=description
+        )
 
         # Upload de arquivos (opcional)
+        uploaded_files = []
         if files:
             try:
-                FileHandler.validate_files(files)
                 for file in files:
+                    # Faz o upload do arquivo para o S3
                     file_url = FileHandler.upload_to_s3(
                         file, user, folder="support_replies_attachments/")
-                    SupportReplyAttachment.objects.create(
-                        support_reply=reply, file=file_url)
-            except ValueError as e:
-                return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+                    # Salva o link no banco de dados
+                    attachment = SupportReplyAttachment.objects.create(
+                        support_reply=reply, file=file_url
+                    )
+
+                    # Adiciona o link à lista de arquivos retornados
+                    uploaded_files.append(file_url)
             except Exception as e:
+
                 return Response({"error": f"Erro ao fazer upload do arquivo: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         # Serializar a resposta com os dados necessários
         serializer = SupportReplySerializer(reply)
-        return Response({"message": "Resposta criada com sucesso.", "data": serializer.data}, status=status.HTTP_201_CREATED)
+        return Response({
+            "message": "Resposta criada com sucesso.",
+            "data": serializer.data,
+
+        }, status=status.HTTP_201_CREATED)

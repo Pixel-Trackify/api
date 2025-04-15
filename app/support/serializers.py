@@ -11,9 +11,6 @@ class SupportSerializer(serializers.ModelSerializer):
                   'created_at', 'updated_at', 'files']
 
     def get_files(self, obj):
-        """
-        Retorna os arquivos associados ao ticket de suporte.
-        """
         return [attachment.file for attachment in obj.attachments.all()]
 
 
@@ -26,16 +23,8 @@ class SupportReplyAttachmentSerializer(serializers.ModelSerializer):
 
 class SupportReplySerializer(serializers.ModelSerializer):
     support_uid = serializers.CharField(source='support.uid', read_only=True)
-    files = serializers.SerializerMethodField()
 
     class Meta:
         model = SupportReply
         fields = ['uid', 'support_uid', 'description',
-                  'created_at', 'files']
-
-    def get_files(self, obj):
-        """
-        Retorna os arquivos associados à resposta.
-        """
-        attachments = SupportReplyAttachment.objects.filter(support_reply=obj)
-        return [attachment.file for attachment in attachments]
+                  'created_at']
