@@ -196,4 +196,6 @@ class SupportReplyCreateView(APIView):
             except Exception as e:
                 return Response({"error": f"Erro ao fazer upload do arquivo: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        return Response({"message": "Resposta criada com sucesso.", "uid": reply.uid}, status=status.HTTP_201_CREATED)
+        # Serializar a resposta com os dados necessários
+        serializer = SupportReplySerializer(reply)
+        return Response({"message": "Resposta criada com sucesso.", "data": serializer.data}, status=status.HTTP_201_CREATED)
