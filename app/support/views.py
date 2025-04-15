@@ -240,5 +240,6 @@ class SupportReplyCreateView(APIView):
         return Response({
             "message": "Resposta criada com sucesso.",
             "data": serializer.data,
+            "files": uploaded_files  # Links dos arquivos enviados
 
         }, status=status.HTTP_201_CREATED)
