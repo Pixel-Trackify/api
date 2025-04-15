@@ -36,6 +36,37 @@ class SupportListView(generics.ListAPIView):
         return Support.objects.filter(user=user)
 
 
+class SupportDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, uid):
+        user = request.user
+
+        # Verifica se o ticket existe
+        support = Support.objects.filter(uid=uid).first()
+        if not support:
+            return Response({"error": "Ticket de suporte não encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Verifica permissões
+        if not user.is_superuser and support.user != user:
+            return Response({"error": "Você não tem permissão para acessar este ticket."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Serializa os dados do ticket
+        support_serializer = SupportSerializer(support)
+
+        # Obtém e serializa as respostas associadas
+        replies = SupportReply.objects.filter(support=support)
+        replies_serializer = SupportReplySerializer(replies, many=True)
+
+        return Response({
+            "message": "Detalhes do ticket recuperados com sucesso.",
+            "data": {
+                "ticket": support_serializer.data,
+                "replies": replies_serializer.data
+            }
+        }, status=status.HTTP_200_OK)
+
+
 @schemas['support_replies_view']
 class SupportRepliesView(APIView):
     permission_classes = [IsAuthenticated]
