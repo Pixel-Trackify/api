@@ -48,6 +48,12 @@ class SupportDetailView(APIView):
         if not support:
             return Response({"error": "Ticket de suporte não encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
+        if user.is_superuser:
+            support.admin_read = True
+        else:
+            support.user_read = True
+        support.save()
+
         # Verifica permissões
         if not user.is_superuser and support.user != user:
             return Response({"error": "Você não tem permissão para acessar este ticket."}, status=status.HTTP_403_FORBIDDEN)
@@ -154,7 +160,7 @@ class SupportCreateView(APIView):
 
         # Cria o ticket
         support = Support.objects.create(
-            user=user, title=title, description=description
+            user=user, title=title, description=description, user_read=True
         )
 
         # Upload de arquivos (opcional)
@@ -162,10 +168,7 @@ class SupportCreateView(APIView):
         if files:
             try:
                 for file in files:
-                    # Faz o upload do arquivo para o S3
                     file_url = FileHandler.upload_to_s3(file, user)
-
-                    # Salva o link no banco de dados
                     attachment = SupportReplyAttachment.objects.create(
                         support=support, file=file_url
                     )
@@ -180,7 +183,7 @@ class SupportCreateView(APIView):
         return Response({
             "message": "Ticket criado com sucesso.",
             "uid": support.uid,
-            "files": uploaded_files  # Links dos arquivos enviados
+            "files": uploaded_files
         }, status=status.HTTP_201_CREATED)
 
 

@@ -9,7 +9,7 @@ class SupportSerializer(serializers.ModelSerializer):
     class Meta:
         model = Support
         fields = ['uid', 'title', 'description',
-                  'created_at', 'updated_at', 'files', 'role']
+                  'created_at', 'updated_at', 'files', 'role', 'closed', 'admin_read', 'user_read']
 
     def get_files(self, obj):
         return [attachment.file for attachment in obj.attachments.all()]
