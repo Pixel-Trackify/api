@@ -11,4 +11,4 @@ class IsAdminUserOrReadOnly(BasePermission):
         if request.method in ['GET', 'HEAD', 'OPTIONS']:
             return True
 
-        return request.user and request.user.is_staff
+        return request.user and request.user.is_superuser
