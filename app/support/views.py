@@ -25,6 +25,7 @@ class SupportListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
     ordering_fields = ['created_at']
+    ordering = ['-created_at']
     search_fields = ['title', 'description']
 
     def get_queryset(self):
