@@ -57,6 +57,22 @@ class Campaign(models.Model):
     total_chargeback = models.IntegerField(default=0)
     amount_chargeback = models.DecimalField(
         max_digits=15, decimal_places=2, default=0)
+    credit_card_amount = models.DecimalField(
+        max_digits=15, decimal_places=2, default=0
+    )
+    credit_card_total = models.IntegerField(default=0)
+    pix_amount = models.DecimalField(
+        max_digits=15, decimal_places=2, default=0
+    )
+    pix_total = models.IntegerField(default=0)
+    debit_card_amount = models.DecimalField(
+        max_digits=15, decimal_places=2, default=0
+    )
+    debit_card_total = models.IntegerField(default=0)
+    boleto_amount = models.DecimalField(
+        max_digits=15, decimal_places=2, default=0
+    )
+    boleto_total = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -142,17 +158,17 @@ class FinanceLogs(models.Model):
     amount_abandoned = models.DecimalField(
         max_digits=15, decimal_places=2, default=0)
     credit_card_amount = models.DecimalField(
-        max_digits=15, decimal_places=2, default=0)  
-    credit_card_total = models.IntegerField(default=0)  
+        max_digits=15, decimal_places=2, default=0)
+    credit_card_total = models.IntegerField(default=0)
     pix_amount = models.DecimalField(
-        max_digits=15, decimal_places=2, default=0)  
-    pix_total = models.IntegerField(default=0)  
+        max_digits=15, decimal_places=2, default=0)
+    pix_total = models.IntegerField(default=0)
     debit_card_amount = models.DecimalField(
-        max_digits=15, decimal_places=2, default=0)  
-    debit_card_total = models.IntegerField(default=0)  
+        max_digits=15, decimal_places=2, default=0)
+    debit_card_total = models.IntegerField(default=0)
     boleto_amount = models.DecimalField(
-        max_digits=15, decimal_places=2, default=0)  
-    boleto_total = models.IntegerField(default=0)  
+        max_digits=15, decimal_places=2, default=0)
+    boleto_total = models.IntegerField(default=0)
     date = models.DateField(auto_now_add=True)
 
     class Meta:
