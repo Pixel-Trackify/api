@@ -14,8 +14,6 @@ class Support(models.Model):
     )
     admin_read = models.BooleanField(default=False)
     user_read = models.BooleanField(default=False)
-    file = models.URLField(max_length=500, null=True,
-                           blank=True)
     total_replies = models.IntegerField(default=0)
     title = models.CharField(max_length=255)
     description = models.TextField()
@@ -42,8 +40,6 @@ class SupportReply(models.Model):
     role = models.CharField(
         max_length=20, choices=(("user", "User"), ("is_superuser", "Admin"))
     )  # Identifica se a resposta foi feita por um usuário ou admin
-    file = models.URLField(max_length=500, null=True,
-                           blank=True)
     description = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
