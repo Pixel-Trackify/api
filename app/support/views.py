@@ -11,20 +11,26 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from .models import Support, SupportReply
 from .serializers import SupportSerializer, SupportReplySerializer, SupportReplyAttachment
-from .schema import schemas
+from .schema import (
+    support_list_view_schema,
+    support_detail_view_schema,
+    support_create_view_schema,
+    support_reply_create_view_schema,
+)
 import logging
 
 
 logger = logging.getLogger('django')
 
 
-@schemas['support_view_set']
+@support_list_view_schema
 class SupportListView(generics.ListAPIView):
     queryset = Support.objects.all()
     serializer_class = SupportSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
     ordering_fields = ['created_at']
+    ordering = ['-created_at']
     search_fields = ['title', 'description']
 
     def get_queryset(self):
@@ -36,6 +42,7 @@ class SupportListView(generics.ListAPIView):
         return Support.objects.filter(user=user)
 
 
+@support_detail_view_schema
 class SupportDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -46,6 +53,12 @@ class SupportDetailView(APIView):
         support = Support.objects.filter(uid=uid).first()
         if not support:
             return Response({"error": "Ticket de suporte não encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+        if user.is_superuser:
+            support.admin_read = True
+        else:
+            support.user_read = True
+        support.save()
 
         # Verifica permissões
         if not user.is_superuser and support.user != user:
@@ -67,7 +80,7 @@ class SupportDetailView(APIView):
         }, status=status.HTTP_200_OK)
 
 
-@schemas['support_replies_view']
+@support_reply_create_view_schema
 class SupportRepliesView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -137,7 +150,7 @@ class FileHandler:
             raise Exception(f"Erro ao fazer upload do arquivo: {str(e)}")
 
 
-@schemas['support_create_view']
+@support_create_view_schema
 class SupportCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -145,7 +158,8 @@ class SupportCreateView(APIView):
         user = request.user
         title = request.data.get('title')
         description = request.data.get('description')
-        files = request.FILES.getlist('files')  # Obtém os arquivos enviados
+        files = request.FILES.getlist(
+            'files') or request.FILES.getlist('files[]')
 
         # Valida título e descrição
         if not title or not description:
@@ -153,7 +167,7 @@ class SupportCreateView(APIView):
 
         # Cria o ticket
         support = Support.objects.create(
-            user=user, title=title, description=description
+            user=user, title=title, description=description, user_read=True
         )
 
         # Upload de arquivos (opcional)
@@ -161,10 +175,7 @@ class SupportCreateView(APIView):
         if files:
             try:
                 for file in files:
-                    # Faz o upload do arquivo para o S3
                     file_url = FileHandler.upload_to_s3(file, user)
-
-                    # Salva o link no banco de dados
                     attachment = SupportReplyAttachment.objects.create(
                         support=support, file=file_url
                     )
@@ -179,11 +190,11 @@ class SupportCreateView(APIView):
         return Response({
             "message": "Ticket criado com sucesso.",
             "uid": support.uid,
-            "files": uploaded_files  # Links dos arquivos enviados
+            "files": uploaded_files
         }, status=status.HTTP_201_CREATED)
 
 
-@schemas['support_reply_create_view']
+@support_reply_create_view_schema
 class SupportReplyCreateView(APIView):
     permission_classes = [IsAuthenticated]
 

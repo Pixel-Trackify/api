@@ -36,7 +36,7 @@ class GoalViewSet(viewsets.ModelViewSet):
             queryset = self.queryset
 
             # Se for administrador, permite filtros e ordenação
-            if user.is_staff:
+            if user.is_superuser:
                 prize = self.request.query_params.get('prize', None)
                 description = self.request.query_params.get(
                     'description', None)
@@ -84,7 +84,7 @@ class GoalViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
 
-        if not self.request.user.is_staff:
+        if not self.request.user.is_superuser:
             raise PermissionDenied(
                 "Você não tem permissão para deletar esta meta.")
         instance.delete()

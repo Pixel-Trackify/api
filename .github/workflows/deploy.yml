@@ -35,6 +35,7 @@ jobs:
         sed -i 's|AWS_SECRET_ACCESS_KEY=.*|AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}|' .env
         sed -i 's|AWS_DEFAULT_REGION=.*|AWS_DEFAULT_REGION=${{ secrets.AWS_DEFAULT_REGION }}|' .env
         sed -i 's|AWS_BUCKET=.*|AWS_BUCKET=${{ secrets.AWS_BUCKET }}|' .env
+        sed -i 's|REQUIRE_EMAIL_CONFIRMATION=.*|REQUIRE_EMAIL_CONFIRMATION=${{ secrets.REQUIRE_EMAIL_CONFIRMATION }}|' .env
 
     - name: Deploy to Server via SCP
       uses: appleboy/scp-action@master
