@@ -11,14 +11,19 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from .models import Support, SupportReply
 from .serializers import SupportSerializer, SupportReplySerializer, SupportReplyAttachment
-from .schema import schemas
+from .schema import (
+    support_list_view_schema,
+    support_detail_view_schema,
+    support_create_view_schema,
+    support_reply_create_view_schema,
+)
 import logging
 
 
 logger = logging.getLogger('django')
 
 
-@schemas['support_view_set']
+@support_list_view_schema
 class SupportListView(generics.ListAPIView):
     queryset = Support.objects.all()
     serializer_class = SupportSerializer
@@ -37,6 +42,7 @@ class SupportListView(generics.ListAPIView):
         return Support.objects.filter(user=user)
 
 
+@support_detail_view_schema
 class SupportDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -74,7 +80,7 @@ class SupportDetailView(APIView):
         }, status=status.HTTP_200_OK)
 
 
-@schemas['support_replies_view']
+@support_reply_create_view_schema
 class SupportRepliesView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -144,7 +150,7 @@ class FileHandler:
             raise Exception(f"Erro ao fazer upload do arquivo: {str(e)}")
 
 
-@schemas['support_create_view']
+@support_create_view_schema
 class SupportCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -187,7 +193,7 @@ class SupportCreateView(APIView):
         }, status=status.HTTP_201_CREATED)
 
 
-@schemas['support_reply_create_view']
+@support_reply_create_view_schema
 class SupportReplyCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
