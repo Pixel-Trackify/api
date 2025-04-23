@@ -158,7 +158,8 @@ class SupportCreateView(APIView):
         user = request.user
         title = request.data.get('title')
         description = request.data.get('description')
-        files = request.FILES.getlist('files')
+        files = request.FILES.getlist(
+            'files') or request.FILES.getlist('files[]')
 
         # Valida título e descrição
         if not title or not description:
