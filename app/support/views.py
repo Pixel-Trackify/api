@@ -54,20 +54,17 @@ class SupportDetailView(APIView):
         if not support:
             return Response({"error": "Ticket de suporte não encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
+        if not user.is_superuser and support.user != user:
+            return Response({"error": "Você não tem permissão para acessar este ticket."}, status=status.HTTP_403_FORBIDDEN)
+
         if user.is_superuser:
             support.admin_read = True
         else:
             support.user_read = True
         support.save()
 
-        # Verifica permissões
-        if not user.is_superuser and support.user != user:
-            return Response({"error": "Você não tem permissão para acessar este ticket."}, status=status.HTTP_403_FORBIDDEN)
-
-        # Serializa os dados do ticket
         support_serializer = SupportSerializer(support)
 
-        # Obtém e serializa as respostas associadas
         replies = SupportReply.objects.filter(support=support)
         replies_serializer = SupportReplySerializer(replies, many=True)
 
