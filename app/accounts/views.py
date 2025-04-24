@@ -1,5 +1,6 @@
 
 from rest_framework.views import APIView
+from rest_framework import viewsets, status, filters
 from rest_framework.exceptions import NotFound
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework.response import Response
@@ -9,6 +10,9 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import RegisterSerializer, LoginSerializer, UserUpdateSerializer, UpdateUserPlanSerializer, UserProfileSerializer, ChangePasswordSerializer, UserSubscriptionSerializer, PlanSerializer
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
+from django.utils.crypto import get_random_string
+from django.core.cache import cache
+from django.core.exceptions import PermissionDenied
 from rest_framework.exceptions import NotFound
 from rest_framework import generics
 import logging
@@ -20,17 +24,21 @@ import user_agents
 import uuid
 from django.utils import timezone
 from django.conf import settings
+from .permissions import IsAdminUserForList
 from project.pagination import DefaultPagination
 import os
 import boto3
+from datetime import timedelta
 from datetime import datetime
-from botocore.exceptions import NoCredentialsError, PartialCredentialsError
+from botocore.exceptions import NoCredentialsError, PartialCredentialsError, BotoCoreError, ClientError
 from .schema import (
     register_view_schema, user_profile_view_schema, change_password_view_schema,
     get_users_view_schema, account_retrieve_update_destroy_view_schema,
     filter_users_view_schema, login_view_schema, logout_view_schema,
     update_user_plan_view_schema, user_plan_view_schema, user_subscription_history_view_schema, upload_avatar_view_schema
 )
+
+logger = logging.getLogger('django')
 
 
 @register_view_schema
@@ -134,85 +142,82 @@ class ChangePasswordView(APIView):
         return Response({"message": "Senha alterada com sucesso."}, status=status.HTTP_200_OK)
 
 
-@get_users_view_schema
-class GetUsersView(generics.ListAPIView):
-    # Apenas administradores podem listar usuários
-    permission_classes = [IsAdminUser]
+class UserViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gerenciar usuários.
+    """
     queryset = Usuario.objects.all().order_by("uid")
-    serializer_class = UserProfileSerializer
-    # Usando a paginação personalizada
-    pagination_class = DefaultPagination
+    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
+    ordering_fields = ['date_joined']
+    ordering = ['-date_joined']
+    search_fields = ['name', 'email']
+    lookup_field = 'uid'
+    permission_classes = [IsAdminUserForList]
 
+    def get_serializer_class(self):
+        """
+        Define o serializer baseado na ação.
+        """
+        if self.action == 'list':
+            return UserProfileSerializer
+        elif self.action == 'retrieve':
+            return UserProfileSerializer
+        elif self.action in ['update', 'partial_update']:
+            return UserUpdateSerializer
+        elif self.action == 'create':
+            return RegisterSerializer
+        return super().get_serializer_class()
 
-@account_retrieve_update_destroy_view_schema
-class AccountRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
-    """
-    View para detalhar, atualizar ou excluir a conta do usuário.
-    Requer autenticação para edição e só permite que o dono da conta edite.
-    """
-    permission_classes = [
-        IsAuthenticated]  # Exige autenticação para todas as ações exceto GET?
-    queryset = Usuario.objects.all()
-    # Serializador específico para atualização
-    serializer_class = UserUpdateSerializer
-    lookup_field = 'uid'  # Campo para busca de usuário na URL
-
-    def get_object(self):
-        """Busca o usuário pelo ID na URL e verifica permissões."""
-        user_uid = self.kwargs.get("pk")
-        try:
-            user = Usuario.objects.get(uid=user_uid)
-        except Usuario.DoesNotExist:
-            raise NotFound(detail="Usuário não encontrado.",
-                           code="not_found")  # HTTP 404
-
-        # Verifica se o usuário autenticado é o dono do recurso
-        if self.request.user != user:
-            # Esconde a existência do recurso para não donos
-            raise NotFound(detail="Usuário não encontrado.")
-
-        return user
-
-    def update(self, request, *args, **kwargs):
-        """Atualização parcial (PATCH) ou total (PUT) usando o serializer."""
-        user = self.get_object()
-        serializer = self.get_serializer(
-            instance=user, data=request.data, partial=bool(request.method == 'PATCH'))
-        serializer.is_valid(raise_exception=True)
-
-        # Salva alterações (incluindo tratamento de password pelo serializer)
-        serializer.save()
-
+    def create(self, request, *args, **kwargs):
         return Response(
-            {
-                "message": "Usuário atualizado com sucesso.",
-                "data": serializer.data,
-            },
-            status=status.HTTP_200_OK
+            {"detail": "A criação de usuários não está disponível neste endpoint."},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED
         )
 
+    def list(self, request, *args, **kwargs):
+        """
+        Lista todos os usuários (apenas para administradores).
+        """
+        queryset = self.filter_queryset(self.get_queryset())
 
-@filter_users_view_schema
-class FilterUsersView(generics.ListAPIView):
-    """
-    View para listar, filtrar, pesquisar e ordenar usuários.
-    - Suporte a múltiplos tipos de filtros: exato, intervalo, pesquisa e ordenação.
-    - Paginada para lidar com grandes quantidades de dados.
-    """
-    permission_classes = [IsAuthenticated]
-    queryset = Usuario.objects.all().order_by("uid")
-    serializer_class = RegisterSerializer
-    pagination_class = DefaultPagination
+        if not queryset.exists():
+            return Response(
+                {"total": 0, "detail": "Nenhum usuário encontrado.", "results": []},
+                status=status.HTTP_200_OK
+            )
 
-    # Configuração dos backends de filtro, pesquisa e ordenação
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_class = UsuarioFilter  # Filtros personalizados
-    search_fields = ['name', 'email']  # Campos para pesquisa textual
-    ordering_fields = ['name', 'email', 'created_at']  # Ordenação permitida
-    # ordering = ['id']  # Ordenação padrão
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
 
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
-logger = logging.getLogger('accounts')  # Logger para a aplicação de accounts
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if not request.user.is_superuser and instance != request.user:
+            raise PermissionDenied(
+                "Você não tem permissão para acessar este recurso.")
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+
+    def update(self, request, *args, **kwargs):
+        if not request.user.is_superuser:
+            raise PermissionDenied(
+                "Apenas administradores podem atualizar usuários.")
+        return super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        if not request.user.is_superuser:
+            raise PermissionDenied(
+                "Apenas administradores podem deletar usuários.")
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response(
+            {"message": "Usuário excluído com sucesso."},
+            status=status.HTTP_200_OK
+        )
 
 
 @login_view_schema
@@ -427,3 +432,92 @@ class UploadAvatarView(APIView):
                 {"error": f"Erro ao fazer upload do avatar: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class PasswordResetRequestView(APIView):
+    """
+    Endpoint para solicitar a recuperação de senha.
+    Envia um código de recuperação por e-mail usando AWS SES.
+    """
+
+    def post(self, request):
+        email = request.data.get("email")
+        if not email:
+            return Response({"error": "O campo 'email' é obrigatório."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Verificar se o e-mail está associado a um usuário
+        try:
+            user = Usuario.objects.get(email=email)
+        except Usuario.DoesNotExist:
+            return Response({"error": "Usuário não encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Gerar um código de recuperação
+        recovery_code = get_random_string(length=6, allowed_chars="0123456789")
+
+        # Salvar o código no cache com validade de X minutos
+        cache_key = f"password_reset_{user.uid}"
+        cache.set(cache_key, recovery_code, timeout=timedelta(
+            minutes=10).total_seconds())  # Código válido por 10 minutos
+
+        # Configurar o cliente SES
+        ses_client = boto3.client(
+            'ses',
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name=settings.AWS_DEFAULT_REGION
+        )
+
+        # Enviar o e-mail com o código de recuperação
+        try:
+            ses_client.send_email(
+                Source=settings.AWS_SES_SOURCE_EMAIL,
+                Destination={"ToAddresses": [email]},
+                Message={
+                    "Subject": {"Data": "Recuperação de Senha"},
+                    "Body": {
+                        "Text": {
+                            "Data": f"Olá {user.name},\n\nSeu código de recuperação de senha é: {recovery_code}\n\nEste código é válido por 10 minutos."
+                        }
+                    }
+                }
+            )
+        except (BotoCoreError, ClientError) as e:
+            return Response({"error": f"Erro ao enviar o e-mail: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({"message": "Código de recuperação enviado com sucesso."}, status=status.HTTP_200_OK)
+
+
+class PasswordResetConfirmView(APIView):
+    """
+    Endpoint para confirmar o código de recuperação e redefinir a senha.
+    """
+
+    def post(self, request):
+        email = request.data.get("email")
+        recovery_code = request.data.get("recovery_code")
+        new_password = request.data.get("new_password")
+
+        if not email or not recovery_code or not new_password:
+            return Response({"error": "Os campos 'email', 'recovery_code' e 'new_password' são obrigatórios."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Verificar se o e-mail está associado a um usuário
+        try:
+            user = Usuario.objects.get(email=email)
+        except Usuario.DoesNotExist:
+            return Response({"error": "Usuário não encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Verificar o código de recuperação no cache
+        cache_key = f"password_reset_{user.uid}"
+        cached_code = cache.get(cache_key)
+
+        if not cached_code or cached_code != recovery_code:
+            return Response({"error": "Código de recuperação inválido ou expirado."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Atualizar a senha do usuário
+        user.set_password(new_password)
+        user.save()
+
+        # Remover o código do cache
+        cache.delete(cache_key)
+
+        return Response({"message": "Senha redefinida com sucesso."}, status=status.HTTP_200_OK)
