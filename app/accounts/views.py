@@ -33,9 +33,8 @@ from datetime import datetime
 from botocore.exceptions import NoCredentialsError, PartialCredentialsError, BotoCoreError, ClientError
 from .schema import (
     register_view_schema, user_profile_view_schema, change_password_view_schema,
-    get_users_view_schema, account_retrieve_update_destroy_view_schema,
-    filter_users_view_schema, login_view_schema, logout_view_schema,
-    update_user_plan_view_schema, user_plan_view_schema, user_subscription_history_view_schema, upload_avatar_view_schema
+    login_view_schema, logout_view_schema,
+    update_user_plan_view_schema, user_plan_view_schema, user_subscription_history_view_schema, upload_avatar_view_schema, create_user_view_schema
 )
 
 logger = logging.getLogger('django')
@@ -168,6 +167,7 @@ class UserViewSet(viewsets.ModelViewSet):
             return RegisterSerializer
         return super().get_serializer_class()
 
+    @create_user_view_schema
     def create(self, request, *args, **kwargs):
         """
         Permite que administradores criem novos usuários.

@@ -169,35 +169,6 @@ change_password_view_schema = extend_schema_view(
     )
 )
 
-get_users_view_schema = extend_schema_view(
-    get=extend_schema(
-        description="Endpoint para listar usuários. Apenas administradores podem acessar.",
-        responses={200: UserProfileSerializer(many=True)}
-    )
-)
-
-account_retrieve_update_destroy_view_schema = extend_schema_view(
-    get=extend_schema(
-        description="Endpoint para detalhar a conta do usuário.",
-        responses={200: UserUpdateSerializer}
-    ),
-    put=extend_schema(
-        request=UserUpdateSerializer,
-        responses={200: UserUpdateSerializer},
-        description="Endpoint para atualizar a conta do usuário."
-    ),
-    delete=extend_schema(
-        description="Endpoint para excluir a conta do usuário.",
-        responses={204: None}
-    )
-)
-
-filter_users_view_schema = extend_schema_view(
-    get=extend_schema(
-        description="Endpoint para listar, filtrar, pesquisar e ordenar usuários.",
-        responses={200: RegisterSerializer(many=True)}
-    )
-)
 
 login_view_schema = extend_schema_view(
     post=extend_schema(
@@ -320,4 +291,37 @@ upload_avatar_view_schema = extend_schema_view(
             ),
         ],
     )
+)
+
+
+create_user_view_schema = extend_schema(
+    summary="Criar um novo usuário",
+    description="Permite que administradores criem novos usuários. O campo 'admin' é opcional e define se o usuário será administrador.",
+    examples=[
+        OpenApiExample(
+            "Exemplo de criação de usuário administrador",
+            value={
+                "email": "pedro@gmail.com",
+                "cpf": "97805704031",
+                "name": "Pedro Almeida",
+                "password": "Password123!",
+                "confirm_password": "Password123!",
+                "admin": True
+            },
+            request_only=True,  # Este exemplo é apenas para a requisição
+        ),
+        OpenApiExample(
+            "Resposta de sucesso",
+            value={
+                "message": "Usuário criado com sucesso.",
+                "user": {
+                    "uid": "b77d099a-8577-4e93-b213-7e95884b16bd",
+                    "name": "Pedro Almeida",
+                    "email": "pedro@gmail.com",
+                    "is_admin": True
+                }
+            },
+            response_only=True,  # Este exemplo é apenas para a resposta
+        ),
+    ],
 )
