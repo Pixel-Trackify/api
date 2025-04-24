@@ -326,6 +326,8 @@ AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
 AWS_BUCKET = os.getenv('AWS_BUCKET')
 AWS_DEFAULT_REGION = os.getenv('AWS_DEFAULT_REGION', 'sa-east-1')
 AWS_S3_CUSTOM_DOMAIN = f'{AWS_BUCKET}.s3.amazonaws.com'
+AWS_SES_SOURCE_EMAIL = os.getenv(
+    'AWS_SES_SOURCE_EMAIL', 'default-email@dominio.com')
 
 
 # Configuração para uploads
@@ -334,3 +336,11 @@ DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
 # Carregar o domínio do webhook
 WEBHOOK_BASE_URL = os.getenv('WEBHOOK_BASE_URL', 'http://localhost')
+
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}
