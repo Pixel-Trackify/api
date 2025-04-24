@@ -169,9 +169,48 @@ class UserViewSet(viewsets.ModelViewSet):
         return super().get_serializer_class()
 
     def create(self, request, *args, **kwargs):
+        """
+        Permite que administradores criem novos usuários.
+        O campo 'admin' é opcional e define se o usuário será administrador.
+        """
+        if not request.user.is_superuser:
+            raise PermissionDenied(
+                "Apenas administradores podem criar usuários.")
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        password = serializer.validated_data.get("password")
+        confirm_password = request.data.get("confirm_password")
+        if password != confirm_password:
+            return Response(
+                {"detail": "As senhas não coincidem."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        admin_flag = request.data.get("admin", False)
+        user = Usuario.objects.create_user(
+            email=serializer.validated_data["email"],
+            cpf=serializer.validated_data["cpf"],
+            name=serializer.validated_data["name"],
+            password=password,
+        )
+
+        if admin_flag:
+            user.is_superuser = True
+            user.save()
+
         return Response(
-            {"detail": "A criação de usuários não está disponível neste endpoint."},
-            status=status.HTTP_405_METHOD_NOT_ALLOWED
+            {
+                "message": "Usuário criado com sucesso.",
+                "user": {
+                    "uid": user.uid,
+                    "name": user.name,
+                    "email": user.email,
+                    "is_admin": user.is_superuser,
+                },
+            },
+            status=status.HTTP_201_CREATED,
         )
 
     def list(self, request, *args, **kwargs):
