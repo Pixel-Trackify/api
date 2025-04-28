@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import RegisterSerializer, LoginSerializer, UserUpdateSerializer, UpdateUserPlanSerializer, UserProfileSerializer, ChangePasswordSerializer, UserSubscriptionSerializer, PlanSerializer, MultipleDeleteSerializer
+from .serializers import RegisterSerializer, LoginSerializer, UserUpdateSerializer, UpdateUserPlanSerializer, UserProfileSerializer, ChangePasswordSerializer, UserSubscriptionSerializer, PlanSerializer, MultipleDeleteSerializer, AdminUserUpdateSerializer
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.decorators import action
 from django_filters.rest_framework import DjangoFilterBackend
@@ -163,7 +163,7 @@ class UserViewSet(viewsets.ModelViewSet):
         elif self.action == 'retrieve':
             return UserProfileSerializer
         elif self.action in ['update', 'partial_update']:
-            return UserUpdateSerializer
+            return AdminUserUpdateSerializer
         elif self.action == 'create':
             return RegisterSerializer
         return super().get_serializer_class()
@@ -243,34 +243,30 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     def update(self, request, *args, **kwargs):
-        if not request.user.is_superuser:
-            raise PermissionDenied(
-                "Apenas administradores podem atualizar usuários."
+        """
+        Atualiza os dados do usuário.
+        """
+        partial = kwargs.pop(
+            'partial', False)
+        instance = self.get_object()
+
+        if not request.data:
+            return Response(
+                {"detail": "Nenhum dado foi enviado para atualização."},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
-        partial = kwargs.pop('partial', False)
-        instance = self.get_object()
         serializer = self.get_serializer(
             instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
 
-        # Verificar se os campos de senha estão presentes
-        password = request.data.get("password")
-        confirm_password = request.data.get("confirm_password")
-
-        if password or confirm_password:
-            if password != confirm_password:
-                return Response(
-                    {"detail": "As senhas não coincidem."},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            instance.set_password(password)
-
-        # Salvar as alterações no usuário
+        # Salva as alterações no usuário
         serializer.save()
-        instance.save()
 
-        return Response(serializer.data)
+        return Response(
+            {"detail": "Alteração feita com sucesso.", "data": serializer.data},
+            status=status.HTTP_200_OK
+        )
 
     def destroy(self, request, *args, **kwargs):
         if not request.user.is_superuser:
