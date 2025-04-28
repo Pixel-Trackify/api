@@ -1533,9 +1533,11 @@ paths:
         schema:
           type: string
           enum:
+          - day
           - month
           - year
         description: |-
+          * `day` - Diario
           * `month` - Mensal
           * `year` - Anual
       - in: query
