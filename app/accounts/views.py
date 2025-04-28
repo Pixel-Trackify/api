@@ -245,8 +245,32 @@ class UserViewSet(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         if not request.user.is_superuser:
             raise PermissionDenied(
-                "Apenas administradores podem atualizar usuários.")
-        return super().update(request, *args, **kwargs)
+                "Apenas administradores podem atualizar usuários."
+            )
+
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(
+            instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+
+        # Verificar se os campos de senha estão presentes
+        password = request.data.get("password")
+        confirm_password = request.data.get("confirm_password")
+
+        if password or confirm_password:
+            if password != confirm_password:
+                return Response(
+                    {"detail": "As senhas não coincidem."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            instance.set_password(password)
+
+        # Salvar as alterações no usuário
+        serializer.save()
+        instance.save()
+
+        return Response(serializer.data)
 
     def destroy(self, request, *args, **kwargs):
         if not request.user.is_superuser:
