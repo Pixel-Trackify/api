@@ -358,3 +358,10 @@ class ChangePasswordSerializer(serializers.Serializer):
         password_validator(new_password)
 
         return data
+
+
+class MultipleDeleteSerializer(serializers.Serializer):
+    uids = serializers.ListField(
+        child=serializers.UUIDField(),
+        help_text="Lista de UIDs dos usuários a serem excluídos."
+    )

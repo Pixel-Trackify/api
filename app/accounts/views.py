@@ -7,8 +7,9 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import RegisterSerializer, LoginSerializer, UserUpdateSerializer, UpdateUserPlanSerializer, UserProfileSerializer, ChangePasswordSerializer, UserSubscriptionSerializer, PlanSerializer
+from .serializers import RegisterSerializer, LoginSerializer, UserUpdateSerializer, UpdateUserPlanSerializer, UserProfileSerializer, ChangePasswordSerializer, UserSubscriptionSerializer, PlanSerializer, MultipleDeleteSerializer
 from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.decorators import action
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils.crypto import get_random_string
 from django.core.cache import cache
@@ -34,7 +35,7 @@ from botocore.exceptions import NoCredentialsError, PartialCredentialsError, Bot
 from .schema import (
     register_view_schema, user_profile_view_schema, change_password_view_schema,
     login_view_schema, logout_view_schema,
-    update_user_plan_view_schema, user_plan_view_schema, user_subscription_history_view_schema, upload_avatar_view_schema, create_user_view_schema
+    update_user_plan_view_schema, user_plan_view_schema, user_subscription_history_view_schema, upload_avatar_view_schema, create_user_view_schema, multiple_delete_schema
 )
 
 logger = logging.getLogger('django')
@@ -255,6 +256,32 @@ class UserViewSet(viewsets.ModelViewSet):
         self.perform_destroy(instance)
         return Response(
             {"message": "Usuário excluído com sucesso."},
+            status=status.HTTP_200_OK
+        )
+
+    @multiple_delete_schema
+    @action(detail=False, methods=['post'], url_path='multiple-delete', permission_classes=[IsAdminUserForList])
+    def multiple_delete(self, request, *args, **kwargs):
+        """
+        Exclui múltiplos usuários com base em uma lista de UIDs.
+        """
+        serializer = MultipleDeleteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        uids = serializer.validated_data['uids']
+        users_to_delete = Usuario.objects.filter(uid__in=uids)
+
+        if not users_to_delete.exists():
+            return Response(
+                {"detail": "Nenhum usuário encontrado com os UIDs fornecidos."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        count = users_to_delete.count()
+        users_to_delete.delete()
+
+        return Response(
+            {"message": f"{count} usuário(s) excluído(s) com sucesso."},
             status=status.HTTP_200_OK
         )
 

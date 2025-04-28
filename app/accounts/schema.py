@@ -1,5 +1,5 @@
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample, OpenApiTypes
-from .serializers import RegisterSerializer, UserProfileSerializer, ChangePasswordSerializer, UserUpdateSerializer, UpdateUserPlanSerializer, PlanSerializer, UserSubscriptionSerializer, LoginSerializer
+from .serializers import RegisterSerializer, UserProfileSerializer, ChangePasswordSerializer, UserUpdateSerializer, UpdateUserPlanSerializer, PlanSerializer, UserSubscriptionSerializer, LoginSerializer, MultipleDeleteSerializer
 
 register_view_schema = extend_schema_view(
     post=extend_schema(
@@ -322,6 +322,29 @@ create_user_view_schema = extend_schema(
                 }
             },
             response_only=True,  # Este exemplo é apenas para a resposta
+        ),
+    ],
+)
+
+multiple_delete_schema = extend_schema(
+    summary="Excluir Múltiplos Usuários",
+    description="Permite que administradores excluam múltiplos usuários com base em uma lista de UIDs.",
+    request=MultipleDeleteSerializer,
+    examples=[
+        OpenApiExample(
+            "Exemplo de Requisição",
+            value={
+                "uids": [
+                    "0f10470f-90bb-4281-8928-91a31a84e78c",
+                    "1a20470f-90bb-4281-8928-91a31a84e78d"
+                ]
+            },
+            request_only=True,
+        ),
+        OpenApiExample(
+            "Exemplo de Resposta",
+            value={"message": "2 usuário(s) excluído(s) com sucesso."},
+            response_only=True,
         ),
     ],
 )
