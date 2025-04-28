@@ -63,8 +63,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    'django.contrib.sites',
-    'allauth',
+
     'dj_rest_auth',
     'dj_rest_auth.registration',
     'drf_spectacular',
@@ -100,7 +99,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'allauth.account.middleware.AccountMiddleware',
+
 ]
 
 ROOT_URLCONF = 'project.urls'
@@ -283,17 +282,6 @@ SPECTACULAR_SETTINGS = {
     'SERVE_INCLUDE_SCHEMA': False,
 }
 
-
-# Configuração do Django Allauth
-
-
-# "email" para login com email, "username" para usuário
-ACCOUNT_AUTHENTICATION_METHOD = 'email'
-ACCOUNT_EMAIL_REQUIRED = True  # O email é obrigatório
-ACCOUNT_USERNAME_REQUIRED = False  # Desativa username padrão do Django
-ACCOUNT_USER_MODEL_USERNAME_FIELD = None  # Define que não há campo de username
-ACCOUNT_EMAIL_VERIFICATION = 'none'  # "optional", "mandatory" ou "none"
-ACCOUNT_ADAPTER = 'allauth.account.adapter.DefaultAccountAdapter'
 
 ACCOUNT_RATE_LIMITS = {
     'login_failed': f"{os.getenv('MAX_LOGIN_ATTEMPTS', '5')}/{int(os.getenv('LOCKOUT_DURATION_MINUTES', '5')) * 60}s",
