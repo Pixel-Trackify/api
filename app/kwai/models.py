@@ -5,7 +5,7 @@ from campaigns.models import Campaign
 
 
 class Kwai(models.Model):
-    user_id = models.ForeignKey(
+    user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="kwai_entries",
