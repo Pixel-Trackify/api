@@ -23,7 +23,6 @@ class CampaignSerializer(serializers.ModelSerializer):
     )
     # Campo personalizado para estatísticas
     stats = serializers.SerializerMethodField()
-    overviews = serializers.SerializerMethodField()
 
     class Meta:
         model = Campaign
@@ -31,7 +30,7 @@ class CampaignSerializer(serializers.ModelSerializer):
             'id', 'uid', 'integrations', 'user', 'source', 'title', 'CPM', 'CPC', 'CPV', 'method',
             'total_approved', 'total_pending', 'amount_approved', 'amount_pending', 'total_abandoned', 'amount_abandoned', 'total_canceled', 'amount_canceled', 'total_refunded', 'amount_refunded', 'total_rejected', 'amount_rejected', 'total_chargeback', 'amount_chargeback',
             'total_ads', 'profit', 'ROI', 'total_views', 'total_clicks',
-            'created_at', 'updated_at', 'stats', 'overviews'
+            'created_at', 'updated_at', 'stats'
         ]
         read_only_fields = ['id', 'uid', 'user', 'created_at', 'updated_at']
 
@@ -55,53 +54,6 @@ class CampaignSerializer(serializers.ModelSerializer):
 
         # Retorna as estatísticas no formato solicitado
         return stats
-
-    def get_overviews(self, obj):
-        today = timezone.now().date()  # Use timezone-aware datetime
-        start_date = today - timedelta(days=30)
-
-        # Obter despesas diárias (EXPENSE)
-        expenses = obj.finance_logs.filter(
-            date__gte=start_date,
-            date__lte=today
-        ).values('date').annotate(
-            total_expense=Sum('total_ads')
-        )
-
-        # Obter receitas diárias (REVENUE)
-        integrations = obj.integrations.all()
-
-        revenues = IntegrationRequest.objects.filter(
-            integration__in=integrations,  # Filtrar pelas integrações relacionadas
-            status='APPROVED',
-            created_at__gte=timezone.make_aware(
-                datetime.combine(start_date, datetime.min.time())),
-            created_at__lte=timezone.make_aware(
-                datetime.combine(today, datetime.max.time()))
-        ).values('created_at').annotate(
-            total_revenue=Sum('amount')
-        )
-
-        # Combinar despesas e receitas
-        overviews = []
-        for expense in expenses:
-            if 'total_expense' in expense and 'date' in expense:
-                overviews.append({
-                    "type": "EXPENSE",
-                    "value": expense['total_expense'],
-                    "date": expense['date']
-                })
-        for revenue in revenues:
-            if 'total_revenue' in revenue and 'created_at' in revenue:
-                overviews.append({
-                    "type": "REVENUE",
-                    "value": revenue['total_revenue'],
-                    "date": revenue['created_at'].date()
-                })
-
-        # Ordenar por data
-        overviews.sort(key=lambda x: x['date'])
-        return overviews
 
     def validate_CPM_CPC_CPV(self, data):
         """
