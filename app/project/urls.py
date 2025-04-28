@@ -15,6 +15,7 @@ urlpatterns = [
     path('', include('payments.urls')),
     path('', include('support.urls')),
     path('', include('goals.urls')),
+    path('', include('kwai.urls')),
     path('api/schema/', SpectacularAPIView.as_view(),
          name='schema'),  # URL para gerar o esquema OpenAPI
     # URLs para visualizações da documentação

@@ -85,6 +85,7 @@ INSTALLED_APPS = [
     'payments',
     'support',
     'goals',
+    'kwai',
 ]
 
 SITE_ID = 1
