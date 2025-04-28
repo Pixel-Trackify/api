@@ -358,3 +358,77 @@ class ChangePasswordSerializer(serializers.Serializer):
         password_validator(new_password)
 
         return data
+
+
+class AdminUserUpdateSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=False)
+    confirm_password = serializers.CharField(write_only=True, required=False)
+    change_password = serializers.BooleanField(
+        write_only=True, required=False, default=False)
+    admin = serializers.BooleanField(required=False, default=False)
+    cpf = serializers.CharField(required=False)  # Campo para CPF
+
+    class Meta:
+        model = Usuario
+        fields = ['name', 'email', 'cpf', 'password',
+                  'confirm_password', 'change_password', 'admin']
+        extra_kwargs = {
+            'password': {'write_only': True},
+            'confirm_password': {'write_only': True},
+        }
+
+    def validate_cpf(self, value):
+        """
+        Valida o CPF para garantir que ele seja único e válido.
+        """
+        if not value.isdigit() or len(value) != 11:
+            raise serializers.ValidationError(
+                "O CPF deve conter 11 dígitos numéricos.")
+        if Usuario.objects.filter(cpf=value).exclude(pk=self.instance.pk).exists():
+            raise serializers.ValidationError("Este CPF já está em uso.")
+        return value
+
+    def validate(self, data):
+        """
+        Valida os dados do serializer.
+        """
+        if not data:
+            raise serializers.ValidationError(
+                "Nenhum dado foi enviado para atualização.")
+
+        if data.get('change_password'):
+            if not data.get('password') or not data.get('confirm_password'):
+                raise serializers.ValidationError(
+                    "Os campos 'password' e 'confirm_password' são obrigatórios ao alterar a senha."
+                )
+            if data['password'] != data['confirm_password']:
+                raise serializers.ValidationError(
+                    "Os campos 'password' e 'confirm_password' devem ser iguais."
+                )
+        return data
+
+    def update(self, instance, validated_data):
+        """
+        Atualiza os dados do usuário.
+        """
+        admin_flag = validated_data.pop('admin', None)
+        if admin_flag is not None:
+            instance.is_superuser = admin_flag
+
+        if validated_data.pop('change_password', False):
+            password = validated_data.pop('password', None)
+            if password:
+                instance.set_password(password)
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        instance.save()
+        return instance
+
+
+class MultipleDeleteSerializer(serializers.Serializer):
+    uids = serializers.ListField(
+        child=serializers.UUIDField(),
+        help_text="Lista de UIDs dos usuários a serem excluídos."
+    )

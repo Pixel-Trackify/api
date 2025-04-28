@@ -63,8 +63,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    'django.contrib.sites',
-    'allauth',
+
     'dj_rest_auth',
     'dj_rest_auth.registration',
     'drf_spectacular',
@@ -86,6 +85,7 @@ INSTALLED_APPS = [
     'payments',
     'support',
     'goals',
+    'kwai',
 ]
 
 SITE_ID = 1
@@ -100,7 +100,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'allauth.account.middleware.AccountMiddleware',
+
 ]
 
 ROOT_URLCONF = 'project.urls'
@@ -284,17 +284,6 @@ SPECTACULAR_SETTINGS = {
 }
 
 
-# Configuração do Django Allauth
-
-
-# "email" para login com email, "username" para usuário
-ACCOUNT_AUTHENTICATION_METHOD = 'email'
-ACCOUNT_EMAIL_REQUIRED = True  # O email é obrigatório
-ACCOUNT_USERNAME_REQUIRED = False  # Desativa username padrão do Django
-ACCOUNT_USER_MODEL_USERNAME_FIELD = None  # Define que não há campo de username
-ACCOUNT_EMAIL_VERIFICATION = 'none'  # "optional", "mandatory" ou "none"
-ACCOUNT_ADAPTER = 'allauth.account.adapter.DefaultAccountAdapter'
-
 ACCOUNT_RATE_LIMITS = {
     'login_failed': f"{os.getenv('MAX_LOGIN_ATTEMPTS', '5')}/{int(os.getenv('LOCKOUT_DURATION_MINUTES', '5')) * 60}s",
 }
@@ -326,6 +315,8 @@ AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
 AWS_BUCKET = os.getenv('AWS_BUCKET')
 AWS_DEFAULT_REGION = os.getenv('AWS_DEFAULT_REGION', 'sa-east-1')
 AWS_S3_CUSTOM_DOMAIN = f'{AWS_BUCKET}.s3.amazonaws.com'
+AWS_SES_SOURCE_EMAIL = os.getenv(
+    'AWS_SES_SOURCE_EMAIL', 'default-email@dominio.com')
 
 
 # Configuração para uploads
@@ -334,3 +325,11 @@ DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
 # Carregar o domínio do webhook
 WEBHOOK_BASE_URL = os.getenv('WEBHOOK_BASE_URL', 'http://localhost')
+
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}

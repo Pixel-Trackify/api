@@ -5,7 +5,6 @@ djangorestframework-simplejwt==5.4
 drf-spectacular==0.28.0
 django-filter==24.3
 dj-rest-auth==7.0.1
-django-allauth==65.3.1
 PyYAML==6.0.2
 ua-parser==1.0.1
 ua-parser-builtins==0.18.0.post1

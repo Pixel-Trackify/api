@@ -8,7 +8,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('accounts.urls')),
     path('', include('authentication.urls')),
-    path('auth/', include('allauth.urls')),
     path('', include('plans.urls')),
     path('', include('tutorials.urls')),
     path('', include('campaigns.urls')),
@@ -16,7 +15,7 @@ urlpatterns = [
     path('', include('payments.urls')),
     path('', include('support.urls')),
     path('', include('goals.urls')),
-    # path('', index, name='index'),
+    path('', include('kwai.urls')),
     path('api/schema/', SpectacularAPIView.as_view(),
          name='schema'),  # URL para gerar o esquema OpenAPI
     # URLs para visualizações da documentação
