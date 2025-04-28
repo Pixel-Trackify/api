@@ -2,15 +2,14 @@ import uuid
 from django.db import models
 from django.conf import settings
 from campaigns.models import Campaign
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class Kwai(models.Model):
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="kwai_entries",
-        null=True,
-        blank=True
+        User, on_delete=models.CASCADE
     )
     uid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     name = models.CharField(max_length=255)
