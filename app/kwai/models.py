@@ -1,10 +1,17 @@
 import uuid
 from django.db import models
+from django.conf import settings
 from campaigns.models import Campaign
 
 
 class Kwai(models.Model):
-    id = models.AutoField(primary_key=True)
+    user_id = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="kwai_entries",
+        null=True,
+        blank=True
+    )
     uid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     name = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -30,4 +37,3 @@ class KwaiCampaign(models.Model):
 
     class Meta:
         db_table = 'kwai_campaigns'
-        
