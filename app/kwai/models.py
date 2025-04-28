@@ -9,8 +9,11 @@ User = get_user_model()
 
 class Kwai(models.Model):
     user = models.ForeignKey(
-        User, on_delete=models.CASCADE
+
+        User, on_delete=models.CASCADE, null=True,
+        blank=True,
     )
+
     uid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     name = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
