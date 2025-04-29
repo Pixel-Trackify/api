@@ -8,7 +8,8 @@ import uuid
 class Plan(models.Model):
     """Modelo para representar planos de assinatura"""
     DURATION_CHOICES = [
-        ('month', 'Mensal'),  # Opções de duração
+        ('day', 'Diário'),
+        ('month', 'Mensal'),
         ('year', 'Anual'),
     ]
 
@@ -73,6 +74,8 @@ class UserSubscription(models.Model):
         super().save(*args, **kwargs)
 
     def calculate_end_date(self):
+        if self.plan.duration == 'day':
+            return self.start_date + timedelta(days=self.plan.duration_value)
         if self.plan.duration == 'month':
             return self.start_date + timedelta(days=30 * self.plan.duration_value)
         elif self.plan.duration == 'year':
