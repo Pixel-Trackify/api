@@ -209,7 +209,7 @@ class SupportReplyCreateView(APIView):
 
         # Obtém os dados da requisição
         description = request.data.get('description')
-        files = request.FILES.getlist('files')  # Obtém os arquivos enviados
+        files = request.FILES.getlist('files')  
 
         # Valida descrição
         if not description:
@@ -217,6 +217,15 @@ class SupportReplyCreateView(APIView):
 
         # Define o papel (role) do autor da resposta
         role = "admin" if user.is_superuser else "user"
+
+        # Atualiza os campos de leitura no ticket
+        if user.is_superuser:
+            support.admin_read = True
+            support.user_read = False  
+        else:
+            support.user_read = True
+            support.admin_read = False  
+        support.save()
 
         # Cria a resposta
         reply = SupportReply.objects.create(
@@ -240,7 +249,6 @@ class SupportReplyCreateView(APIView):
                     # Adiciona o link à lista de arquivos retornados
                     uploaded_files.append(file_url)
             except Exception as e:
-
                 return Response({"error": f"Erro ao fazer upload do arquivo: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         # Serializar a resposta com os dados necessários
@@ -249,5 +257,4 @@ class SupportReplyCreateView(APIView):
             "message": "Resposta criada com sucesso.",
             "data": serializer.data,
             "files": uploaded_files  # Links dos arquivos enviados
-
         }, status=status.HTTP_201_CREATED)
