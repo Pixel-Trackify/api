@@ -14,6 +14,7 @@ class Support(models.Model):
     )
     admin_read = models.BooleanField(default=False)
     user_read = models.BooleanField(default=False)
+    closed = models.BooleanField(default=False)
     total_replies = models.IntegerField(default=0)
     title = models.CharField(max_length=255)
     description = models.TextField()

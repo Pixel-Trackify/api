@@ -10,4 +10,5 @@ urlpatterns = [
     path('support/create/', views.SupportCreateView.as_view(), name='support-create'),
     path('support/reply/<uuid:uid>/', views.SupportReplyCreateView.as_view(),
          name='support-reply-create'),
+    path('support/<str:uid>/close/', views.close_ticket, name='close_ticket'),
 ]
