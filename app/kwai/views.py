@@ -97,8 +97,7 @@ class KwaiOverview(APIView):
 
         # Montar a resposta
         response_data = {
-            # Substitui o summary pelos dados serializados de FinanceLogs
-            "summary": serializer.data,
+            **(serializer.data[0] if serializer.data else {}),
             "stats": stats,
             "overviews": overviews,
         }
