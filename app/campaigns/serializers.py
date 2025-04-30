@@ -28,7 +28,7 @@ class CampaignSerializer(serializers.ModelSerializer):
     class Meta:
         model = Campaign
         fields = [
-            'id', 'uid', 'integrations', 'user', 'source', 'title', 'CPM', 'CPC', 'CPV', 'method',
+            'uid', 'integrations', 'user', 'source', 'title', 'CPM', 'CPC', 'CPV', 'method',
             'total_approved', 'total_pending', 'amount_approved', 'amount_pending', 'total_abandoned', 'amount_abandoned', 'total_canceled', 'amount_canceled', 'total_refunded', 'amount_refunded', 'total_rejected', 'amount_rejected', 'total_chargeback', 'amount_chargeback',
             'total_ads', 'profit', 'ROI', 'total_views', 'total_clicks',
             'created_at', 'updated_at', 'stats', 'overviews'
@@ -57,95 +57,42 @@ class CampaignSerializer(serializers.ModelSerializer):
         return stats
 
     def get_overviews(self, obj):
-
-        today = timezone.now().date()  # Use timezone-aware datetime
+        """
+        Obtém os dados de despesas (EXPENSE) e receitas (REVENUE) diretamente da tabela FinanceLogs.
+        """
+        today = timezone.now().date()
         start_date = today - timedelta(days=30)
 
-        # Obter despesas diárias (EXPENSE)
+        # Obtém os registros de FinanceLogs associados à campanha no intervalo de 30 dias
+        finance_logs = obj.finance_logs.filter(
+            date__gte=start_date, date__lte=today)
 
-        expenses = obj.finance_logs.filter(
-            date__gte=start_date,
-            date__lte=today
-        ).values('date').annotate(
-            total_expense=Sum('total_ads')
-
-        )
-
-        # Obter receitas diárias (REVENUE)
-
-        integrations = obj.integrations.all()
-
-        revenues = IntegrationRequest.objects.filter(
-
-
-            integration__in=integrations,  # Filtrar pelas integrações relacionadas
-
-
-            status='APPROVED',
-
-
-            created_at__gte=timezone.make_aware(
-
-
-                datetime.combine(start_date, datetime.min.time())),
-
-
-            created_at__lte=timezone.make_aware(
-
-
-                datetime.combine(today, datetime.max.time()))
-
-
-        ).values('created_at').annotate(
-
-
-            total_revenue=Sum('amount')
-
-
-        )
-
-        # Combinar despesas e receitas
-
+        # Inicializa a lista de overviews
         overviews = []
 
+        # Adiciona as despesas (EXPENSE) ao overview
+        expenses = finance_logs.values('date').annotate(
+            total_expense=Sum('total_ads'))
         for expense in expenses:
-
             if 'total_expense' in expense and 'date' in expense:
-
                 overviews.append({
-
-
                     "type": "EXPENSE",
-
-
                     "value": expense['total_expense'],
-
-
                     "date": expense['date']
-
-
                 })
 
+        # Adiciona as receitas (REVENUE) ao overview
+        revenues = finance_logs.values('date').annotate(
+            total_revenue=Sum('amount_approved'))
         for revenue in revenues:
-
-            if 'total_revenue' in revenue and 'created_at' in revenue:
-
+            if 'total_revenue' in revenue and 'date' in revenue:
                 overviews.append({
-
-
                     "type": "REVENUE",
-
-
                     "value": revenue['total_revenue'],
-
-
-                    "date": revenue['created_at'].date()
-
-
+                    "date": revenue['date']
                 })
 
-        # Ordenar por data
-
+        # Ordena os resultados por data
         overviews.sort(key=lambda x: x['date'])
 
         return overviews
