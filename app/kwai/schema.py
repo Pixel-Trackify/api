@@ -27,47 +27,212 @@ kwai_list_view_get_schema = extend_schema(
     ],
 )
 
-kwai_list_view_post_schema = extend_schema(
+kwai_create_view_post_schema = extend_schema(
     summary="Criar uma nova conta Kwai",
-    description="Cria uma nova conta Kwai com base nos dados fornecidos.",
+    description="Cria uma nova conta Kwai com base nos dados fornecidos, incluindo campanhas associadas.",
     request=KwaiSerializer,
     responses={
         201: KwaiSerializer,
-        400: OpenApiExample(
-            "Erro de Validação",
-            value={
-                "error": "O campo 'campaigns' é obrigatório e não pode estar vazio."},
-        ),
-    },
-)
 
+    },
+    examples=[
+        OpenApiExample(
+            "Exemplo de Requisição",
+            value={
+                "name": "Conta da Marcela12",
+                "campaigns": [
+                    {
+                        "uid": "72ddc00d-54e7-4e35-9dcd-e7eae9d61b91"
+                    }
+                ]
+            },
+            request_only=True,  # Indica que este exemplo é apenas para a requisição
+        ),
+        OpenApiExample(
+            "Exemplo de Resposta",
+            value={
+                "uid": "9f96b8bc-40f3-415e-81a0-da1bfb7fcd5c",
+                "name": "Conta da Marcela123",
+                "user": "b77d099a-8577-4e93-b213-7e95884b16bd",
+                "campaigns": [
+                    {
+                        "uid": "28f32ca0-8c69-4bf1-b74b-a3034f5c9ad4",
+                        "title": "Gateway teste 3",
+                        "in_use": True
+                    }
+                ],
+                "created_at": None,
+                "updated_at": None,
+                "title": "zeroone pay",
+                "total_approved": 0,
+                "total_pending": 0,
+                "amount_approved": 0,
+                "amount_pending": 0,
+                "total_abandoned": 0,
+                "amount_abandoned": 0,
+                "total_canceled": 0,
+                "amount_canceled": 0,
+                "total_refunded": 0,
+                "amount_refunded": 0,
+                "total_rejected": 0,
+                "amount_rejected": 0,
+                "total_chargeback": 0,
+                "amount_chargeback": 0,
+                "total_ads": 0,
+                "profit": 0,
+                "ROI": 0,
+                "total_views": 0,
+                "total_clicks": 0,
+                "stats": {
+                    "PIX": 0,
+                    "CARD_CREDIT": 0,
+                    "DEBIT_CARD": 0,
+                    "BOLETO": 0
+                },
+                "overviews": []
+            },
+            response_only=True,  # Indica que este exemplo é apenas para a resposta
+        ),
+    ],
+)
 # Schema para KwaiDetailView
-kwai_detail_view_get_schema = extend_schema(
+kwai_get_view_schema = extend_schema(
     summary="Obter detalhes de uma conta Kwai",
     description="Retorna os detalhes de uma conta Kwai específica, incluindo campanhas associadas e dados financeiros.",
     responses={
         200: KwaiSerializer,
-        404: OpenApiExample(
-            "Conta Não Encontrada",
-            value={"error": "Conta Kwai não encontrada."},
-        ),
+
     },
+    examples=[
+        OpenApiExample(
+            "Exemplo de Resposta",
+            value={
+                "uid": "ef3dfc59-3232-4430-90d3-f8ddbdf87410",
+                "name": "Conta da Marcela novo 2",
+                "user": "251e36e4-738e-45ea-a315-7d9d86eff03c",
+                "campaigns": [
+                    {
+                        "uid": "125456d5-bf0c-4510-96b0-4d14ec372356",
+                        "title": "zeroone pay",
+                        "in_use": True
+                    }
+                ],
+                "created_at": "2025-04-23",
+                "updated_at": "2025-04-23",
+                "title": "zeroone pay",
+                "total_approved": 0,
+                "total_pending": 0,
+                "amount_approved": 0.0,
+                "amount_pending": 0,
+                "total_abandoned": 0,
+                "amount_abandoned": 0,
+                "total_canceled": 0,
+                "amount_canceled": 0,
+                "total_refunded": 0,
+                "amount_refunded": 0,
+                "total_rejected": 0,
+                "amount_rejected": 0,
+                "total_chargeback": 0,
+                "amount_chargeback": 0,
+                "total_ads": 0.0,
+                "profit": 0.0,
+                "ROI": 0.0,
+                "total_views": 0,
+                "total_clicks": 0,
+                "stats": {
+                    "PIX": 0,
+                    "CARD_CREDIT": 0,
+                    "DEBIT_CARD": 0,
+                    "BOLETO": 0
+                },
+                "overviews": [
+                    {
+                        "type": "EXPENSE",
+                        "value": 0.0,
+                        "date": "2025-04-23"
+                    },
+                    {
+                        "type": "REVENUE",
+                        "value": 0.0,
+                        "date": "2025-04-23"
+                    }
+                ]
+            },
+            response_only=True,  # Indica que este exemplo é apenas para a resposta
+        ),
+    ],
 )
 
-kwai_detail_view_put_schema = extend_schema(
+kwai_put_view_schema = extend_schema(
     summary="Atualizar uma conta Kwai",
-    description="Atualiza os dados de uma conta Kwai específica.",
+    description="Atualiza os dados de uma conta Kwai específica.(name - campaigns)",
     request=KwaiSerializer,
     responses={
-        200: KwaiSerializer,
-        404: OpenApiExample(
-            "Conta Não Encontrada",
-            value={"error": "Conta Kwai não encontrada."},
-        ),
+        201: KwaiSerializer,
+
     },
+    examples=[
+        OpenApiExample(
+            "Exemplo de Requisição",
+            value={
+                "name": "Conta da Marcela",
+                "campaigns": [
+                    {
+                        "uid": "72ddc00d-54e7-4e35-9dcd-e7eae9d61b91"
+                    }
+                ]
+            },
+            request_only=True,  # Indica que este exemplo é apenas para a requisição
+        ),
+        OpenApiExample(
+            "Exemplo de Resposta",
+            value={
+                "uid": "9f96b8bc-40f3-415e-81a0-da1bfb7fcd5c",
+                "name": "Conta da Marcela123",
+                "user": "b77d099a-8577-4e93-b213-7e95884b16bd",
+                "campaigns": [
+                    {
+                        "uid": "28f32ca0-8c69-4bf1-b74b-a3034f5c9ad4",
+                        "title": "Gateway teste 3",
+                        "in_use": True
+                    }
+                ],
+                "created_at": None,
+                "updated_at": None,
+                "title": "zeroone pay",
+                "total_approved": 0,
+                "total_pending": 0,
+                "amount_approved": 0,
+                "amount_pending": 0,
+                "total_abandoned": 0,
+                "amount_abandoned": 0,
+                "total_canceled": 0,
+                "amount_canceled": 0,
+                "total_refunded": 0,
+                "amount_refunded": 0,
+                "total_rejected": 0,
+                "amount_rejected": 0,
+                "total_chargeback": 0,
+                "amount_chargeback": 0,
+                "total_ads": 0,
+                "profit": 0,
+                "ROI": 0,
+                "total_views": 0,
+                "total_clicks": 0,
+                "stats": {
+                    "PIX": 0,
+                    "CARD_CREDIT": 0,
+                    "DEBIT_CARD": 0,
+                    "BOLETO": 0
+                },
+                "overviews": []
+            },
+            response_only=True,  # Indica que este exemplo é apenas para a resposta
+        ),
+    ],
 )
 
-kwai_detail_view_delete_schema = extend_schema(
+kwai_delete_view_schema = extend_schema(
     summary="Excluir uma conta Kwai",
     description="Exclui uma conta Kwai específica e libera as campanhas associadas.",
     responses={
@@ -80,6 +245,51 @@ kwai_detail_view_delete_schema = extend_schema(
             value={"error": "Conta Kwai não encontrada."},
         ),
     },
+)
+
+kwai_multiple_delete_schema = extend_schema(
+    summary="Excluir múltiplas contas Kwai",
+    description="Permite excluir múltiplas contas Kwai fornecendo uma lista de UIDs.",
+    request=OpenApiTypes.OBJECT,
+    responses={
+        200: OpenApiExample(
+            "Contas Excluídas",
+            value={"detail": "Contas Kwai excluídas com sucesso."},
+        ),
+        400: OpenApiExample(
+            "Erro de Validação",
+            value={"error": "Alguns UIDs são inválidos ou não encontrados."},
+        ),
+    },
+    examples=[
+        OpenApiExample(
+            "Exemplo de Requisição",
+            value={
+                "uids": [
+                    "e5c17d14-1a2d-48da-8add-221d8e407cae",
+                    "a12be829-5af2-43d6-b496-ca3116a3110e"
+                ]
+            },
+            request_only=True,  # Indica que este exemplo é apenas para a requisição
+        ),
+        OpenApiExample(
+            "Exemplo de Resposta",
+            value={
+                "detail": "Contas Kwai excluídas com sucesso."
+            },
+            response_only=True,  # Indica que este exemplo é apenas para a resposta
+        ),
+        OpenApiExample(
+            "Exemplo de Resposta com Erro",
+            value={
+                "error": "Alguns UIDs são inválidos ou não encontrados.",
+                "invalid_uids": [
+                    "a12be829-5af2-43d6-b496-ca3116a3110e"
+                ]
+            },
+            response_only=True,  # Indica que este exemplo é apenas para a resposta
+        ),
+    ],
 )
 
 # Schema para CampaignsNotInUseView
@@ -133,52 +343,49 @@ kwai_overview_get_schema = extend_schema(
         ),
     },
 )
-kwai_overview_schema = extend_schema(
-    summary="Obter dados agregados e registros de FinanceLogs",
-    description="Retorna os dados agregados, estatísticas e registros de FinanceLogs dos últimos 30 dias.",
+dashboard_campaigns_get_schema = extend_schema(
+    summary="Obter dados financeiros do dashboard de campanhas",
+    description="Retorna os dados financeiros agregados e estatísticas do dashboard de campanhas.",
     responses={
         200: OpenApiTypes.OBJECT,
+
     },
     examples=[
         OpenApiExample(
             "Exemplo de Resposta",
             value={
-                "summary": [
-                    {
-                        "profit": "149.59818",
-                        "ROI": "37230.14783",
-                        "total_views": 0,
-                        "total_clicks": 181,
-                        "total_ads": "0.40182000",
-                        "total_approved": 15,
-                        "total_pending": 0,
-                        "total_refunded": 0,
-                        "total_abandoned": 0,
-                        "total_chargeback": 0,
-                        "total_rejected": 0,
-                        "amount_approved": "150.00",
-                        "amount_pending": "0.00",
-                        "amount_refunded": "0.00",
-                        "amount_rejected": "0.00",
-                        "amount_chargeback": "0.00",
-                        "amount_abandoned": "0.00",
-                        "credit_card_amount": "0.00",
-                        "credit_card_total": 0,
-                        "pix_amount": "30.00",
-                        "pix_total": 3,
-                        "debit_card_amount": "0.00",
-                        "debit_card_total": 0,
-                        "boleto_amount": "10.00",
-                        "boleto_total": 1,
-                        "date": "2025-04-23",
-                        "campaign": 49
-                    }
-                ],
+                "source": "Kwai",
+                "title": "zeroone pay",
+                "CPM": "2.22",
+                "CPC": None,
+                "CPV": None,
+                "method": "CPM",
+                "total_approved": 15,
+                "total_pending": 0,
+                "amount_approved": 150.0,
+                "amount_pending": 0,
+                "total_abandoned": 0,
+                "amount_abandoned": 0,
+                "total_canceled": 0,
+                "amount_canceled": 0,
+                "total_refunded": 0,
+                "amount_refunded": 0,
+                "total_rejected": 0,
+                "amount_rejected": 0,
+                "total_chargeback": 0,
+                "amount_chargeback": 0,
+                "total_ads": 0.40182,
+                "profit": 149.59818,
+                "ROI": 37230.14783,
+                "total_views": 0,
+                "total_clicks": 181,
+                "created_at": "2025-04-23",
+                "updated_at": "2025-04-23",
                 "stats": {
-                    "boleto": 1,
-                    "pix": 3,
-                    "credit_card": 0,
-                    "credit_debit": 0
+                    "PIX": 3,
+                    "CARD_CREDIT": 0,
+                    "DEBIT_CARD": 0,
+                    "BOLETO": 1
                 },
                 "overviews": [
                     {
@@ -188,31 +395,19 @@ kwai_overview_schema = extend_schema(
                     },
                     {
                         "type": "REVENUE",
-                        "value": 10.0,
-                        "date": "2025-04-23"
-                    },
-                    {
-                        "type": "REVENUE",
-                        "value": 10.0,
-                        "date": "2025-04-23"
-                    },
-                    {
-                        "type": "REVENUE",
-                        "value": 10.0,
-                        "date": "2025-04-23"
-                    },
-                    {
-                        "type": "REVENUE",
-                        "value": 10.0,
-                        "date": "2025-04-23"
-                    },
-                    {
-                        "type": "REVENUE",
-                        "value": 10.0,
+                        "value": 150.0,
                         "date": "2025-04-23"
                     }
                 ]
             },
-        )
-    ]
+            response_only=True,  # Indica que este exemplo é apenas para a resposta
+        ),
+        OpenApiExample(
+            "Erro Interno",
+            value={
+                "error": "Erro ao obter os dados financeiros do dashboard."
+            },
+            response_only=True,  # Indica que este exemplo é apenas para a resposta
+        ),
+    ],
 )

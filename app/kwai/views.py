@@ -5,26 +5,22 @@ from rest_framework import status, permissions
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.decorators import action
-from campaigns.models import Campaign, FinanceLogs
-from integrations.models import IntegrationRequest
+from campaigns.models import Campaign
 from .services import get_financial_data
 from .models import KwaiCampaign
-from .serializers import FinanceLogsSerializer, KwaiSerializer, CampaignSerializer
+from .serializers import KwaiSerializer, CampaignSerializer
 from .models import Kwai, KwaiCampaign
-from django.db.models import Sum
 from django.db import transaction
-from django.utils import timezone
-from datetime import datetime, timedelta
-from .schema import kwai_overview_schema
 import logging
 import uuid
 from .schema import (
     kwai_list_view_get_schema,
-    kwai_list_view_post_schema,
-    kwai_detail_view_get_schema,
-    kwai_detail_view_put_schema,
-    kwai_detail_view_delete_schema,
-    campaigns_not_in_use_view_get_schema
+    kwai_create_view_post_schema,
+    kwai_get_view_schema,
+    kwai_put_view_schema,
+    kwai_delete_view_schema,
+    kwai_multiple_delete_schema,
+    campaigns_not_in_use_view_get_schema, dashboard_campaigns_get_schema
 
 
 )
@@ -44,6 +40,8 @@ class KwaiViewSet(ModelViewSet):
     search_fields = ['name']
     ordering_fields = ['created_at']
     ordering = ['-created_at']
+    lookup_field = 'uid'
+    http_method_names = ['get', 'post', 'put', 'delete']
 
     @kwai_list_view_get_schema
     def list(self, request, *args, **kwargs):
@@ -52,7 +50,7 @@ class KwaiViewSet(ModelViewSet):
         """
         return super().list(request, *args, **kwargs)
 
-    @kwai_list_view_post_schema
+    @kwai_create_view_post_schema
     def create(self, request, *args, **kwargs):
         """
         Cria uma nova conta Kwai.
@@ -70,7 +68,7 @@ class KwaiViewSet(ModelViewSet):
         serializer.save(user=request.user)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    @kwai_detail_view_get_schema
+    @kwai_get_view_schema
     def retrieve(self, request, pk=None, *args, **kwargs):
         """
         Retorna os detalhes de uma conta Kwai específica.
@@ -87,7 +85,7 @@ class KwaiViewSet(ModelViewSet):
         serializer = self.get_serializer(kwai)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @kwai_detail_view_put_schema
+    @kwai_put_view_schema
     def update(self, request, pk=None, *args, **kwargs):
         """
         Atualiza os dados de uma conta Kwai específica, incluindo campanhas associadas.
@@ -141,7 +139,7 @@ class KwaiViewSet(ModelViewSet):
         serializer = self.get_serializer(kwai)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @kwai_detail_view_delete_schema
+    @kwai_delete_view_schema
     def destroy(self, request, pk=None, *args, **kwargs):
         """
         Exclui uma conta Kwai específica.
@@ -164,6 +162,7 @@ class KwaiViewSet(ModelViewSet):
 
         return Response({"message": "Conta Kwai excluída com sucesso."}, status=status.HTTP_200_OK)
 
+    @kwai_multiple_delete_schema
     @action(detail=False, methods=['post'], url_path='delete-multiple')
     def delete_multiple(self, request):
         """
@@ -243,6 +242,7 @@ class CampaignsNotInUseView(APIView):
             return Response({"error": "Erro ao listar campanhas não utilizadas."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+@dashboard_campaigns_get_schema
 class Dashboard_campaigns(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
