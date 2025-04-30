@@ -69,16 +69,16 @@ class KwaiViewSet(ModelViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @kwai_get_view_schema
-    def retrieve(self, request, pk=None, *args, **kwargs):
+    def retrieve(self, request, uid=None, *args, **kwargs):
         """
         Retorna os detalhes de uma conta Kwai específica.
         """
         try:
-            uuid.UUID(pk)
-        except ValueError:
+            uuid.UUID(uid)  
+        except (ValueError, TypeError):
             return Response({"error": "UID inválido."}, status=status.HTTP_400_BAD_REQUEST)
 
-        kwai = self.get_queryset().filter(uid=pk).first()
+        kwai = self.get_queryset().filter(uid=uid).first()
         if not kwai:
             return Response({"error": "Conta Kwai não encontrada."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -86,11 +86,16 @@ class KwaiViewSet(ModelViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @kwai_put_view_schema
-    def update(self, request, pk=None, *args, **kwargs):
+    def update(self, request, uid=None, *args, **kwargs):
         """
         Atualiza os dados de uma conta Kwai específica, incluindo campanhas associadas.
         """
-        kwai = self.get_queryset().filter(uid=pk).first()
+        try:
+            uuid.UUID(uid)  
+        except (ValueError, TypeError):
+            return Response({"error": "UID inválido."}, status=status.HTTP_400_BAD_REQUEST)
+
+        kwai = self.get_queryset().filter(uid=uid).first()
         if not kwai:
             return Response({"error": "Conta Kwai não encontrada."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -120,14 +125,6 @@ class KwaiViewSet(ModelViewSet):
 
             # Atualizar o campo 'in_use' das campanhas
             with transaction.atomic():
-
-                kwai_campaigns = KwaiCampaign.objects.filter(kwai=kwai)
-                for kwai_campaign in kwai_campaigns:
-                    campaign = kwai_campaign.campaign
-                    campaign.in_use = False
-                    campaign.save()
-
-                # Associar as novas campanhas e marcar como `in_use=True`
                 KwaiCampaign.objects.filter(kwai=kwai).delete()
                 for campaign in campaigns:
                     campaign.in_use = True
@@ -140,24 +137,21 @@ class KwaiViewSet(ModelViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @kwai_delete_view_schema
-    def destroy(self, request, pk=None, *args, **kwargs):
+    def destroy(self, request, uid=None, *args, **kwargs):
         """
         Exclui uma conta Kwai específica.
         """
-        if not request.user.is_superuser:
-            return Response({"error": "Apenas administradores podem excluir contas."}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            uuid.UUID(uid)  # Valida se o 'uid' é um UUID válido
+        except (ValueError, TypeError):
+            return Response({"error": "UID inválido."}, status=status.HTTP_400_BAD_REQUEST)
 
-        kwai = self.get_queryset().filter(uid=pk).first()
+        kwai = self.get_queryset().filter(uid=uid).first()
         if not kwai:
             return Response({"error": "Conta Kwai não encontrada."}, status=status.HTTP_404_NOT_FOUND)
 
         with transaction.atomic():
-            kwai_campaigns = KwaiCampaign.objects.filter(kwai=kwai)
-            for kwai_campaign in kwai_campaigns:
-                campaign = kwai_campaign.campaign
-                campaign.in_use = False
-                campaign.save()
-
+            KwaiCampaign.objects.filter(kwai=kwai).delete()
             kwai.delete()
 
         return Response({"message": "Conta Kwai excluída com sucesso."}, status=status.HTTP_200_OK)
