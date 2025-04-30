@@ -5,6 +5,7 @@ import uuid
 from django.db.models import Sum
 from django.utils import timezone
 from datetime import timedelta
+from .services import get_financial_data
 
 
 class FinanceLogsSerializer(serializers.ModelSerializer):
@@ -22,12 +23,12 @@ class CampaignSerializer(serializers.ModelSerializer):
 class KwaiSerializer(serializers.ModelSerializer):
     # Campo para leitura das campanhas associadas
     campaigns = serializers.SerializerMethodField()
-    overviews = serializers.SerializerMethodField()
+    # financial_overviews = serializers.SerializerMethodField()
 
     class Meta:
         model = Kwai
         fields = ['uid', 'name', 'user',
-                  'campaigns', 'created_at', 'updated_at', 'overviews']
+                  'campaigns', 'created_at', 'updated_at']
 
     def get_campaigns(self, obj):
         """
@@ -37,49 +38,24 @@ class KwaiSerializer(serializers.ModelSerializer):
             kwai_campaigns__kwai=obj)  # Obtém as campanhas associadas
         return CampaignSerializer(campaigns, many=True).data
 
-    def get_overviews(self, obj):
+    def to_representation(self, instance):
         """
-        Obtém os dados de despesas (EXPENSE) e receitas (REVENUE) diretamente da tabela FinanceLogs.
+        Personaliza a representação dos dados para incluir os dados financeiros da campanha.
         """
-        today = timezone.now().date()
-        start_date = today - timedelta(days=30)
+        # Obtém a representação padrão
+        representation = super().to_representation(instance)
 
-        # Obtém os registros de FinanceLogs associados à campanha no intervalo de 30 dias
-        finance_logs = FinanceLogs.objects.filter(
-            campaign__kwai_campaigns__kwai=obj,
-            date__gte=start_date,
-            date__lte=today
-        )
+        # Obtém os dados financeiros agregados
+        financial_data = get_financial_data(kwai=instance)
 
-        # Inicializa a lista de overviews
-        overviews = []
+        fields_to_remove = ['source', 'CPM', 'CPC', 'CPV', 'method']
+        for field in fields_to_remove:
+            financial_data.pop(field, None)
 
-        # Adiciona as despesas (EXPENSE) ao overview
-        expenses = finance_logs.values('date').annotate(
-            total_expense=Sum('total_ads'))
-        for expense in expenses:
-            if 'total_expense' in expense and 'date' in expense:
-                overviews.append({
-                    "type": "EXPENSE",
-                    "value": expense['total_expense'],
-                    "date": expense['date']
-                })
+        # Combina os dados financeiros com os dados da conta Kwai
+        representation.update(financial_data)
 
-        # Adiciona as receitas (REVENUE) ao overview
-        revenues = finance_logs.values('date').annotate(
-            total_revenue=Sum('amount_approved'))
-        for revenue in revenues:
-            if 'total_revenue' in revenue and 'date' in revenue:
-                overviews.append({
-                    "type": "REVENUE",
-                    "value": revenue['total_revenue'],
-                    "date": revenue['date']
-                })
-
-        # Ordena os resultados por data
-        overviews.sort(key=lambda x: x['date'])
-
-        return overviews
+        return representation
 
     def create(self, validated_data):
         request = self.context.get('request')
