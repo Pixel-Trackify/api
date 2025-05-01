@@ -181,26 +181,31 @@ class PasswordValidator:
 
     def validate_length(self, password):
         if len(password) < self.min_length:
-            raise ValidationError(
-                f"A senha deve ter no mínimo {self.min_length} caracteres.")
+            raise serializers.ValidationError(
+                {"password": f"A senha deve ter no mínimo {self.min_length} caracteres."}
+            )
         if len(password) > self.max_length:
-            raise ValidationError(
-                f"A senha deve ter no máximo {self.max_length} caracteres.")
+            raise serializers.ValidationError(
+                {"password": f"A senha deve ter no máximo {self.max_length} caracteres."}
+            )
 
     def validate_uppercase(self, password):
         if self.require_uppercase and not re.search(r'[A-Z]', password):
             raise ValidationError(
-                "A senha deve conter pelo menos 1 letra maiúscula.")
+                {"password": "A senha deve conter pelo menos 1 letra maiúscula."}
+            )
 
     def validate_special_char(self, password):
         if self.require_special_char and not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
             raise ValidationError(
-                "A senha deve conter pelo menos 1 caractere especial.")
+                {"password": "A senha deve conter pelo menos 1 caractere especial."}
+            )
 
     def validate_common_password(self, password):
         if password.lower() in self.common_passwords:
             raise ValidationError(
-                "Essa senha é muito comum e insegura. Escolha outra.")
+                {"password": "Essa senha é muito comum e insegura. Escolha outra."}
+            )
 
     def __call__(self, password):
         self.validate_length(password)
