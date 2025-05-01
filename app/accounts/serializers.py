@@ -117,6 +117,8 @@ class RegisterSerializer(serializers.ModelSerializer):
 
         return email
 
+
+class CPFValidator:
     def validate_cpf(self, cpf):
         """
         Valida se o CPF informado é válido.
@@ -284,6 +286,17 @@ class UserProfileSerializer(serializers.ModelSerializer):
         model = Usuario
         fields = ['uid', 'name', 'email', 'cpf',
                   'avatar', 'date_joined', 'active_plan', 'profit']
+
+    def validate(self, data):
+        """
+        Valida os dados enviados no PUT.
+        """
+        cpf = data.get('cpf')
+        if cpf:
+            if not CPFValidator.validar_cpf(cpf):
+                raise serializers.ValidationError({"cpf": "CPF inválido."})
+
+        return data
 
     def get_active_plan(self, obj):
         active_subscription = obj.subscriptions.filter(is_active=True).first()
