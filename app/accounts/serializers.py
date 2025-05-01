@@ -165,19 +165,8 @@ class PasswordValidator:
         self.min_length = settings.PASSWORD_MIN
         self.max_length = settings.PASSWORD_MAX
         self.block_common = settings.PASSWORD_BLOCK_COMMON
-        self.common_passwords = self.load_common_passwords()
         self.require_uppercase = settings.PASSWORD_REQUIRE_UPPERCASE
         self.require_special_char = settings.PASSWORD_REQUIRE_SPECIAL_CHAR
-
-    def load_common_passwords(self):
-        if not self.block_common:
-            return set()
-
-        try:
-            with open(settings.PASSWORD_COMMON_LIST, 'r') as f:
-                return {line.strip().lower() for line in f}
-        except FileNotFoundError:
-            return set()
 
     def validate_length(self, password):
         if len(password) < self.min_length:
@@ -201,17 +190,10 @@ class PasswordValidator:
                 {"password": "A senha deve conter pelo menos 1 caractere especial."}
             )
 
-    def validate_common_password(self, password):
-        if password.lower() in self.common_passwords:
-            raise ValidationError(
-                {"password": "Essa senha é muito comum e insegura. Escolha outra."}
-            )
-
     def __call__(self, password):
         self.validate_length(password)
         self.validate_uppercase(password)
         self.validate_special_char(password)
-        self.validate_common_password(password)
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
