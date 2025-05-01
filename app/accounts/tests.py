@@ -17,7 +17,7 @@ password = "7lonAzJxss@"
 - Testar validação de campo 'name' aceitar apenas caracteres alfanuméricos e alguns especiais
 - Testar bloqueio de conta após N tentativas de login falhas
 - Testar limites de tamanho de 'name' (mínimo/máximo)
-- Testar atualização de perfil via endpoint protegido
+- Testar se o campo 'avatar' é atualizado corretamente
 """
 class TestAccountRegistration(APITestCase):
     """Testes para o endpoint de registro de nova conta."""
@@ -148,3 +148,97 @@ class TestAccountRegistration(APITestCase):
         self.assertIn("cpf", response.data)
         self.assertEqual(response.data["email"], ["usuario com este email já existe."])
         self.assertEqual(response.data["cpf"], ["usuario com este cpf já existe."])
+  
+class TestProfileUpdate(APITestCase):
+    """Testes para endpoints de atualização de perfil de usuário autenticado."""
+    
+    def setUp(self):
+        # Registrar e autenticar um usuário válido
+        try:
+            self.register_url = reverse("account-create-list")
+            self.login_url = reverse("login")  # ajuste conforme sua rota de login
+            # Criar usuário
+            payload = {"email": email, "cpf": cpf, "name": name,
+                       "password": password, "confirm_password": password}
+            reg_response = self.client.post(self.register_url, payload, format="json")
+            self.assertEqual(reg_response.status_code, status.HTTP_201_CREATED)
+            
+            # Autenticar para obter token
+            login_payload = {"identifier": email, "password": password}
+            login_response = self.client.post(self.login_url, login_payload, format="json")
+            self.assertEqual(login_response.status_code, status.HTTP_200_OK)
+            self.access_token = login_response.data.get("access")
+            # Definir cabeçalho de autorização
+            self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access_token}")
+            
+            # URL para atualizar perfil (detail)
+            self.detail_url = reverse("profile") 
+        except NoReverseMatch as e:
+            self.fail(f"Rota não encontrada: {str(e)}")
+            print(f"Rota não encontrada: {str(e)}")
+        except Exception as e:
+            self.fail(f"Erro inesperado: {str(e)}")
+            print(f"Erro inesperado: {str(e)}")
+
+    def test_update_profile_with_invalid_email_format_returns_400(self):
+        """Deve retornar 400 quando o formato de email for inválido."""
+        payload = {"email": "inválido@","name": name, "cpf": cpf}
+        response = self.client.put(self.detail_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('email', response.data)
+        self.assertEqual(response.data["email"], ["Insira um endereço de email válido."])
+    
+    def test_update_profile_with_invalid_cpf_length_returns_400(self):
+        """Deve retornar 400 quando o CPF exceder 11 caracteres."""
+        payload = {"email": email,"name": name, "cpf": "999999999999"}
+        response = self.client.put(self.detail_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('cpf', response.data)
+        self.assertEqual(response.data["cpf"], ["Certifique-se de que este campo não tenha mais de 11 caracteres."])
+    
+    def test_update_profile_with_invalid_cpf_numbers_returns_400(self):
+        """Deve retornar 400 quando o CPF tiver sequência numérica inválida."""
+        payload = {"email": email,"name": name, "cpf": "00000000000"}
+        response = self.client.put(self.detail_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('cpf', response.data)
+        self.assertEqual(response.data["cpf"], ["CPF inválido."])
+        
+    def test_update_profile_with_duplicate_email_and_cpf_returns_400(self):
+        """Deve retornar 400 quando email e CPF já estiverem em uso por outro usuário."""
+        # Registra um usuário aleatório primeiro
+        dup_email = "email.duplicado@gmail.com"
+        dup_cpf = "12519340134"
+        
+        self.url = reverse("account-create-list")
+        payload = {"email": dup_email, "cpf": dup_cpf, "name": name,
+                   "password": password, "confirm_password": password}
+        response = self.client.post(self.url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        
+        payload = {"email": dup_email,"name": name, "cpf": dup_cpf}
+        response = self.client.put(self.detail_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('email', response.data)
+        self.assertIn('cpf', response.data)
+        self.assertEqual(response.data["email"], ["usuario com este email já existe."])
+        self.assertEqual(response.data["cpf"], ["usuario com este cpf já existe."])
+        
+    def test_successful_profile_update_returns_200_and_updated_fields(self):
+        """Deve atualizar perfil com dados válidos e retornar 200 com os valores alterados."""
+        try:
+            new_name = "Maria Silva"
+            new_cpf = "55150852996"
+            new_email = "tester2@gmail.com"
+            payload = {"name": new_name, "email": new_email, "cpf": new_cpf}
+            response = self.client.put(self.detail_url, payload, format="json")
+            
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(response.data.get('name'), new_name)
+            self.assertEqual(response.data.get('email'), new_email)
+            self.assertEqual(response.data.get('cpf'), new_cpf)
+            
+        except Exception as e:
+            self.fail(f"Erro inesperado: {str(e)}")
+            print(f"Erro inesperado: {str(e)}")
+            
