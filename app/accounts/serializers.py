@@ -35,6 +35,10 @@ class RegisterSerializer(serializers.ModelSerializer):
         password_validator = PasswordValidator()
         password_validator(data['password'])
 
+        cpf = data.get('cpf')
+        if cpf and not CPFValidator.validar_cpf(cpf):
+            raise serializers.ValidationError({"cpf": "CPF inválido."})
+
         # Valida se o plano existe, se fornecido
         plan_uid = data.get('plan_uid')
         if plan_uid and not Plan.objects.filter(uid=plan_uid).exists():
