@@ -21,10 +21,23 @@ class DashboardSerializer(serializers.Serializer):
     total_users = serializers.IntegerField()
     total_users_subscription = serializers.IntegerField()
     total_approved = serializers.IntegerField()
-    total_pending = serializers.IntegerField()
     amount_approved = serializers.DecimalField(max_digits=10, decimal_places=2)
+    total_pending = serializers.IntegerField()
     amount_pending = serializers.DecimalField(max_digits=10, decimal_places=2)
+    total_refunded = serializers.IntegerField()
+    amount_refunded = serializers.DecimalField(max_digits=10, decimal_places=2)
+    total_abandoned = serializers.IntegerField()
+    amount_abandoned = serializers.DecimalField(
+        max_digits=10, decimal_places=2)
+    total_chargeback = serializers.IntegerField()
+    amount_chargeback = serializers.DecimalField(
+        max_digits=10, decimal_places=2)
+    total_rejected = serializers.IntegerField()
+    amount_rejected = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+    total_ads = serializers.IntegerField()
     profit = serializers.DecimalField(max_digits=10, decimal_places=2)
+
     total_views = serializers.IntegerField()
     total_clicks = serializers.IntegerField()
     stats = serializers.DictField()

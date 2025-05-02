@@ -50,12 +50,31 @@ class AdminDashboardViewSet(ViewSet):
         total_pending = finance_logs.aggregate(
             total_pending=Sum('total_pending')
         )['total_pending'] or 0
+        total_refunded = finance_logs.aggregate(total_refunded=Sum('total_refunded'))[
+            'total_refunded'] or 0
+        total_abandoned = finance_logs.aggregate(total_abandoned=Sum('total_abandoned'))[
+            'total_abandoned'] or 0
+        total_chargeback = finance_logs.aggregate(
+            total_chargeback=Sum('total_chargeback'))['total_chargeback'] or 0
+        total_rejected = finance_logs.aggregate(total_rejected=Sum('total_rejected'))[
+            'total_rejected'] or 0
+
         amount_approved = finance_logs.aggregate(
             amount_approved=Sum('amount_approved')
         )['amount_approved'] or 0
         amount_pending = finance_logs.aggregate(
             amount_pending=Sum('amount_pending')
         )['amount_pending'] or 0
+        amount_refunded = finance_logs.aggregate(amount_refunded=Sum('amount_refunded'))[
+            'amount_refunded'] or 0
+        amount_rejected = finance_logs.aggregate(amount_rejected=Sum('amount_rejected'))[
+            'amount_rejected'] or 0
+        amount_chargeback = finance_logs.aggregate(
+            amount_chargeback=Sum('amount_chargeback'))['amount_chargeback'] or 0
+        amount_abandoned = finance_logs.aggregate(
+            amount_abandoned=Sum('amount_abandoned'))['amount_abandoned'] or 0
+        total_ads = finance_logs.aggregate(total_ads=Sum('total_ads'))[
+            'total_ads'] or 0
         profit = finance_logs.aggregate(total=Sum('profit'))['total'] or 0
         total_views = finance_logs.aggregate(
             total=Sum('total_views')
@@ -100,6 +119,15 @@ class AdminDashboardViewSet(ViewSet):
             "total_pending": total_pending,
             "amount_approved": amount_approved,
             "amount_pending": amount_pending,
+            "total_refunded": total_refunded,
+            "total_abandoned": total_abandoned,
+            "total_chargeback": total_chargeback,
+            "total_rejected": total_rejected,
+            "amount_refunded": amount_refunded,
+            "amount_abandoned": amount_abandoned,
+            "amount_chargeback": amount_chargeback,
+            "amount_rejected": amount_rejected,
+            "total_ads": total_ads,
             "profit": profit,
             "total_views": total_views,
             "total_clicks": total_clicks,
