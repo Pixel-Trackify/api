@@ -86,6 +86,7 @@ INSTALLED_APPS = [
     'support',
     'goals',
     'kwai',
+    'custom_admin',
 ]
 
 SITE_ID = 1
