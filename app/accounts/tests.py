@@ -3,6 +3,7 @@ from django.urls import reverse, NoReverseMatch
 from rest_framework import status
 from rest_framework.test import APITestCase
 from uuid import UUID
+import os
 
 User = get_user_model()
 
@@ -133,7 +134,7 @@ class TestAccountRegistration(APITestCase):
         self.assertIsNone(user_block.get('avatar'))
 
         # flags e tokens
-        self.assertIs(data['require_email_confirmation'], False)
+        self.assertIs(data['require_email_confirmation'], os.getenv("REQUIRE_EMAIL_CONFIRMATION", "True") == "False")
         self.assertIsInstance(data['refresh'], str)
         self.assertTrue(len(data['refresh']) > 0)
         self.assertIsInstance(data['access'], str)
