@@ -86,6 +86,7 @@ INSTALLED_APPS = [
     'support',
     'goals',
     'kwai',
+    'custom_admin',
 ]
 
 SITE_ID = 1
@@ -308,7 +309,7 @@ FIRE_BANKING_API_URL = 'https://api.firebanking.com.br'
 FIRE_BANKING_API_KEY = os.getenv('FIRE_BANKING_API_KEY')
 
 REQUIRE_EMAIL_CONFIRMATION = os.getenv(
-    "REQUIRE_EMAIL_CONFIRMATION", "True") == "True"
+    "REQUIRE_EMAIL_CONFIRMATION", "True") == "False"
 
 AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')

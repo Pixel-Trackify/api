@@ -54,55 +54,29 @@ class RegisterView(APIView):
 
             # Verificar se a confirmação de e-mail é necessária
             require_email_confirmation = os.getenv(
-                "REQUIRE_EMAIL_CONFIRMATION", "True") == "True"
+                "REQUIRE_EMAIL_CONFIRMATION", "True") == "False"
 
-            if not require_email_confirmation:
-                # Gerar tokens JWT
-                refresh = RefreshToken.for_user(user)
+            # Gerar tokens JWT
+            refresh = RefreshToken.for_user(user)
+            access_token = str(refresh.access_token)
 
-                # Registrar o log de login
-                ip_address = request.META.get('REMOTE_ADDR')
-                user_agent_string = request.META.get('HTTP_USER_AGENT', '')
-                user_agent = user_agents.parse(user_agent_string)
-                device = f"{user_agent.device.family} {user_agent.device.brand} {user_agent.device.model}"
-                browser = f"{user_agent.browser.family} {user_agent.browser.version_string}"
-                token = str(refresh.access_token)
-
-                LoginLog.objects.create(
-                    user=user,
-                    ip_address=ip_address,
-                    device=device,
-                    browser=browser,
-                    login_time=timezone.now(),
-                    token=token
-                )
-
-                logger.info(
-                    f"Usuário {user.email} registrado e logado com sucesso.")
-
-                return Response({
-                    "message": "Usuário registrado com sucesso!",
-                    "user": {
-                        "uid": user.uid,
-                        "name": user.name,
-                        "email": user.email,
-                        "avatar": user.avatar
-                    },
-                    "require_email_confirmation": require_email_confirmation,
-                    "refresh": str(refresh),
-                    "access": str(refresh.access_token),
-                }, status=status.HTTP_201_CREATED)
-
-            return Response({
+            # Adicionar todas as chaves esperadas na resposta
+            response_data = {
                 "message": "Usuário registrado com sucesso!",
                 "user": {
-                    "uid": user.uid,
+                    "uid": str(user.uid),
                     "name": user.name,
                     "email": user.email,
-                    "avatar": user.avatar
+                    "cpf": user.cpf,
+                    "avatar": user.avatar.url if user.avatar else None,
+                    "date_joined": user.date_joined.isoformat(),
                 },
-                "require_email_confirmation": require_email_confirmation
-            }, status=status.HTTP_201_CREATED)
+                "require_email_confirmation": require_email_confirmation,
+                "refresh": str(refresh),
+                "access": access_token,
+            }
+
+            return Response(response_data, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -121,9 +95,12 @@ class UserProfileView(APIView):
     def put(self, request, *args, **kwargs):
         serializer = UserProfileSerializer(
             request.user, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
+        if not serializer.is_valid():
+            # Retorna 400 com os erros de validação
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
         serializer.save()
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @change_password_view_schema

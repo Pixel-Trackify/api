@@ -35,6 +35,10 @@ class RegisterSerializer(serializers.ModelSerializer):
         password_validator = PasswordValidator()
         password_validator(data['password'])
 
+        cpf = data.get('cpf')
+        if cpf and not CPFValidator.validar_cpf(cpf):
+            raise serializers.ValidationError({"cpf": "CPF inválido."})
+
         # Valida se o plano existe, se fornecido
         plan_uid = data.get('plan_uid')
         if plan_uid and not Plan.objects.filter(uid=plan_uid).exists():
@@ -117,6 +121,8 @@ class RegisterSerializer(serializers.ModelSerializer):
 
         return email
 
+
+class CPFValidator:
     def validate_cpf(self, cpf):
         """
         Valida se o CPF informado é válido.
@@ -165,48 +171,35 @@ class PasswordValidator:
         self.min_length = settings.PASSWORD_MIN
         self.max_length = settings.PASSWORD_MAX
         self.block_common = settings.PASSWORD_BLOCK_COMMON
-        self.common_passwords = self.load_common_passwords()
         self.require_uppercase = settings.PASSWORD_REQUIRE_UPPERCASE
         self.require_special_char = settings.PASSWORD_REQUIRE_SPECIAL_CHAR
 
-    def load_common_passwords(self):
-        if not self.block_common:
-            return set()
-
-        try:
-            with open(settings.PASSWORD_COMMON_LIST, 'r') as f:
-                return {line.strip().lower() for line in f}
-        except FileNotFoundError:
-            return set()
-
     def validate_length(self, password):
         if len(password) < self.min_length:
-            raise ValidationError(
-                f"A senha deve ter no mínimo {self.min_length} caracteres.")
+            raise serializers.ValidationError(
+                {"password": f"A senha deve ter no mínimo {self.min_length} caracteres."}
+            )
         if len(password) > self.max_length:
-            raise ValidationError(
-                f"A senha deve ter no máximo {self.max_length} caracteres.")
+            raise serializers.ValidationError(
+                {"password": f"A senha deve ter no máximo {self.max_length} caracteres."}
+            )
 
     def validate_uppercase(self, password):
         if self.require_uppercase and not re.search(r'[A-Z]', password):
             raise ValidationError(
-                "A senha deve conter pelo menos 1 letra maiúscula.")
+                {"password": "A senha deve conter pelo menos 1 letra maiúscula."}
+            )
 
     def validate_special_char(self, password):
         if self.require_special_char and not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
             raise ValidationError(
-                "A senha deve conter pelo menos 1 caractere especial.")
-
-    def validate_common_password(self, password):
-        if password.lower() in self.common_passwords:
-            raise ValidationError(
-                "Essa senha é muito comum e insegura. Escolha outra.")
+                {"password": "A senha deve conter pelo menos 1 caractere especial."}
+            )
 
     def __call__(self, password):
         self.validate_length(password)
         self.validate_uppercase(password)
         self.validate_special_char(password)
-        self.validate_common_password(password)
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
@@ -297,6 +290,17 @@ class UserProfileSerializer(serializers.ModelSerializer):
         model = Usuario
         fields = ['uid', 'name', 'email', 'cpf',
                   'avatar', 'date_joined', 'active_plan', 'profit']
+
+    def validate(self, data):
+        """
+        Valida os dados enviados no PUT.
+        """
+        cpf = data.get('cpf')
+        if cpf:
+            if not CPFValidator.validar_cpf(cpf):
+                raise serializers.ValidationError({"cpf": "CPF inválido."})
+
+        return data
 
     def get_active_plan(self, obj):
         active_subscription = obj.subscriptions.filter(is_active=True).first()
