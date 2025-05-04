@@ -36,25 +36,20 @@ class CampaignSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'uid', 'user', 'created_at', 'updated_at']
 
     def get_stats(self, obj):
-        """
-        Calcula as estatísticas de métodos de pagamento (payment_method)
-        com base nas IntegrationRequests associadas à campanha.
-        """
-        # Obtém todas as integrações associadas à campanha
-        integrations = obj.integrations.all()
 
-        # Obtém todas as IntegrationRequests associadas às integrações
-        integration_requests = IntegrationRequest.objects.filter(
-            integration__in=integrations
+        stats = obj.finance_logs.aggregate(
+            credit_card_amount=Sum('credit_card_amount'),
+            debit_card_amount=Sum('debit_card_amount'),
+            pix_amount=Sum('pix_amount'),
+            boleto_amount=Sum('boleto_amount')
         )
 
-        # Conta os métodos de pagamento
-        payment_methods = integration_requests.values_list(
-            'payment_method', flat=True)
-        stats = Counter(payment_methods)
-
-        # Retorna as estatísticas no formato solicitado
-        return stats
+        return {
+            "CREDIT_CARD": stats.get('credit_card_amount', 0) or 0,
+            "DEBIT_CARD": stats.get('debit_card_amount', 0) or 0,
+            "PIX": stats.get('pix_amount', 0) or 0,
+            "BOLETO": stats.get('boleto_amount', 0) or 0,
+        }
 
     def get_overviews(self, obj):
         """

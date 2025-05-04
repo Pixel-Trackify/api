@@ -63,10 +63,10 @@ def get_financial_data(user=None, kwai=None):
 
     # Estatísticas de pagamento (stats)
     stats = {
-        "PIX": finance_logs.aggregate(total_pix=Sum('pix_total'))['total_pix'] or 0,
-        "CARD_CREDIT": finance_logs.aggregate(total_credit_card=Sum('credit_card_total'))['total_credit_card'] or 0,
-        "DEBIT_CARD": finance_logs.aggregate(total_debit_card=Sum('debit_card_total'))['total_debit_card'] or 0,
-        "BOLETO": finance_logs.aggregate(total_boleto=Sum('boleto_total'))['total_boleto'] or 0,
+        "PIX": finance_logs.aggregate(pix_amount=Sum('pix_amount'))['pix_amount'] or 0,
+        "CARD_CREDIT": finance_logs.aggregate(credit_card_amount=Sum('credit_card_amount'))['credit_card_amount'] or 0,
+        "DEBIT_CARD": finance_logs.aggregate(debit_card_amount=Sum('debit_card_amount'))['debit_card_amount'] or 0,
+        "BOLETO": finance_logs.aggregate(boleto_amount=Sum('boleto_amount'))['boleto_amount'] or 0,
     }
 
     # Cálculo de lucro e ROI
