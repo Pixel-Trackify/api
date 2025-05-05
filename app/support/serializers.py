@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Support, SupportReplyAttachment, SupportReply
+import re
 
 
 class SupportSerializer(serializers.ModelSerializer):
@@ -18,6 +19,27 @@ class SupportSerializer(serializers.ModelSerializer):
         if obj.user.is_superuser:
             return "admin"
         return "user"
+
+    def validate_title(self, value):
+        """
+        Valida o campo `title` para evitar scripts maliciosos e limitar a 100 caracteres.
+        """
+        if len(value) > 100:
+            raise serializers.ValidationError(
+                "O título não pode ter mais de 100 caracteres.")
+        if not re.match(r'^[a-zA-Z0-9\s\-_,\.;:()áéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ]+$', value):
+            raise serializers.ValidationError(
+                "O título contém caracteres inválidos.")
+        return value
+
+    def validate_description(self, value):
+        """
+        Valida o campo `description` para evitar scripts maliciosos.
+        """
+        if not re.match(r'^[a-zA-Z0-9\s\-_,\.;:()áéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ]+$', value):
+            raise serializers.ValidationError(
+                "A descrição contém caracteres inválidos.")
+        return value
 
 
 class SupportReplyAttachmentSerializer(serializers.ModelSerializer):

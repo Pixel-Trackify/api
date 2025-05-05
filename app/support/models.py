@@ -16,7 +16,7 @@ class Support(models.Model):
     user_read = models.BooleanField(default=False)
     closed = models.BooleanField(default=False)
     total_replies = models.IntegerField(default=0)
-    title = models.CharField(max_length=255)
+    title = models.CharField(max_length=100)
     description = models.TextField()
     closed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
