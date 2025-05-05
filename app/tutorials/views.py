@@ -2,7 +2,8 @@ from rest_framework import viewsets, status, filters
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAdminUser
 from rest_framework.decorators import action
-from django.shortcuts import get_object_or_404
+from rest_framework.exceptions import ValidationError
+import re
 from .models import Tutorial
 from .serializers import TutorialSerializer
 from django.core.exceptions import PermissionDenied
@@ -39,6 +40,23 @@ class TutorialViewSet(viewsets.ModelViewSet):
             ordering = f'-{ordering}'
 
         return queryset.order_by(ordering)
+
+    def filter_queryset(self, queryset):
+        """
+        Sobrescreve o método filter_queryset para validar os parâmetros de busca.
+        """
+        queryset = super().filter_queryset(queryset)
+
+        search_param = self.request.query_params.get('search', None)
+
+        if search_param:
+
+            if not re.match(r'^[a-zA-Z0-9\s\-_,\.;:()áéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ]+$', search_param):
+                raise ValidationError(
+                    {"search": "O parâmetro de busca contém caracteres inválidos."}
+                )
+
+        return queryset
 
     def list(self, request, *args, **kwargs):
         """
