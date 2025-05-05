@@ -11,6 +11,8 @@ from .models import KwaiCampaign
 from .serializers import KwaiSerializer, CampaignSerializer
 from .models import Kwai, KwaiCampaign
 from django.db import transaction
+from rest_framework.exceptions import ValidationError
+import re
 import logging
 import uuid
 from .schema import (
@@ -43,6 +45,20 @@ class KwaiViewSet(ModelViewSet):
     lookup_field = 'uid'
     http_method_names = ['get', 'post', 'put', 'delete']
 
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+
+        search_param = self.request.query_params.get('search', None)
+
+        if search_param:
+
+            if not re.match(r'^[a-zA-Z0-9\s\-_,\.;:()áéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ]+$', search_param):
+                raise ValidationError(
+                    {"search": "O parâmetro de busca contém caracteres inválidos."}
+                )
+
+        return queryset
+
     @kwai_list_view_get_schema
     def list(self, request, *args, **kwargs):
         """
@@ -74,7 +90,7 @@ class KwaiViewSet(ModelViewSet):
         Retorna os detalhes de uma conta Kwai específica.
         """
         try:
-            uuid.UUID(uid)  
+            uuid.UUID(uid)
         except (ValueError, TypeError):
             return Response({"error": "UID inválido."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -91,7 +107,7 @@ class KwaiViewSet(ModelViewSet):
         Atualiza os dados de uma conta Kwai específica, incluindo campanhas associadas.
         """
         try:
-            uuid.UUID(uid)  
+            uuid.UUID(uid)
         except (ValueError, TypeError):
             return Response({"error": "UID inválido."}, status=status.HTTP_400_BAD_REQUEST)
 

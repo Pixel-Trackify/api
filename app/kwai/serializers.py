@@ -2,10 +2,8 @@ from rest_framework import serializers
 from .models import Kwai, KwaiCampaign
 from campaigns.models import FinanceLogs, Campaign
 import uuid
-from django.db.models import Sum
-from django.utils import timezone
-from datetime import timedelta
 from .services import get_financial_data
+import re
 
 
 class FinanceLogsSerializer(serializers.ModelSerializer):
@@ -21,14 +19,22 @@ class CampaignSerializer(serializers.ModelSerializer):
 
 
 class KwaiSerializer(serializers.ModelSerializer):
-    # Campo para leitura das campanhas associadas
+
     campaigns = serializers.SerializerMethodField()
-    # financial_overviews = serializers.SerializerMethodField()
 
     class Meta:
         model = Kwai
         fields = ['uid', 'name', 'user',
                   'campaigns', 'created_at', 'updated_at']
+
+    def validate_name(self, value):
+        if len(value) > 100:
+            raise serializers.ValidationError(
+                "O nome não pode ter mais de 100 caracteres.")
+        if not re.match(r'^[a-zA-Z0-9\s\-_,\.;:()áéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ]+$', value):
+            raise serializers.ValidationError(
+                "O nome contém caracteres inválidos.")
+        return value
 
     def get_campaigns(self, obj):
         """
