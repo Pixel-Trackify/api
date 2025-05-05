@@ -1,23 +1,17 @@
 from rest_framework import viewsets, status, filters
-from django.utils.timezone import now
 from rest_framework.decorators import action
-from rest_framework.views import APIView
+import re
 from rest_framework.response import Response
-from rest_framework.exceptions import PermissionDenied
-from django.shortcuts import get_object_or_404
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from .models import Campaign, FinanceLogs
-from integrations.models import Integration
-from .serializers import CampaignSerializer, CampaignViewSerializer
-from user_agents import parse
-from integrations.campaign_utils import recalculate_campaigns
-from .finance_log_utils import update_finance_logs
+from rest_framework.permissions import IsAuthenticated
+from .models import Campaign
+from .serializers import CampaignSerializer
 from django.conf import settings
 import logging
 from .schema import schemas
-from decimal import Decimal
-import os
+
+
 from django.urls import reverse
 
 logger = logging.getLogger('django')
@@ -32,6 +26,21 @@ class CampaignViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
     ordering_fields = ['title', 'created_at']
     search_fields = ['title', 'created_at']
+
+    def filter_queryset(self, queryset):
+        """
+        Sobrescreve o método filter_queryset para validar os parâmetros de busca.
+        """
+        search_param = self.request.query_params.get('search', None)
+
+        if search_param:
+
+            if not re.match(r'^[a-zA-Z0-9\s\-_,\.;:()áéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ]+$', search_param):
+                raise ValidationError(
+                    {"search": "O parâmetro de busca contém caracteres inválidos."}
+                )
+
+        return super().filter_queryset(queryset)
 
     def get_queryset(self):
         """Retorna as campanhas do usuário autenticado"""

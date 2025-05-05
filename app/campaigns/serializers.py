@@ -3,9 +3,9 @@ from collections import Counter
 from integrations.models import IntegrationRequest
 from .models import Campaign, CampaignView, Integration
 import logging
-from django.urls import reverse
+import re
 from django.db.models import Sum
-from datetime import datetime, timedelta
+from datetime import timedelta
 from django.utils import timezone
 
 logger = logging.getLogger('django')
@@ -28,7 +28,7 @@ class CampaignSerializer(serializers.ModelSerializer):
     class Meta:
         model = Campaign
         fields = [
-            'uid', 'integrations', 'user', 'source', 'title', 'CPM', 'CPC', 'CPV', 'method',
+            'uid', 'integrations', 'user', 'source', 'title', 'description', 'CPM', 'CPC', 'CPV', 'method',
             'total_approved', 'total_pending', 'amount_approved', 'amount_pending', 'total_abandoned', 'amount_abandoned', 'total_canceled', 'amount_canceled', 'total_refunded', 'amount_refunded', 'total_rejected', 'amount_rejected', 'total_chargeback', 'amount_chargeback',
             'total_ads', 'profit', 'ROI', 'total_views', 'total_clicks',
             'created_at', 'updated_at', 'stats', 'overviews'
@@ -91,6 +91,30 @@ class CampaignSerializer(serializers.ModelSerializer):
         overviews.sort(key=lambda x: x['date'])
 
         return overviews
+
+    def validate_title(self, value):
+        if len(value) > 100:
+            raise serializers.ValidationError(
+                "O título não pode ter mais de 100 caracteres.")
+        if not re.match(r'^[a-zA-Z0-9\s\-_,\.;:()áéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ]+$', value):
+            raise serializers.ValidationError(
+                "O título contém caracteres inválidos.")
+        return value
+
+    def validate_description(self, value):
+        if value is None or value.strip() == "":
+            # Permite que o campo esteja vazio
+            return value
+
+        if len(value) > 200:
+            raise serializers.ValidationError(
+                "A descrição não pode ter mais de 200 caracteres.")
+
+        if not re.match(r'^[a-zA-Z0-9\s\-_,\.;:()áéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ]+$', value):
+            raise serializers.ValidationError(
+                "A descrição contém caracteres inválidos.")
+
+        return value
 
     def validate_CPM_CPC_CPV(self, data):
         """
