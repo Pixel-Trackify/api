@@ -2,7 +2,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from django.db import transaction
 from django.db.models import Q
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -12,6 +12,7 @@ from campaigns.models import Campaign
 from .serializers import IntegrationSerializer, IntegrationRequestSerializer
 from django.conf import settings
 import logging
+import re
 from .schema import schemas
 
 logger = logging.getLogger('django')
@@ -35,6 +36,23 @@ class IntegrationViewSet(viewsets.ModelViewSet):
         Retorna as integrações do usuário autenticado.
         """
         queryset = self.queryset.filter(user=self.request.user)
+
+        return queryset
+
+    def filter_queryset(self, queryset):
+        """
+        Sobrescreve o método filter_queryset para validar os parâmetros de busca.
+        """
+        queryset = super().filter_queryset(queryset)
+
+        search_param = self.request.query_params.get('search', None)
+
+        if search_param:
+
+            if not re.match(r'^[a-zA-Z0-9\s\-_,\.;:()áéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ]+$', search_param):
+                raise ValidationError(
+                    {"search": "O parâmetro de busca contém caracteres inválidos."}
+                )
 
         return queryset
 

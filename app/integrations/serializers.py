@@ -3,6 +3,7 @@ from .models import Integration, Transaction, IntegrationRequest
 from django.urls import reverse
 from django.conf import settings
 import logging
+import re
 
 logger = logging.getLogger('django')
 
@@ -17,6 +18,18 @@ class IntegrationSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'uid', 'user', 'deleted',
                             'status', 'created_at', 'updated_at']
 
+    def validate_name(self, value):
+        """
+        Valida o campo `name` para evitar scripts maliciosos e limitar a 100 caracteres.
+        """
+        if len(value) > 100:
+            raise serializers.ValidationError(
+                "O nome não pode ter mais de 100 caracteres.")
+        if not re.match(r'^[a-zA-Z0-9\s\-_,\.;:()áéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ]+$', value):
+            raise serializers.ValidationError(
+                "O nome contém caracteres inválidos.")
+        return value
+
     def validate_gateway(self, value):
         """
         Valida o campo `gateway` para aceitar tanto o `id` quanto o `name` dos `choices`.
@@ -27,10 +40,6 @@ class IntegrationSerializer(serializers.ModelSerializer):
         gateway_mapping.update(
             # Adiciona id -> id
             {choice[0]: choice[0] for choice in valid_gateways})
-
-        # Log para depuração
-        logger.debug(f"Valor recebido para gateway: {value}")
-        logger.debug(f"Gateways válidos: {gateway_mapping}")
 
         if value not in gateway_mapping:
             raise serializers.ValidationError(

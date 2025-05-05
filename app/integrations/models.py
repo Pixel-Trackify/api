@@ -11,7 +11,7 @@ class Integration(models.Model):
     uid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='integrations')
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=100)
     gateway = models.CharField(max_length=255, choices=[
         ('zeroone', 'ZeroOne'),
         ('ghostspay', 'GhostsPay'),
@@ -27,7 +27,7 @@ class Integration(models.Model):
 
 
     ])
-    in_use = models.BooleanField(default=False) 
+    in_use = models.BooleanField(default=False)
     deleted = models.BooleanField(default=False)
     status = models.CharField(max_length=10, choices=[(
         'active', 'Active'), ('inactive', 'Inactive')], default='active')
