@@ -15,6 +15,10 @@ password = "7lonAzJxss@"
 gateway = "zeroone"
 nameIntegration = "Conta da Sarah - ZeroOne"
 
+"""
+@todo:
+    - Testar com todos os gateways disponíveis
+"""
 class TestIntegrationRegistration(APITestCase):
     
     def setUp(self):
@@ -326,7 +330,6 @@ class TestIntegrationListing(APITestCase):
         Testa a listagem de integrações com o filtro de busca (?search).
         """
         # Filtrar integrações pelo nome "Zero"
-        print("URL de busca:", f"{self.create_url}?search=Zero")
         response = self.client.get(f"{self.create_url}?search=Zero")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("count", response.data)
