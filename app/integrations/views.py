@@ -23,7 +23,7 @@ class IntegrationViewSet(viewsets.ModelViewSet):
     """
     ViewSet para gerenciar integrações.
     """
-    queryset = Integration.objects.all()
+    queryset = Integration.objects.all().order_by("-created_at")
     serializer_class = IntegrationSerializer
     permission_classes = [IsAuthenticated]
     lookup_field = 'uid'
