@@ -29,7 +29,7 @@ class IntegrationViewSet(viewsets.ModelViewSet):
     lookup_field = 'uid'
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
     ordering_fields = ['created_at']
-    search_fields = ['name', 'created_at', 'gateway']
+    search_fields = ['name', 'gateway']
 
     def get_queryset(self):
         """
