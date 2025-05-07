@@ -18,7 +18,8 @@ from rest_framework.exceptions import NotFound
 from rest_framework import generics
 import logging
 from .models import Usuario, LoginLog
-from plans.models import Plan, UserSubscription
+from plans.models import Plan
+from zeroone_payments.models import UserSubscription
 from rest_framework_simplejwt.tokens import RefreshToken
 from .filters import UsuarioFilter
 import user_agents

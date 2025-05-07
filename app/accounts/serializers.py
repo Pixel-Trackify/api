@@ -8,7 +8,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from accounts.models import Usuario
 from django.conf import settings
-from plans.models import Plan, UserSubscription
+from plans.models import Plan
+from zeroone_payments.models import UserSubscription
 from django.utils import timezone
 from datetime import timedelta
 import uuid

@@ -1,6 +1,5 @@
 from django.contrib import admin
-from .models import Plan, PlanFeature, UserSubscription
-
+from .models import Plan, PlanFeature
 
 
 class PlanFeatureInline(admin.TabularInline):
@@ -15,11 +14,3 @@ class PlanAdmin(admin.ModelAdmin):
     list_display = ('name', 'price', 'duration',
                     'is_current')  # Colunas na lista
     inlines = [PlanFeatureInline]  # Integra características
-
-
-@admin.register(UserSubscription)
-class UserSubscriptionAdmin(admin.ModelAdmin):
-    """Configuração do Admin para Assinaturas"""
-    list_display = ('user', 'plan', 'start_date', 'end_date',
-                    'is_active')  # Colunas na lista
-    list_filter = ('is_active', 'plan')  # Filtros laterais
