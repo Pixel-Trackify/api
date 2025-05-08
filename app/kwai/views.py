@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.decorators import action
 from campaigns.models import Campaign
+from datetime import datetime, timedelta
 from .services import get_financial_data
 from .models import KwaiCampaign
 from .serializers import KwaiSerializer, CampaignSerializer
@@ -257,5 +258,31 @@ class Dashboard_campaigns(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        data = get_financial_data(user=request.user)
+
+        start_date = request.query_params.get('start', None)
+        end_date = request.query_params.get('end', None)
+
+        try:
+
+            if not start_date and not end_date:
+                end_date = datetime.now().date()
+                start_date = end_date - timedelta(days=30)
+
+            elif start_date and not end_date:
+                start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+                # Inclui o dia inteiro no filtro
+                end_date = start_date + timedelta(days=1)
+
+            elif start_date and end_date:
+                start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+                end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+
+        except ValueError:
+
+            raise ValidationError(
+                {"detail": "Os parâmetros de data devem estar no formato YYYY-MM-DD."})
+
+        # Obtém os dados financeiros filtrados pelo intervalo de datas
+        data = get_financial_data(
+            user=request.user, start_date=start_date, end_date=end_date)
         return Response(data, status=status.HTTP_200_OK)

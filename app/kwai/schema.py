@@ -1,6 +1,6 @@
 from drf_spectacular.utils import extend_schema, OpenApiExample
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema, OpenApiExample
+from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiParameter
 from .serializers import KwaiSerializer, CampaignSerializer, FinanceLogsSerializer
 
 # Schema para KwaiListView
@@ -345,7 +345,22 @@ kwai_overview_get_schema = extend_schema(
 )
 dashboard_campaigns_get_schema = extend_schema(
     summary="Obter dados financeiros do dashboard de campanhas",
-    description="Retorna os dados financeiros agregados e estatísticas do dashboard de campanhas.",
+    description="Retorna os dados financeiros agregados e estatísticas do dashboard de campanhas. "
+    "Permite filtrar os dados por intervalo de datas usando os parâmetros `start` e `end`. (?start=2025-04-20&end=2025-04-25)",
+    parameters=[
+        OpenApiParameter(
+            name="start",
+            description="Data inicial no formato YYYY-MM-DD. Filtra campanhas criadas a partir desta data.",
+            required=False,
+            type=OpenApiTypes.DATE,
+        ),
+        OpenApiParameter(
+            name="end",
+            description="Data final no formato YYYY-MM-DD. Filtra campanhas criadas até esta data.",
+            required=False,
+            type=OpenApiTypes.DATE,
+        ),
+    ],
     responses={
         200: OpenApiTypes.OBJECT,
 

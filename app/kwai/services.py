@@ -4,25 +4,28 @@ from django.utils import timezone
 from datetime import timedelta
 
 
-def get_financial_data(user=None, kwai=None):
+def get_financial_data(user=None, kwai=None, start_date=None, end_date=None):
     """
     Retorna os dados financeiros agregados e overviews para um usuário ou uma conta Kwai.
     """
-    today = timezone.now().date()
-    start_date = today - timedelta(days=30)
+    # Define o intervalo padrão de 30 dias se as datas não forem fornecidas
+    if not start_date and not end_date:
+        today = timezone.now().date()
+        start_date = today - timedelta(days=30)
+        end_date = today
 
     # Filtrar despesas e receitas (FinanceLogs)
     if user:
         finance_logs = FinanceLogs.objects.filter(
             campaign__user=user,
             date__gte=start_date,
-            date__lte=today
+            date__lte=end_date
         )
     elif kwai:
         finance_logs = FinanceLogs.objects.filter(
             campaign__kwai_campaigns__kwai=kwai,
             date__gte=start_date,
-            date__lte=today
+            date__lte=end_date
         )
     else:
         raise ValueError("É necessário fornecer um 'user' ou 'kwai'.")
@@ -101,14 +104,14 @@ def get_financial_data(user=None, kwai=None):
     # Ordena os overviews por data
     overviews.sort(key=lambda x: x['date'])
 
-    # Retorna os dados agregados
+    
     return {
         "source": "Kwai",
         "title": "zeroone pay",
-        "CPM": "2.22",  # Valor fixo ou calculado, dependendo da lógica
-        "CPC": None,  # Valor fixo ou calculado, dependendo da lógica
-        "CPV": None,  # Valor fixo ou calculado, dependendo da lógica
-        "method": "CPM",  # Valor fixo ou baseado em lógica
+        "CPM": "2.22",  
+        "CPC": None,  
+        "CPV": None,  
+        "method": "CPM",  
         "total_approved": total_approved,
         "total_pending": total_pending,
         "amount_approved": round(amount_approved, 2),
