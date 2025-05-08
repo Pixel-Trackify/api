@@ -16,7 +16,16 @@ class TutorialSerializer(serializers.ModelSerializer):
         if not youtube_regex.match(value):
             raise serializers.ValidationError("URL do YouTube inválida.")
         return value
-
+    
+    def validate_title(self, value):
+        if len(value) < 5:
+            raise serializers.ValidationError("O campo deve ter pelo menos 5 caracteres.")
+        
+        if len(value) > 100:
+            raise serializers.ValidationError("O campo não pode exceder 100 caracteres.")
+        
+        return value
+    
     def create(self, validated_data):
         youtube_url = validated_data.get('youtube_url')
         video_id = self.extract_video_id(youtube_url)
