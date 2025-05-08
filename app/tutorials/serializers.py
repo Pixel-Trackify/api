@@ -4,7 +4,6 @@ from .models import Tutorial
 import re
 import html
 
-
 class TutorialSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tutorial

@@ -107,3 +107,125 @@ class TestTutorialRegistration(APITestCase):
             response.data["title"][0],
             "O campo não pode exceder 100 caracteres."
         )
+
+    def test_create_tutorial_invalid_html_in_title(self):
+        """
+        Testa a criação de um tutorial com o título contendo tags HTML inválidas (possível tentativa de XSS).
+        """
+        payload = {
+            "title": "<script>alert('XSS')</script>",
+            "description": "",
+            "youtube_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        }
+        response = self.client.post(self.create_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("title", response.data)
+        self.assertEqual(
+            response.data["title"][0],
+            "O campo não pode conter tags HTML."
+        )
+        
+    def test_create_tutorial_non_ascii_title(self):
+        """
+        Testa a criação de um tutorial com o título contendo caracteres não ASCII.
+        """
+        payload = {
+            "title": "😀",
+            "description": "",
+            "youtube_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        }
+        response = self.client.post(self.create_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("title", response.data)
+        self.assertEqual(
+            response.data["title"][0],
+            "O campo só pode conter caracteres ASCII."
+        )
+        
+    def test_create_tutorial_xss_attempt_in_title(self):
+        """
+        Testa a criação de um tutorial com o título contendo uma tentativa de XSS.
+        """
+        payload = {
+            "title": "&lt;script&gt;alert(&#x27;XRSS&#x27;);&lt;/script&gt;",
+            "description": "",
+            "youtube_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        }
+        response = self.client.post(self.create_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("title", response.data)
+        self.assertEqual(
+            response.data["title"][0],
+            "O campo não pode conter tags HTML."
+        )
+        
+    def test_create_tutorial_min_description_length(self):
+        """
+        Testa a criação de um tutorial com a descrição no limite mínimo de caracteres.
+        """
+        payload = {
+            "title": "Valid Title",
+            "description": "AAA",
+            "youtube_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        }
+        response = self.client.post(self.create_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("description", response.data)
+        self.assertEqual(
+            response.data["description"][0],
+            "O campo deve ter pelo menos 5 caracteres."
+        )
+
+    def test_create_tutorial_exceed_max_description_length(self):
+        """
+        Testa a criação de um tutorial com a descrição excedendo o limite máximo de caracteres.
+        """
+        too_long_description = "A" * 501
+        payload = {
+            "title": "Valid Title",
+            "description": too_long_description,
+            "youtube_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        }
+        response = self.client.post(self.create_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("description", response.data)
+        self.assertEqual(
+            response.data["description"][0],
+            "O campo não pode exceder 500 caracteres."
+        )
+
+    def test_create_tutorial_invalid_html_in_description(self):
+        """
+        Testa a criação de um tutorial com a descrição contendo tags HTML inválidas (possível tentativa de XSS).
+        """
+        payload = {
+            "title": "Valid Title",
+            "description": "<script>alert('XSS')</script>",
+            "youtube_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        }
+        response = self.client.post(self.create_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("description", response.data)
+        self.assertEqual(
+            response.data["description"][0],
+            "O campo não pode conter tags HTML."
+        )
+
+    def test_create_tutorial_non_ascii_description(self):
+        """
+        Testa a criação de um tutorial com a descrição contendo caracteres não ASCII.
+        """
+        payload = {
+            "title": "Valid Title",
+            "description": "😀",
+            "youtube_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        }
+        response = self.client.post(self.create_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("description", response.data)
+        self.assertEqual(
+            response.data["description"][0],
+            "O campo só pode conter caracteres ASCII."
+        )
+        
+        
