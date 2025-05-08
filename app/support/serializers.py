@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from .models import Support, SupportReplyAttachment, SupportReply
 import re
+import html
+from django.utils.html import strip_tags
 
 
 class SupportSerializer(serializers.ModelSerializer):
@@ -21,24 +23,48 @@ class SupportSerializer(serializers.ModelSerializer):
         return "user"
 
     def validate_title(self, value):
-        """
-        Valida o campo `title` para evitar scripts maliciosos e limitar a 100 caracteres.
-        """
+        try:
+            value.encode('ascii')
+        except UnicodeEncodeError:
+            raise serializers.ValidationError(
+                "O campo só pode conter caracteres ASCII.")
+
+        if html.unescape(strip_tags(value)) != value:
+            raise serializers.ValidationError(
+                "O campo não pode conter tags HTML.")
+
+        if len(value) < 5:
+            raise serializers.ValidationError(
+                "O campo deve ter pelo menos 5 caracteres.")
+
         if len(value) > 100:
             raise serializers.ValidationError(
-                "O título não pode ter mais de 100 caracteres.")
-        if not re.match(r'^[a-zA-Z0-9\s\-_,\.;:()áéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ]+$', value):
-            raise serializers.ValidationError(
-                "O título contém caracteres inválidos.")
+                "O campo não pode exceder 100 caracteres.")
+
         return value
 
     def validate_description(self, value):
-        """
-        Valida o campo `description` para evitar scripts maliciosos.
-        """
-        if not re.match(r'^[a-zA-Z0-9\s\-_,\.;:()áéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ]+$', value):
+        if not value:
+            return value
+
+        try:
+            value.encode('ascii')
+        except UnicodeEncodeError:
             raise serializers.ValidationError(
-                "A descrição contém caracteres inválidos.")
+                "O campo só pode conter caracteres ASCII.")
+
+        if html.unescape(strip_tags(value)) != value:
+            raise serializers.ValidationError(
+                "O campo não pode conter tags HTML.")
+
+        if len(value) < 5:
+            raise serializers.ValidationError(
+                "O campo deve ter pelo menos 5 caracteres.")
+
+        if len(value) > 500:
+            raise serializers.ValidationError(
+                "O campo não pode exceder 500 caracteres.")
+
         return value
 
 
