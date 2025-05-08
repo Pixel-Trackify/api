@@ -281,7 +281,7 @@ class UserSubscriptionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserSubscription
-        fields = ['plan', 'start_date', 'end_date', 'is_active']
+        fields = ['plan', 'start_date', 'expiration', 'is_active']
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -327,7 +327,7 @@ class UpdateUserPlanSerializer(serializers.Serializer):
 
         # Criar nova assinatura
         UserSubscription.objects.create(user=instance, plan=plan, start_date=timezone.now(
-        ), end_date=timezone.now() + timedelta(days=30), is_active=True)
+        ), expiration=timezone.now() + timedelta(days=30), is_active=True)
 
         # Atualizar o tipo de conta do usuário
         instance.account_type = plan
