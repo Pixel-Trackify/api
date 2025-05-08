@@ -1,11 +1,13 @@
 import socket
 import re
 from django.contrib.auth.password_validation import validate_password
-from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.utils.html import strip_tags
+import html
+
+
 from accounts.models import Usuario
 from django.conf import settings
 from plans.models import Plan
@@ -291,6 +293,27 @@ class UserProfileSerializer(serializers.ModelSerializer):
         model = Usuario
         fields = ['uid', 'name', 'email', 'cpf',
                   'avatar', 'date_joined', 'active_plan', 'profit']
+
+    def validate_name(self, value):
+
+        try:
+            value.encode('ascii')
+        except UnicodeEncodeError:
+            raise serializers.ValidationError(
+                "O campo só pode conter caracteres ASCII.")
+
+        if html.unescape(strip_tags(value)) != value:
+            raise serializers.ValidationError(
+                "O campo não pode conter tags HTML.")
+
+        if len(value) < 5:
+            raise serializers.ValidationError(
+                "O campo deve ter pelo menos 5 caracteres.")
+        if len(value) > 100:
+            raise serializers.ValidationError(
+                "O campo não pode exceder 100 caracteres.")
+
+        return value
 
     def validate(self, data):
         """
