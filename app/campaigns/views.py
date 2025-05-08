@@ -1,6 +1,7 @@
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 import re
+from datetime import datetime, timedelta
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
@@ -31,16 +32,43 @@ class CampaignViewSet(viewsets.ModelViewSet):
         """
         Sobrescreve o método filter_queryset para validar os parâmetros de busca.
         """
+        queryset = super().filter_queryset(queryset)
+
+        # Validação do parâmetro de busca
         search_param = self.request.query_params.get('search', None)
-
         if search_param:
-
             if not re.match(r'^[a-zA-Z0-9\s\-_,\.;:()áéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ]+$', search_param):
                 raise ValidationError(
                     {"search": "O parâmetro de busca contém caracteres inválidos."}
                 )
 
-        return super().filter_queryset(queryset)
+        # Filtros de intervalo de datas
+        start_date = self.request.query_params.get('start', None)
+        end_date = self.request.query_params.get('end', None)
+
+        try:
+
+            if not start_date and not end_date:
+                end_date = datetime.now().date()
+                start_date = end_date - timedelta(days=30)
+
+            elif start_date and not end_date:
+                start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+                end_date = start_date
+
+            elif start_date and end_date:
+                start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+                end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+
+            queryset = queryset.filter(
+                created_at__date__gte=start_date, created_at__date__lte=end_date)
+
+        except ValueError:
+
+            raise ValidationError(
+                {"detail": "Os parâmetros de data devem estar no formato YYYY-MM-DD."})
+
+        return queryset
 
     def get_queryset(self):
         """Retorna as campanhas do usuário autenticado"""
