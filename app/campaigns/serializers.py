@@ -3,10 +3,11 @@ from collections import Counter
 from integrations.models import IntegrationRequest
 from .models import Campaign, CampaignView, Integration
 import logging
-import re
 from django.db.models import Sum
 from datetime import timedelta
 from django.utils import timezone
+from django.utils.html import strip_tags
+import html
 
 logger = logging.getLogger('django')
 
@@ -93,26 +94,47 @@ class CampaignSerializer(serializers.ModelSerializer):
         return overviews
 
     def validate_title(self, value):
+        try:
+            value.encode('ascii')
+        except UnicodeEncodeError:
+            raise serializers.ValidationError(
+                "O campo só pode conter caracteres ASCII.")
+
+        if html.unescape(strip_tags(value)) != value:
+            raise serializers.ValidationError(
+                "O campo não pode conter tags HTML.")
+
+        if len(value) < 5:
+            raise serializers.ValidationError(
+                "O campo deve ter pelo menos 5 caracteres.")
+
         if len(value) > 100:
             raise serializers.ValidationError(
-                "O título não pode ter mais de 100 caracteres.")
-        if not re.match(r'^[a-zA-Z0-9\s\-_,\.;:()áéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ]+$', value):
-            raise serializers.ValidationError(
-                "O título contém caracteres inválidos.")
+                "O campo não pode exceder 100 caracteres.")
+
         return value
 
     def validate_description(self, value):
-        if value is None or value.strip() == "":
-            # Permite que o campo esteja vazio
+        if not value:
             return value
 
-        if len(value) > 200:
+        try:
+            value.encode('ascii')
+        except UnicodeEncodeError:
             raise serializers.ValidationError(
-                "A descrição não pode ter mais de 200 caracteres.")
+                "O campo só pode conter caracteres ASCII.")
 
-        if not re.match(r'^[a-zA-Z0-9\s\-_,\.;:()áéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ]+$', value):
+        if html.unescape(strip_tags(value)) != value:
             raise serializers.ValidationError(
-                "A descrição contém caracteres inválidos.")
+                "O campo não pode conter tags HTML.")
+
+        if len(value) < 5:
+            raise serializers.ValidationError(
+                "O campo deve ter pelo menos 5 caracteres.")
+
+        if len(value) > 500:
+            raise serializers.ValidationError(
+                "O campo não pode exceder 500 caracteres.")
 
         return value
 
