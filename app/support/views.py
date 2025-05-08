@@ -56,6 +56,7 @@ class SupportListView(generics.ListAPIView):
                 raise ValidationError(
                     {"search": "O parâmetro de busca contém caracteres inválidos."}
                 )
+        return queryset
 
 
 @support_detail_view_schema
