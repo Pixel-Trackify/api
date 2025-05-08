@@ -81,7 +81,7 @@ class TestIntegrationRegistration(APITestCase):
         self.assertIn("name", response.data)
         self.assertEqual(
             response.data["name"][0],
-            "O nome contém caracteres inválidos."
+            "O campo não pode conter tags HTML."
         )
         
     def test_create_integration_name_too_long(self):
@@ -180,7 +180,7 @@ class TestIntegrationUpdate(APITestCase):
         self.assertIn("name", response.data)
         self.assertEqual(
             response.data["name"][0],
-            "O nome contém caracteres inválidos."
+            "O campo não pode conter tags HTML."
         )
 
     def test_update_integration_name_too_long(self):
@@ -289,7 +289,7 @@ class TestIntegrationListing(APITestCase):
             self.access_token = login_response.data.get("access")
             self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access_token}")
             # Criar duas integrações para listar
-            integration_payload_1 = {"gateway": gateway, "name": "Zero"}
+            integration_payload_1 = {"gateway": gateway, "name": name + " - ZeroOne" }
             integration_payload_2 = {"gateway": "disrupty", "name": "Teste"}
             self.client.post(self.create_url, integration_payload_1, format="json")
             self.client.post(self.create_url, integration_payload_2, format="json")
@@ -310,7 +310,7 @@ class TestIntegrationListing(APITestCase):
         # Verifica os dados da primeira integração
         integration_1 = response.data["results"][1]
         self.assertIn("uid", integration_1)
-        self.assertEqual(integration_1["name"], "Zero")
+        self.assertEqual(integration_1["name"], name + " - ZeroOne")
         self.assertEqual(integration_1["gateway"], gateway)
         self.assertFalse(integration_1["deleted"])
         self.assertEqual(integration_1["status"], "active")
@@ -340,7 +340,7 @@ class TestIntegrationListing(APITestCase):
         # Verifica os dados da integração retornada
         integration = response.data["results"][0]
         self.assertIn("uid", integration)
-        self.assertEqual(integration["name"], "Zero")
+        self.assertEqual(integration["name"], name + " - ZeroOne")
         self.assertEqual(integration["gateway"], gateway)
         self.assertEqual(integration["status"], "active")
         self.assertTrue(integration["webhook_url"].startswith("http"))
@@ -364,7 +364,7 @@ class TestIntegrationDetail(APITestCase):
             self.access_token = login_response.data.get("access")
             self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access_token}")
             # Criar uma integração para detalhes
-            integration_payload = {"gateway": "disrupty", "name": "Dis"}
+            integration_payload = {"gateway": "disrupty", "name": "Conta da Sarah - Disrupty"}
             create_response = self.client.post(self.create_url, integration_payload, format="json")
             self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
             self.integration_uid = create_response.data["uid"]
@@ -381,7 +381,7 @@ class TestIntegrationDetail(APITestCase):
 
         self.assertIn("uid", response.data)
         self.assertEqual(response.data["uid"], self.integration_uid)
-        self.assertEqual(response.data["name"], "Dis")
+        self.assertEqual(response.data["name"], "Conta da Sarah - Disrupty")
         self.assertEqual(response.data["gateway"], "disrupty")
         self.assertEqual(response.data["status"], "active")
         self.assertTrue(response.data["webhook_url"].startswith("http"))
