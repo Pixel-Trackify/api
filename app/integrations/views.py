@@ -35,9 +35,7 @@ class IntegrationViewSet(viewsets.ModelViewSet):
         """
         Retorna as integrações do usuário autenticado.
         """
-        queryset = self.queryset.filter(user=self.request.user)
-
-        return queryset
+        return self.queryset.filter(user=self.request.user, deleted=False)
 
     def filter_queryset(self, queryset):
         """
@@ -83,7 +81,7 @@ class IntegrationViewSet(viewsets.ModelViewSet):
         Sobrescreve o método para buscar a integração pelo campo `uid` em vez de `id`.
         """
         obj = get_object_or_404(self.get_queryset(),
-                                uid=self.kwargs.get(self.lookup_field))
+                                uid=self.kwargs.get(self.lookup_field), deleted=False)
 
         return obj
 
@@ -137,6 +135,7 @@ class IntegrationViewSet(viewsets.ModelViewSet):
         if instance.user != self.request.user:
             raise PermissionDenied(
                 "Você não tem permissão para deletar esta integração.")
+        instance.deleted = True
         instance.delete()
 
     @action(detail=False, methods=['post'], url_path='delete-multiple')
@@ -164,12 +163,12 @@ class IntegrationViewSet(viewsets.ModelViewSet):
 
         # Usa uma transação para garantir consistência
         with transaction.atomic():
-            deleted_count = instances.delete()[0]
+            instances.update(deleted=True)
 
         # Retorna uma resposta detalhada
         return Response(
             {
-                "message": f"{deleted_count} integração(ões) excluída(s) com sucesso.",
+                "message": f"{len(instances)} integração(ões) excluída(s) com sucesso.",
                 # Lista de UUIDs não encontrados
                 "not_found": list(not_found_uids)
             },
