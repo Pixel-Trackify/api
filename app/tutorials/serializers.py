@@ -1,6 +1,8 @@
 from rest_framework import serializers
+from django.utils.html import strip_tags
 from .models import Tutorial
 import re
+import html
 
 
 class TutorialSerializer(serializers.ModelSerializer):
@@ -18,11 +20,41 @@ class TutorialSerializer(serializers.ModelSerializer):
         return value
     
     def validate_title(self, value):
+        try:
+            value.encode('ascii')
+        except UnicodeEncodeError:
+            raise serializers.ValidationError("O campo só pode conter caracteres ASCII.")
+        
+        if html.unescape(strip_tags(value)) != value:
+            raise serializers.ValidationError("O campo não pode conter tags HTML.")
+
         if len(value) < 5:
             raise serializers.ValidationError("O campo deve ter pelo menos 5 caracteres.")
         
         if len(value) > 100:
             raise serializers.ValidationError("O campo não pode exceder 100 caracteres.")
+        
+        return value
+    
+
+    def validate_description(self, value):
+        # Campo opcional
+        if not value:
+            return value
+       
+        try:
+            value.encode('ascii')
+        except UnicodeEncodeError:
+            raise serializers.ValidationError("O campo só pode conter caracteres ASCII.")
+       
+        if html.unescape(strip_tags(value)) != value:
+            raise serializers.ValidationError("O campo não pode conter tags HTML.")
+        
+        if len(value) < 5:
+            raise serializers.ValidationError("O campo deve ter pelo menos 5 caracteres.")
+        
+        if len(value) > 500:
+            raise serializers.ValidationError("O campo não pode exceder 500 caracteres.")
         
         return value
     
