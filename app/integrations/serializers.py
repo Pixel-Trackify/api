@@ -1,9 +1,10 @@
 from rest_framework import serializers
 from .models import Integration, Transaction, IntegrationRequest
-from django.urls import reverse
 from django.conf import settings
 import logging
-import re
+from django.utils.html import strip_tags
+import html
+
 
 logger = logging.getLogger('django')
 
@@ -19,15 +20,24 @@ class IntegrationSerializer(serializers.ModelSerializer):
                             'status', 'created_at', 'updated_at']
 
     def validate_name(self, value):
-        """
-        Valida o campo `name` para evitar scripts maliciosos e limitar a 100 caracteres.
-        """
+        try:
+            value.encode('ascii')
+        except UnicodeEncodeError:
+            raise serializers.ValidationError(
+                "O campo só pode conter caracteres ASCII.")
+
+        if html.unescape(strip_tags(value)) != value:
+            raise serializers.ValidationError(
+                "O campo não pode conter tags HTML.")
+
+        if len(value) < 5:
+            raise serializers.ValidationError(
+                "O campo deve ter pelo menos 5 caracteres.")
+
         if len(value) > 100:
             raise serializers.ValidationError(
-                "O nome não pode ter mais de 100 caracteres.")
-        if not re.match(r'^[a-zA-Z0-9\s\-_,\.;:()áéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ]+$', value):
-            raise serializers.ValidationError(
-                "O nome contém caracteres inválidos.")
+                "O campo não pode exceder 100 caracteres.")
+
         return value
 
     def validate_gateway(self, value):
