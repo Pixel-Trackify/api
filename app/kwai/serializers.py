@@ -3,7 +3,8 @@ from .models import Kwai, KwaiCampaign
 from campaigns.models import FinanceLogs, Campaign
 import uuid
 from .services import get_financial_data
-import re
+from django.utils.html import strip_tags
+import html
 
 
 class FinanceLogsSerializer(serializers.ModelSerializer):
@@ -28,12 +29,24 @@ class KwaiSerializer(serializers.ModelSerializer):
                   'campaigns', 'created_at', 'updated_at']
 
     def validate_name(self, value):
+        try:
+            value.encode('ascii')
+        except UnicodeEncodeError:
+            raise serializers.ValidationError(
+                "O campo só pode conter caracteres ASCII.")
+
+        if html.unescape(strip_tags(value)) != value:
+            raise serializers.ValidationError(
+                "O campo não pode conter tags HTML.")
+
+        if len(value) < 5:
+            raise serializers.ValidationError(
+                "O campo deve ter pelo menos 5 caracteres.")
+
         if len(value) > 100:
             raise serializers.ValidationError(
-                "O nome não pode ter mais de 100 caracteres.")
-        if not re.match(r'^[a-zA-Z0-9\s\-_,\.;:()áéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ]+$', value):
-            raise serializers.ValidationError(
-                "O nome contém caracteres inválidos.")
+                "O campo não pode exceder 100 caracteres.")
+
         return value
 
     def get_campaigns(self, obj):
