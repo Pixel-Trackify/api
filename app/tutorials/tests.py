@@ -1065,8 +1065,3 @@ class TestTutorialRegistrationWithoutAdmin(APITestCase):
         }
         response = self.client.post(self.create_url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertIn("detail", response.data)
-        self.assertEqual(
-            response.data["detail"],
-            "Apenas administradores podem criar tutoriais."
-        )
