@@ -30,7 +30,7 @@ class KwaiSerializer(serializers.ModelSerializer):
 
     def validate_name(self, value):
         try:
-            value.encode('ascii')
+            value.encode('latin-1')
         except UnicodeEncodeError:
             raise serializers.ValidationError(
                 "O campo só pode conter caracteres ASCII.")

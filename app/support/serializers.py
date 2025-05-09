@@ -24,7 +24,7 @@ class SupportSerializer(serializers.ModelSerializer):
 
     def validate_title(self, value):
         try:
-            value.encode('ascii')
+            value.encode('latin-1')
         except UnicodeEncodeError:
             raise serializers.ValidationError(
                 "O campo só pode conter caracteres ASCII.")
@@ -48,7 +48,7 @@ class SupportSerializer(serializers.ModelSerializer):
             return value
 
         try:
-            value.encode('ascii')
+            value.encode('latin-1')
         except UnicodeEncodeError:
             raise serializers.ValidationError(
                 "O campo só pode conter caracteres ASCII.")
