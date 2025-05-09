@@ -227,56 +227,7 @@ class TestTutorialRegistration(APITestCase):
             response.data["description"][0],
             "O campo só pode conter caracteres ASCII."
         )
-        
-class TestTutorialRegistrationWithoutAdmin(APITestCase):
     
-    def setUp(self):
-        try:
-            self.register_url = reverse("account-create-list")
-            self.login_url = reverse("login")
-            
-            # Criar usuário
-            payload = {"email": email, "cpf": cpf, "name": name,
-                       "password": password, "confirm_password": password}
-            reg_response = self.client.post(
-                self.register_url, payload, format="json")
-            self.assertEqual(reg_response.status_code, status.HTTP_201_CREATED)
-
-            # Autenticar para obter token
-            login_payload = {"identifier": email, "password": password}
-            login_response = self.client.post(
-                self.login_url, login_payload, format="json")
-            self.assertEqual(login_response.status_code, status.HTTP_200_OK)
-            self.access_token = login_response.data.get("access")
-            
-            # Definir cabeçalho de autorização
-            self.client.credentials(
-                HTTP_AUTHORIZATION=f"Bearer {self.access_token}")
-            
-            # Ajustar a rota correta para tutoriais
-            self.create_url = reverse("tutorial-list")
-        except NoReverseMatch as e:
-            self.fail(f"Rota não encontrada: {str(e)}")
-        except Exception as e:
-            self.fail(f"Erro inesperado: {str(e)}")
-
-    def test_create_tutorial_as_non_admin(self):
-        """
-        Testa a criação de um tutorial sem permissões de administrador.
-        """
-        payload = {
-            "title": "Como criar uma campanha do Kwai",
-            "description": "Alguma descrição válida",
-            "youtube_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-        }
-        response = self.client.post(self.create_url, payload, format="json")
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertIn("detail", response.data)
-        self.assertEqual(
-            response.data["detail"],
-            "Apenas administradores podem criar tutoriais."
-        )
-        
 class TestTutorialEditing(APITestCase):
     
     def setUp(self):
@@ -503,3 +454,222 @@ class TestTutorialEditing(APITestCase):
             "O campo só pode conter caracteres ASCII."
         )
       
+class TestTutorialDeletion(APITestCase):
+    
+    def setUp(self):
+        try:
+            self.register_url = reverse("account-create-list")
+            self.login_url = reverse("login")
+            
+            # Criar usuário
+            payload = {"email": email, "cpf": cpf, "name": name,
+                       "password": password, "confirm_password": password}
+            reg_response = self.client.post(
+                self.register_url, payload, format="json")
+            self.assertEqual(reg_response.status_code, status.HTTP_201_CREATED)
+
+            # Alterar para admin diretamente no banco
+            user = User.objects.get(email=email)
+            user.is_superuser = True
+            user.save()
+
+            # Autenticar para obter token
+            login_payload = {"identifier": email, "password": password}
+            login_response = self.client.post(
+                self.login_url, login_payload, format="json")
+            self.assertEqual(login_response.status_code, status.HTTP_200_OK)
+            self.access_token = login_response.data.get("access")
+            self.uid = login_response.data.get("uid")
+            
+            # Definir cabeçalho de autorização
+            self.client.credentials(
+                HTTP_AUTHORIZATION=f"Bearer {self.access_token}")
+            
+            valid_payload = {
+                "title": "Valid Title",
+                "description": "Valid description",
+                "youtube_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+            }
+            self.create_url = reverse("tutorial-list")
+            
+            create_resp = self.client.post(reverse("tutorial-list"), valid_payload, format="json")
+            self.assertEqual(create_resp.status_code, status.HTTP_201_CREATED)
+            self.tutorial_id = create_resp.data.get("uid")
+        
+            # Ajustar a rota correta para tutoriais
+            self.delete_url = self.create_url +  self.tutorial_id + "/"
+        except NoReverseMatch as e:
+            self.fail(f"Rota não encontrada: {str(e)}")
+        except Exception as e:
+            self.fail(f"Erro inesperado: {str(e)}")
+    
+    def test_delete_tutorial_invalid_uid(self):
+        """
+        Testa a exclusão de uma tutorial com um UID inválida.
+        """
+        delete_url = self.create_url + "847b4a59-5ca6-4335-bc97-b2a07e1eddc7/" 
+        response = self.client.delete(delete_url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn("detail", response.data)
+        self.assertEqual(
+            response.data["detail"],
+            "No Tutorial matches the given query."
+        )
+            
+    def test_delete_tutorial(self):
+        """
+        Testa a exclusão de um tutorial.
+        """
+        response = self.client.delete(self.delete_url, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("message", response.data)
+        self.assertEqual(
+            response.data["message"],
+            "Tutorial excluído com sucesso."
+        )
+        
+        # Verifica se o tutorial foi realmente deletado
+        response = self.client.get(self.delete_url) # essa URL simula o detalhes do tutorial
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        
+    def test_delete_tutorial_not_found(self):
+        """
+        Testa a exclusão de um tutorial que não existe.
+        """
+        invalid_uid = str(UUID(int=0))
+        invalid_delete_url = self.create_url + invalid_uid + "/"
+        response = self.client.delete(invalid_delete_url, format="json")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        
+class TestTutorialBulkDeletion(APITestCase):
+    
+    def setUp(self):
+        try:
+            self.register_url = reverse("account-create-list")
+            self.login_url = reverse("login")
+            
+            # Criar usuário
+            payload = {"email": email, "cpf": cpf, "name": name,
+                       "password": password, "confirm_password": password}
+            reg_response = self.client.post(
+                self.register_url, payload, format="json")
+            self.assertEqual(reg_response.status_code, status.HTTP_201_CREATED)
+
+            # Alterar para admin diretamente no banco
+            user = User.objects.get(email=email)
+            user.is_superuser = True
+            user.save()
+
+            # Autenticar para obter token
+            login_payload = {"identifier": email, "password": password}
+            login_response = self.client.post(
+                self.login_url, login_payload, format="json")
+            self.assertEqual(login_response.status_code, status.HTTP_200_OK)
+            self.access_token = login_response.data.get("access")
+            self.uid = login_response.data.get("uid")
+            
+            # Definir cabeçalho de autorização
+            self.client.credentials(
+                HTTP_AUTHORIZATION=f"Bearer {self.access_token}")
+            
+            valid_payload = {
+                "title": "Valid Title",
+                "description": "Valid description",
+                "youtube_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+            }
+            self.create_url = reverse("tutorial-list")
+            
+            create_resp = self.client.post(reverse("tutorial-list"), valid_payload, format="json")
+            self.assertEqual(create_resp.status_code, status.HTTP_201_CREATED)
+            self.tutorial_id = create_resp.data.get("uid")
+        
+            # Ajustar a rota correta para tutoriais
+            self.bulk_delete_url = reverse("tutorial-delete-multiple")
+        except NoReverseMatch as e:
+            self.fail(f"Rota não encontrada: {str(e)}")
+        except Exception as e:
+            self.fail(f"Erro inesperado: {str(e)}")
+    
+    def test_bulk_delete_tutorials_invalid_uid(self):
+        """
+        Testa a exclusão em massa de tutoriais com um UID inválida.
+        """
+        payload = {
+            "uids": ["847b4a59-5ca6-4335-bc97-b2a07e1eddc7"]
+        }
+        response = self.client.post(self.bulk_delete_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn("error", response.data)
+        self.assertEqual(
+            response.data["error"],
+            "Nenhum tutorial encontrado."
+        )       
+         
+    def test_bulk_delete_tutorials(self):
+        """
+        Testa a exclusão em massa de tutoriais.
+        """
+        payload = {
+            "uids": [self.tutorial_id]
+        }
+        response = self.client.post(self.bulk_delete_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("message", response.data)
+        self.assertEqual(
+            response.data["message"],
+            "1 tutorial(s) excluído(s) com sucesso."
+        )
+        
+        # Verifica se o tutorial foi realmente deletado
+        detail = self.create_url + self.tutorial_id + "/"
+        response = self.client.get(detail)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+  
+class TestTutorialRegistrationWithoutAdmin(APITestCase):
+    
+    def setUp(self):
+        try:
+            self.register_url = reverse("account-create-list")
+            self.login_url = reverse("login")
+            
+            # Criar usuário
+            payload = {"email": email, "cpf": cpf, "name": name,
+                       "password": password, "confirm_password": password}
+            reg_response = self.client.post(
+                self.register_url, payload, format="json")
+            self.assertEqual(reg_response.status_code, status.HTTP_201_CREATED)
+
+            # Autenticar para obter token
+            login_payload = {"identifier": email, "password": password}
+            login_response = self.client.post(
+                self.login_url, login_payload, format="json")
+            self.assertEqual(login_response.status_code, status.HTTP_200_OK)
+            self.access_token = login_response.data.get("access")
+            
+            # Definir cabeçalho de autorização
+            self.client.credentials(
+                HTTP_AUTHORIZATION=f"Bearer {self.access_token}")
+            
+            # Ajustar a rota correta para tutoriais
+            self.create_url = reverse("tutorial-list")
+        except NoReverseMatch as e:
+            self.fail(f"Rota não encontrada: {str(e)}")
+        except Exception as e:
+            self.fail(f"Erro inesperado: {str(e)}")
+
+    def test_create_tutorial_as_non_admin(self):
+        """
+        Testa a criação de um tutorial sem permissões de administrador.
+        """
+        payload = {
+            "title": "Como criar uma campanha do Kwai",
+            "description": "Alguma descrição válida",
+            "youtube_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        }
+        response = self.client.post(self.create_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn("detail", response.data)
+        self.assertEqual(
+            response.data["detail"],
+            "Apenas administradores podem criar tutoriais."
+        )
