@@ -64,7 +64,7 @@ class IntegrationViewSet(viewsets.ModelViewSet):
         # Verifica se o queryset está vazio
         if not queryset.exists():
             return Response(
-                {"total": 0, "detail": "Nenhuma campanha encontrada com os critérios de busca.", "results": []}
+                {"count": 0, "detail": "Nenhuma campanha encontrada com os critérios de busca.", "results": []}
             )
 
         # Caso contrário, retorna os resultados normalmente

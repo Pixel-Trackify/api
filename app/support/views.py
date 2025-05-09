@@ -105,14 +105,14 @@ class SupportRepliesView(APIView):
         support = Support.objects.filter(uid=uid).first()
         if not support:
             return Response(
-                {"total": 0, "detail": "Nenhum suporte encontrado.", "results": []},
+                {"count": 0, "detail": "Nenhum suporte encontrado.", "results": []},
                 status=200
             )
 
         # Verifica permissões
         if not user.is_superuser and support.user != user:
             return Response(
-                {"total": 0, "detail": "Nenhum suporte encontrado.", "results": []},
+                {"count": 0, "detail": "Nenhum suporte encontrado.", "results": []},
                 status=200
             )
 

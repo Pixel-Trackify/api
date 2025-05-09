@@ -200,7 +200,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
         if not queryset.exists():
             return Response(
-                {"total": 0, "detail": "Nenhum usuário encontrado.", "results": []},
+                {"count": 0, "detail": "Nenhum usuário encontrado.", "results": []},
                 status=status.HTTP_200_OK
             )
 

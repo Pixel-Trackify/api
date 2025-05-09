@@ -20,7 +20,7 @@ class TutorialViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
     ordering_fields = ['title', 'description']
     ordering = ['created_at']
-    search_fields = ['title', 'description']
+    search_fields = ['title', 'description', 'youtube_url']
     lookup_field = 'uid'
 
     def get_queryset(self):
@@ -67,7 +67,7 @@ class TutorialViewSet(viewsets.ModelViewSet):
 
         if not queryset.exists():
             return Response(
-                {"total": 0, "detail": "Nenhum tutorial encontrado com os critérios de busca.", "results": []},
+                {"count": 0, "detail": "Nenhum tutorial encontrado com os critérios de busca.", "results": []},
                 status=status.HTTP_200_OK
             )
 
