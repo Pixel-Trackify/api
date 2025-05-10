@@ -1,6 +1,6 @@
 from rest_framework import viewsets, status, filters
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAdminUser
+from .permissions import IsAdminUserOrReadOnly
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 import re
@@ -16,7 +16,7 @@ class TutorialViewSet(viewsets.ModelViewSet):
     """
     queryset = Tutorial.objects.all()
     serializer_class = TutorialSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAdminUserOrReadOnly]
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
     ordering_fields = ['title', 'description']
     ordering = ['created_at']
