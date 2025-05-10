@@ -7,10 +7,13 @@ from django.db.models import Sum, Count, Q, Value
 from django.db.models.functions import TruncDate
 from .permissions import IsSuperUser
 from accounts.models import Usuario
+from zeroone_payments.models import UserSubscription
 from campaigns.models import FinanceLogs
 from .serializers import DashboardSerializer, UsuarioSerializer
 from .schemas import admin_dashboard_schema
 from django.db import models
+import logging
+logger = logging.getLogger('django')
 
 
 class AdminDashboardViewSet(ViewSet):
@@ -30,23 +33,35 @@ class AdminDashboardViewSet(ViewSet):
 
     def get_register_stats(self, start_date, end_date):
         """Obtém estatísticas de registros de usuários (REGISTER)."""
-        return Usuario.objects.filter(
+        stats = Usuario.objects.filter(
             date_joined__range=[start_date, end_date]
         ).annotate(
             type=Value("REGISTER", output_field=models.CharField()),
-            value=Count('uid'),
             date=TruncDate('date_joined')
-        ).values('type', 'value', 'date')
+        ).values(
+            'type', 'date'
+        ).annotate(
+            value=Count('uid')
+        ).order_by('date')
+        return stats
 
     def get_subscription_stats(self, start_date, end_date):
         """Obtém estatísticas de assinaturas ativas (SUBSCRIPTION)."""
-        return Usuario.objects.filter(
-            date_joined__range=[start_date, end_date]
+        stats = UserSubscription.objects.filter(
+            start_date__range=[start_date, end_date],
+            is_active=True
         ).annotate(
+
             type=Value("SUBSCRIPTION", output_field=models.CharField()),
-            value=Count('uid', filter=Q(subscription_active=True)),
-            date=TruncDate('date_joined')
-        ).values('type', 'value', 'date')
+
+            date=TruncDate('start_date')
+        ).values(
+            'type', 'date'
+        ).annotate(
+            value=Count('uid')  # Conta as assinaturas por data
+        ).order_by('date')
+        logger.info(f"Subscription Stats: {list(stats)}")
+        return stats
 
     def fill_missing_days(self, users, start_date, end_date):
         """Preenche os dias ausentes no intervalo de datas com valores 0."""
