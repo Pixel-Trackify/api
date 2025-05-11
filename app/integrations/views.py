@@ -163,12 +163,12 @@ class IntegrationViewSet(viewsets.ModelViewSet):
 
         # Usa uma transação para garantir consistência
         with transaction.atomic():
-            instances.update(deleted=True)
+            updated_count = instances.update(deleted=True)
 
         # Retorna uma resposta detalhada
         return Response(
             {
-                "message": f"{len(instances)} integração(ões) excluída(s) com sucesso.",
+                "message": f"{updated_count} integração(ões) excluída(s) com sucesso.",
                 # Lista de UUIDs não encontrados
                 "not_found": list(not_found_uids)
             },
