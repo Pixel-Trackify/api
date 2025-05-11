@@ -52,6 +52,23 @@ class TestIntegrationRegistration(APITestCase):
             self.fail(f"Erro inesperado: {str(e)}")
             print(f"Erro inesperado: {str(e)}")
             
+    def test_create_integration_empty_data(self):
+        """
+        Testa a criação de uma integração com dados vázios.
+        """
+        response = self.client.post(self.create_url, {}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("gateway", response.data)   
+        self.assertIn("name", response.data)
+        self.assertEqual(
+            response.data["gateway"][0],
+            "Este campo é obrigatório."
+        )
+        self.assertEqual(
+            response.data["name"][0],
+            "Este campo é obrigatório."
+        )
+ 
     def test_create_integration_invalid_name(self):
         """
         Testa a criação de uma integração com um nome de gateway inválido.
@@ -84,6 +101,54 @@ class TestIntegrationRegistration(APITestCase):
             "O campo não pode conter tags HTML."
         )
         
+    def test_create_integration_non_ascii_name(self):
+        """
+        Testa a criação de um integração com o nome contendo caracteres não ASCII.
+        """
+        payload = {
+            "gateway": gateway,
+            "name": "😀"
+        }
+        response = self.client.post(self.create_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("name", response.data)
+        self.assertEqual(
+            response.data["name"][0],
+            "O campo só pode conter caracteres ASCII."
+        )
+        
+    def test_create_integration_title_too_short(self):
+        """
+        Testa a criação de um integração com o título no limite mínimo de caracteres.
+        """
+        payload = {
+            "name": "AAA",
+            "gateway": gateway,
+        }
+        response = self.client.post(self.create_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("name", response.data)
+        self.assertEqual(
+            response.data["name"][0],
+            "O campo deve ter pelo menos 5 caracteres."
+        )
+        
+    def test_create_integration_xss_attempt_in_title(self):
+        """
+        Testa a criação de um integração com o name contendo uma tentativa de XSS.
+        """
+        payload = {
+            "name": "&lt;script&gt;alert(&#x27;XRSS&#x27;);&lt;/script&gt;",
+            "gateway": gateway,
+        }
+        response = self.client.post(self.create_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("name", response.data)
+        self.assertEqual(
+            response.data["name"][0],
+            "O campo não pode conter tags HTML."
+        )
+
     def test_create_integration_name_too_long(self):
         """
         Testa a criação de uma integração com um nome maior que 200 caracteres.
