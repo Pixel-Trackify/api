@@ -43,6 +43,23 @@ class TestIntegrationUpdate(APITestCase):
         except Exception as e:
             self.fail(f"Erro inesperado no setup: {str(e)}")
 
+    def test_update_integration_empty_data(self):
+        """
+        Testa a atualização de uma integração com dados vázios.
+        """
+        response = self.client.put(self.update_url, {}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("gateway", response.data)   
+        self.assertIn("name", response.data)
+        self.assertEqual(
+            response.data["gateway"][0],
+            "Este campo é obrigatório."
+        )
+        self.assertEqual(
+            response.data["name"][0],
+            "Este campo é obrigatório."
+        )
+ 
     def test_update_integration_invalid_name(self):
         """
         Testa a atualização de uma integração com um nome de gateway inválido.
@@ -66,6 +83,54 @@ class TestIntegrationUpdate(APITestCase):
         payload = {
             "gateway": gateway,
             "name": "<script>alert('XSS')</script>"
+        }
+        response = self.client.put(self.update_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("name", response.data)
+        self.assertEqual(
+            response.data["name"][0],
+            "O campo não pode conter tags HTML."
+        )
+
+    def test_update_integration_non_ascii_name(self):
+        """
+        Testa a atualização de um integração com o nome contendo caracteres não ASCII.
+        """
+        payload = {
+            "gateway": gateway,
+            "name": "😀"
+        }
+        response = self.client.put(self.update_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("name", response.data)
+        self.assertEqual(
+            response.data["name"][0],
+            "O campo só pode conter caracteres ASCII."
+        )
+        
+    def test_update_integration_title_too_short(self):
+        """
+        Testa a atualização de um integração com o título no limite mínimo de caracteres.
+        """
+        payload = {
+            "name": "AAA",
+            "gateway": gateway,
+        }
+        response = self.client.put(self.update_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("name", response.data)
+        self.assertEqual(
+            response.data["name"][0],
+            "O campo deve ter pelo menos 5 caracteres."
+        )
+        
+    def test_update_integration_xss_attempt_in_title(self):
+        """
+        Testa a atualização de um integração com o name contendo uma tentativa de XSS.
+        """
+        payload = {
+            "name": "&lt;script&gt;alert(&#x27;XRSS&#x27;);&lt;/script&gt;",
+            "gateway": gateway,
         }
         response = self.client.put(self.update_url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
