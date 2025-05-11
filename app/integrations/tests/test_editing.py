@@ -15,7 +15,6 @@ password = "7lonAzJxss@"
 gateway = "zeroone"
 nameIntegration = "Conta da Sarah - ZeroOne"
 
-
 class TestIntegrationUpdate(APITestCase):
     
     def setUp(self):
