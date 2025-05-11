@@ -1,6 +1,7 @@
 from datetime import timedelta, datetime
 from collections import defaultdict
 from rest_framework.viewsets import ViewSet
+from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.utils.timezone import now
 from django.db.models import Sum, Count, Q, Value
@@ -9,11 +10,112 @@ from .permissions import IsSuperUser
 from accounts.models import Usuario
 from zeroone_payments.models import UserSubscription
 from campaigns.models import FinanceLogs
-from .serializers import DashboardSerializer, UsuarioSerializer
-from .schemas import admin_dashboard_schema
+from .serializers import DashboardSerializer, UsuarioSerializer, ConfigurationSerializer, CaptchaSerializer
+from .models import Configuration
+from rest_framework.views import APIView
+from .schemas import admin_dashboard_schema, configuration_view_get_schema, configuration_view_post_schema
 from django.db import models
+import requests
+from django.urls import reverse
 import logging
 logger = logging.getLogger('django')
+
+
+class ConfigurationView(APIView):
+    permission_classes = [IsSuperUser]
+
+    @configuration_view_get_schema
+    def get(self, request):
+        config = Configuration.objects.first()
+        if not config:
+            return Response({"detail": "Not found."}, status=404)
+        serializer = ConfigurationSerializer(config)
+        return Response(serializer.data)
+
+    @configuration_view_post_schema
+    def post(self, request):
+        config = Configuration.objects.first()
+        data = request.data.copy()
+
+        zeroone_webhook_url = config.zeroone_webhook if config and config.zeroone_webhook else data.get(
+            'zeroone_webhook')
+        zeroone_secret_key = config.zeroone_secret_key if config and config.zeroone_secret_key else data.get(
+            'zeroone_secret_key')
+
+        callback_url = request.build_absolute_uri(reverse('payment-webhook'))
+
+        # Se não houver webhook/código, cadastra na ZeroOne
+        if not (config and config.zeroone_webhook and config.zeroone_webhook_code):
+            if not zeroone_secret_key:
+                return Response({"detail": "Configuração da ZeroOne não cadastrada."}, status=400)
+
+            webhook_payload = {
+                "callbackUrl": callback_url,
+                "name": data.get("name", "Webhook ZeroOne"),
+                "onBuyApproved": True,
+                "onRefound": True,
+                "onChargeback": True,
+                "onPixCreated": True
+            }
+
+            try:
+                # Cria o webhook
+                response = requests.post(
+                    "https://pay.zeroonepay.com.br/api/v1/webhook.create",
+                    json=webhook_payload,
+                    headers={
+                        "Authorization": zeroone_secret_key,
+                    }
+                )
+            except Exception as e:
+                return Response({"detail": f"Erro de conexão com ZeroOne: {str(e)}"}, status=500)
+
+            if response.status_code == 200 and response.json().get("success"):
+                # Busca todos os webhooks para pegar o id do recém-criado
+                try:
+                    get_response = requests.get(
+                        "https://pay.zeroonepay.com.br/api/v1/webhook.getWebhooks",
+                        headers={
+                            "Authorization": zeroone_secret_key,
+                        }
+                    )
+                    if get_response.status_code == 200:
+                        webhooks = get_response.json().get('result', [])
+                        for wh in webhooks:
+                            if wh.get('callbackUrl') == callback_url:
+                                data['zeroone_webhook'] = wh.get(
+                                    'callbackUrl', '')
+                                data['zeroone_webhook_code'] = wh.get('id', '')
+                                break
+                        else:
+                            return Response({"detail": "Webhook recém-criado não encontrado na lista de webhooks."}, status=400)
+                    else:
+                        return Response({"detail": f"Erro ao buscar webhooks: {get_response.text}"}, status=400)
+                except Exception as e:
+                    return Response({"detail": f"Erro ao buscar webhooks na ZeroOne: {str(e)}"}, status=500)
+            else:
+                return Response({"detail": f"Falha ao cadastrar webhook na ZeroOne. Resposta: {response.text}"}, status=400)
+
+        # Salva/atualiza a configuração normalmente
+        if config:
+            serializer = ConfigurationSerializer(
+                config, data=data, partial=True)
+        else:
+            serializer = ConfigurationSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        instance = serializer.save()
+        return Response(serializer.data)
+
+
+class CaptchaView(APIView):
+    permission_classes = [IsSuperUser]
+
+    def get(self, request):
+        config = Configuration.objects.first()
+        if not config:
+            return Response({"detail": "Not found."}, status=404)
+        serializer = CaptchaSerializer(config)
+        return Response(serializer.data)
 
 
 class AdminDashboardViewSet(ViewSet):
@@ -60,8 +162,6 @@ class AdminDashboardViewSet(ViewSet):
         ).annotate(
             value=Count('uid')  # Conta as assinaturas por data
         ).order_by('date')
-        logger.info(f"Subscription Stats: {list(stats)}")
-        return stats
 
     def fill_missing_days(self, users, start_date, end_date):
         """Preenche os dias ausentes no intervalo de datas com valores 0."""
