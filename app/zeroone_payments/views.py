@@ -8,11 +8,11 @@ from plans.models import Plan
 from .models import SubscriptionPayment, UserSubscription
 from .serializers import PaymentSerializer
 from .gateway import ZeroOneGateway
-from .utils import update_payment_status
+from .utils import update_payment_status, create_subscription_and_payment
 from django.utils.timezone import now, timedelta
 import uuid
 from drf_spectacular.utils import extend_schema
-from .schemas import payment_status_schema, payment_create_schema, payment_webhook_schema
+from .schemas import payment_status_schema, payment_create_schema, payment_webhook_schema, payment_change_plan_schema
 
 
 class PaymentStatusView(APIView):
@@ -21,11 +21,10 @@ class PaymentStatusView(APIView):
     @extend_schema(**payment_status_schema)
     def get(self, request, uid):
         payment = get_object_or_404(SubscriptionPayment, uid=uid)
-
         return Response({"status": payment.status}, status=status.HTTP_200_OK)
 
 
-class PaymentView(APIView):
+class PaymentCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(**payment_create_schema)
@@ -34,27 +33,21 @@ class PaymentView(APIView):
             data=request.data, context={'request': request})
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
         data = serializer.validated_data
         user = request.user
 
-        # Busca o plano no banco de dados com base no plan_uid
         try:
             plan = Plan.objects.get(uid=data['plan_uid'])
         except Plan.DoesNotExist:
             return Response({"error": "Plano não encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Gera a chave de idempotência
+        # Checagem de idempotência
         idempotency_key = f"{user.pk}-{plan.uid}-{data['paymentMethod']}"
-
-        # Verifica se já existe um pagamento recente com a mesma idempotência
         one_hour_ago = now() - timedelta(minutes=60)
         existing_payment = SubscriptionPayment.objects.filter(
             idempotency=idempotency_key,
             created_at__gte=one_hour_ago
         ).order_by('-created_at').first()
-
-        # Se existir um pagamento recente e o plano não foi alterado, retorna o pagamento existente
         if existing_payment and existing_payment.subscription.plan == plan:
             return Response({
                 "message": "Pagamento já processado recentemente.",
@@ -64,65 +57,50 @@ class PaymentView(APIView):
                     "price": existing_payment.price,
                     "payment_method": existing_payment.payment_method,
                     "gateway_response": existing_payment.gateway_response
-
                 }
             }, status=status.HTTP_200_OK)
 
-        # payload para o gateway
-        payload = {
-            "name": user.name,
-            "email": user.email,
-            "cpf": user.cpf,
-            "phone": user.phone if hasattr(user, 'phone') else "00000000000",
-            "paymentMethod": data['paymentMethod'],
-            "amount": int(plan.price * 100),
-            "items": [
-                {
-                    "unitPrice": int(plan.price * 100),
-                    "title": str(plan.uid),
-                    "quantity": 1,
-                    "tangible": False
-                }
-            ]
-        }
-
-        # Envia a requisição ao gateway
         try:
-            gateway_response = ZeroOneGateway.generate_pix_payment(payload)
+            payment = create_subscription_and_payment(
+                user, plan, data['paymentMethod'])
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Cria ou atualiza a assinatura do usuário
-        # Tenta buscar a assinatura existente
-        subscription = UserSubscription.objects.filter(
-            user=user, plan=plan).first()
-
-        if not subscription:
-
-            subscription = UserSubscription(
-                user=user, plan=plan, is_active=False)
-            subscription.save()
-            subscription.expiration = subscription.calculate_end_date()
-            subscription.save()
-        else:
-
-            subscription.expiration = subscription.calculate_end_date()
-            subscription.is_active = False
-            subscription.save()
-
-        # Cria a requisição de pagamento
-        payment = SubscriptionPayment.objects.create(
-            uid=uuid.uuid4(),
-            idempotency=idempotency_key,
-            payment_method=data['paymentMethod'],
-            token=gateway_response.get('id', 'unknown'),
-            price=plan.price,
-            gateway_response=gateway_response,
-            status=False,
-            subscription=subscription
-        )
         return Response({
             "message": "Pagamento criado com sucesso.",
+            "payment": {
+                "uid": payment.uid,
+                "status": payment.status,
+                "price": payment.price,
+                "payment_method": payment.payment_method,
+                "gateway_response": payment.gateway_response
+            }
+        }, status=status.HTTP_201_CREATED)
+
+
+class PaymentChangePlanView(APIView):
+    @extend_schema(**payment_change_plan_schema)
+    def put(self, request, uid):
+        serializer = PaymentSerializer(
+            data=request.data, context={'request': request})
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        data = serializer.validated_data
+        user = request.user
+
+        try:
+            plan = Plan.objects.get(uid=data['plan_uid'])
+        except Plan.DoesNotExist:
+            return Response({"error": "Plano não encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            payment = create_subscription_and_payment(
+                user, plan, data['paymentMethod'])
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({
+            "message": "Solicitação de troca de plano criada com sucesso.",
             "payment": {
                 "uid": payment.uid,
                 "status": payment.status,
@@ -156,5 +134,12 @@ class PaymentWebhookView(APIView):
 
         # Atualiza o estado do pagamento e da assinatura
         update_payment_status(payment, payment_status)
+
+        # Se o pagamento foi aprovado, ativa a assinatura e define a expiração
+        if payment_status == "APPROVED":
+            subscription = payment.subscription
+            subscription.is_active = True
+            subscription.expiration = subscription.calculate_end_date()
+            subscription.save()
 
         return Response({"message": "Estado do pagamento atualizado com sucesso."}, status=status.HTTP_200_OK)
