@@ -4,7 +4,7 @@ from . import views
 urlpatterns = [
     path('payments/', views.PaymentCreateView.as_view(),
          name='payments'),
-    path('payments/<uuid:uid>/', views.PaymentChangePlanView.as_view(),
+    path('payments/change/<uuid:uid>/', views.PaymentChangePlanView.as_view(),
          name='payment-change-plan'),
     path('payments/<uuid:uid>/status/',
          views.PaymentStatusView.as_view(), name='payment-status'),
