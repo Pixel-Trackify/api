@@ -119,6 +119,73 @@ payment_create_schema = {
         ),
     },
 }
+
+payment_change_plan_schema = {
+    "summary": "Trocar de plano",
+    "description": (
+        "Troca o plano do usuário. Cria uma nova assinatura inativa e um pagamento para o novo plano. "
+        "A assinatura só será ativada após o pagamento aprovado via webhook."
+    ),
+    "parameters": [
+        OpenApiParameter(
+            name="uid",
+            description="UID da assinatura atual (UserSubscription)",
+            required=True,
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.PATH,
+        )
+    ],
+    "request": PaymentSerializer,
+    "responses": {
+        201: OpenApiResponse(
+            description="Solicitação de troca de plano criada com sucesso",
+            examples=[
+                OpenApiExample(
+                    "Exemplo de Resposta",
+                    value={
+                        "message": "Solicitação de troca de plano criada com sucesso.",
+                        "payment": {
+                            "uid": "1459dbfe-453a-4c1e-a5ae-6f1945e80eec",
+                            "status": False,
+                            "price": 29.99,
+                            "payment_method": "PIX",
+                            "gateway_response": {
+                                "id": "135bef63-28fa-4436-908c-cf11d0cc806a",
+                                "customId": "ZER404781005300500",
+                                "expiresAt": "2025-05-08T03:00:00.000Z",
+                                "pixQrCode": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAOQAAADkCAYAAACIV4iNAAAAAklEQVR4AewaftIAAAxISURB",
+                                "status": "PENDING",
+                                "amount": 2999,
+                                "method": "PIX",
+                                "createdAt": "2025-05-08T00:27:28.652Z",
+                                "updatedAt": "2025-05-08T00:27:28.652Z"
+                            }
+                        }
+                    },
+                )
+            ],
+        ),
+        400: OpenApiResponse(
+            description="Erro de validação",
+            examples=[
+                OpenApiExample(
+                    "Erro de Validação",
+                    value={"plan_uid": ["Este campo é obrigatório."]},
+                )
+            ],
+        ),
+        404: OpenApiResponse(
+            description="Plano não encontrado",
+            examples=[
+                OpenApiExample(
+                    "Plano Não Encontrado",
+                    value={"error": "Plano não encontrado."},
+                )
+            ],
+        ),
+    },
+}
+
 # Schema para o endpoint PaymentWebhookView
 payment_webhook_schema = {
     "summary": "Webhook para notificações de pagamento",
