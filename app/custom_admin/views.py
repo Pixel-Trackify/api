@@ -8,7 +8,7 @@ from django.db.models import Sum, Count, Q, Value
 from django.db.models.functions import TruncDate
 from .permissions import IsSuperUser
 from accounts.models import Usuario
-from zeroone_payments.models import UserSubscription
+from payments.models import UserSubscription
 from campaigns.models import FinanceLogs
 from .serializers import DashboardSerializer, UsuarioSerializer, ConfigurationSerializer, CaptchaSerializer
 from .models import Configuration
@@ -54,7 +54,7 @@ class ConfigurationView(APIView):
                 "daily_late_payment_interest": 0.0,
             }
             return Response(empty_data, status=200)
-        
+
         serializer = ConfigurationSerializer(config)
         return Response(serializer.data)
 

@@ -1,5 +1,5 @@
 from django.utils.timezone import now
-from zeroone_payments.models import UserSubscription
+from payments.models import UserSubscription
 
 
 def sync_user_subscription(user):
