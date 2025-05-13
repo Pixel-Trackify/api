@@ -82,12 +82,11 @@ INSTALLED_APPS = [
     'tutorials',
     'campaigns',
     'integrations',
-    'payments',
     'support',
     'goals',
     'kwai',
     'custom_admin',
-    'zeroone_payments',
+    'payments',
 ]
 
 SITE_ID = 1
