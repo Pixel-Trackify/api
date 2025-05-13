@@ -230,7 +230,7 @@ class SupportReplyCreateView(APIView):
         description = request.data.get('description')
         files = request.FILES.getlist('files')
 
-        serializer = SupportSerializer(data=request.data)
+        serializer = SupportReplySerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
