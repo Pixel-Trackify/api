@@ -28,7 +28,33 @@ class ConfigurationView(APIView):
     def get(self, request):
         config = Configuration.objects.first()
         if not config:
-            return Response({"detail": "Not found."}, status=404)
+            empty_data = {
+                "email_register_subject": "",
+                "email_recovery_subject": "",
+                "email_reminder_subject": "",
+                "email_expired_subject": "",
+                "email_subscription_paid_subject": "",
+                "email_register": "",
+                "email_recovery": "",
+                "email_reminder": "",
+                "email_expired": "",
+                "email_subscription_paid": "",
+                "require_email_confirmation": False,
+                "default_pix": "",
+                "firebanking_api_key": "",
+                "zeroone_webhook": "",
+                "zeroone_webhook_code": "",
+                "zeroone_secret_key": "",
+                "recaptchar_enable": False,
+                "recaptchar_site_key": "",
+                "recaptchar_secret_key": "",
+                "days_to_reminder": 0,
+                "days_to_expire": 0,
+                "late_payment_interest": 0.0,
+                "daily_late_payment_interest": 0.0,
+            }
+            return Response(empty_data, status=200)
+        
         serializer = ConfigurationSerializer(config)
         return Response(serializer.data)
 
