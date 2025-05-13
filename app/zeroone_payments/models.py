@@ -97,3 +97,11 @@ class SubscriptionPayment(models.Model):
 
     class meta:
         db_table = 'subscriptions_payments_zeroone'
+
+
+class NotificationSend(models.Model):
+    index = models.CharField(max_length=255, db_index=True)
+    date = models.DateField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.index} - {self.date}"
