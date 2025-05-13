@@ -1,5 +1,6 @@
 import socket
 import re
+from custom_admin.models import Configuration
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -22,11 +23,12 @@ class RegisterSerializer(serializers.ModelSerializer):
     confirm_password = serializers.CharField(write_only=True, required=True)
     plan_uid = serializers.UUIDField(
         write_only=True, required=False)  # Usar UID em vez de ID
+    captcha = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = Usuario
         fields = ['uid', 'email', 'cpf', 'name', 'password',
-                  'confirm_password', 'date_joined', 'plan_uid', 'avatar']
+                  'confirm_password', 'date_joined', 'plan_uid', 'avatar', 'captcha']
         read_only_fields = ['date_joined']
 
     def validate(self, data):
@@ -48,6 +50,11 @@ class RegisterSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"plan_uid": "Plano não encontrado."})
 
+        # Valida o captcha se necessário
+        config = Configuration.objects.first()
+        if config and config.recaptchar_enable and not data.get('captcha'):
+            raise serializers.ValidationError(
+                {'captcha': 'Este campo é obrigatório.'})
         return data
 
     def create(self, validated_data):
@@ -61,13 +68,25 @@ class RegisterSerializer(serializers.ModelSerializer):
         if avatar:
             user.avatar = avatar
             user.save()
-        return user
 
-        # Se o usuário escolheu um plano, cria a assinatura
+        config = Configuration.objects.first()
+        if config and config.require_email_confirmation:
+            user.is_active = False
+            user.save()
+
+        else:
+            user.is_active = True
+            user.save()
+
         if plan_uid:
             plan = Plan.objects.get(uid=plan_uid)
-            UserSubscription.objects.create(user=user, plan=plan, start_date=timezone.now(
-            ), end_date=timezone.now() + timedelta(days=30), is_active=True)
+            UserSubscription.objects.create(
+                user=user,
+                plan=plan,
+                start_date=timezone.now(),
+                end_date=timezone.now() + timedelta(days=30),
+                is_active=True
+            )
 
         return user
 
