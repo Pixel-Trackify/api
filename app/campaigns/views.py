@@ -3,7 +3,7 @@ from rest_framework.decorators import action
 import re
 from datetime import datetime, timedelta
 from rest_framework.response import Response
-from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError, NotFound
 from django.db import transaction
 from rest_framework.permissions import IsAuthenticated
 from .models import Campaign
@@ -123,13 +123,23 @@ class CampaignViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         """
         Permite deletar uma única campanha pela `uid` na URL.
+        Se o UID não existir, retorna mensagem personalizada.
         """
-        instance = self.get_object()
-        self.perform_destroy(instance)
+        uid = kwargs.get('uid')
+        try:
+            instance = self.get_queryset().get(uid=uid)
+        except Campaign.DoesNotExist:
+            return Response(
+                {"detail": 'Nenhuma campanha corresponde à consulta fornecida.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+            
+        instance.delete()
         return Response(
             {"message": "Campanha excluída com sucesso."},
             status=status.HTTP_200_OK
         )
+
 
     def perform_destroy(self, instance):
         """
@@ -171,7 +181,9 @@ class CampaignViewSet(viewsets.ModelViewSet):
                 for integration in campaign.integrations.all():
                     integration.in_use = False
                     integration.save()
-            deleted_count = instances.delete()[0]
+                    
+            deleted_count = instances.count()        
+            instances.delete()[0]
 
         # Retorna uma resposta detalhada
         return Response(
