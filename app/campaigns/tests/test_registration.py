@@ -585,9 +585,9 @@ class TestCampaignRegistration(APITestCase):
             f"A Integração '{integration_response.data['name']}' já está em uso."
         )
         
-    def test_campaign(self):
+    def test_campaign_CPC(self):
         """
-        Testa a criação de uma nova campanha.
+        Testa a criação de uma nova campanha CPC.
         """
         payload = {
             "title": namecampaign,
@@ -607,4 +607,49 @@ class TestCampaignRegistration(APITestCase):
         self.assertEqual(response.data["description"], descriptionCampaign)
         self.assertEqual(response.data["CPC"], str(amountCampaign))
         self.assertTrue(UUID(response.data["uid"], version=4))
+
+    def test_campaign_CPV(self):
+        """
+        Testa a criação de uma nova campanha CPV.
+        """
+        payload = {
+            "title": namecampaign,
+            "description": descriptionCampaign,
+            "integrations": [self.uid_integration],
+            "method": "CPV",
+            "CPV": amountCampaign
+        }
+        response = self.client.post(self.create_url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIn("uid", response.data)
+        self.assertIn("title", response.data)
+        self.assertIn("description", response.data)
+        self.assertIn("CPV", response.data)
+        
+        self.assertEqual(response.data["title"], namecampaign)
+        self.assertEqual(response.data["description"], descriptionCampaign)
+        self.assertEqual(response.data["CPV"], str(amountCampaign))
+        self.assertTrue(UUID(response.data["uid"], version=4))
+        
+    def test_campaign_CPM(self):
+        """
+        Testa a criação de uma nova campanha CPM.
+        """
+        payload = {
+            "title": namecampaign,
+            "description": descriptionCampaign,
+            "integrations": [self.uid_integration],
+            "method": "CPM",
+            "CPM": amountCampaign
+        }
+        response = self.client.post(self.create_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIn("uid", response.data)
+        self.assertIn("title", response.data)
+        self.assertIn("description", response.data)
+        self.assertIn("CPM", response.data)
+        
+        self.assertEqual(response.data["title"], namecampaign)
+        self.assertEqual(response.data["description"], descriptionCampaign)
+        self.assertEqual(response.data["CPM"], str(amountCampaign))
+        self.assertTrue(UUID(response.data["uid"], version=4))
