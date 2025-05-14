@@ -1,6 +1,9 @@
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
+from rest_framework import serializers
 import re
+from django.utils.html import strip_tags
+import html
 from datetime import datetime, timedelta
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied, ValidationError, NotFound
@@ -37,10 +40,15 @@ class CampaignViewSet(viewsets.ModelViewSet):
         # Validação do parâmetro de busca
         search_param = self.request.query_params.get('search', None)
         if search_param:
-            if not re.match(r'^[a-zA-Z0-9\s\-_,\.;:()áéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ]+$', search_param):
+            try:
+                search_param.encode('latin-1')
+            except UnicodeEncodeError:
                 raise ValidationError(
-                    {"search": "O parâmetro de busca contém caracteres inválidos."}
-                )
+                    {"search": "O parâmetro de busca contém caracteres inválidos."})
+
+            if html.unescape(strip_tags(search_param)) != search_param:
+                raise ValidationError(
+                    {"search": "O parâmetro de busca contém caracteres inválidos."})
 
         # Filtros de intervalo de datas
         start_date = self.request.query_params.get('start', None)
@@ -79,12 +87,16 @@ class CampaignViewSet(viewsets.ModelViewSet):
         Sobrescreve o método list para adicionar uma mensagem de erro
         caso nenhum dado seja encontrado na busca.
         """
-        queryset = self.filter_queryset(self.get_queryset())
-
-        # Verifica se o queryset está vazio
-        if not queryset.exists():
+        try:
+            queryset = self.filter_queryset(self.get_queryset())
+            # Verifica se o queryset está vazio
+            if not queryset.exists():
+                return Response(
+                    {"count": 0, "detail": "Nenhuma campanha encontrada com os critérios de busca.", "results": []}
+                )
+        except Exception as e:
             return Response(
-                {"count": 0, "detail": "Nenhuma campanha encontrada com os critérios de busca.", "results": []}
+                {"count": 0, "results": [], "detail": "O parâmetro de busca contém caracteres inválidos."},
             )
 
         # Caso contrário, retorna os resultados normalmente
