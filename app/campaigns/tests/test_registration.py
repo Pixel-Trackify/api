@@ -20,11 +20,7 @@ descriptionCampaign = "Campanha de teste para o APP da Sara"
 methodCampaign = "CPC"
 amountCampaign = 4.25
 
-"""
-@todo:
-    - Testar com todos os gateways disponíveis
-"""
-class TestcampaignRegistration(APITestCase):
+class TestCampaignRegistration(APITestCase):
     
     def setUp(self):
         try:
@@ -80,7 +76,7 @@ class TestcampaignRegistration(APITestCase):
             self.fail(f"Erro inesperado: {str(e)}")
             print(f"Erro inesperado: {str(e)}")
             
-    def test_create_campaign_empty_data(self):
+    def test_campaign_empty_data(self):
         """
         Testa a criação de uma campanha com dados vazios.
         """
@@ -98,7 +94,7 @@ class TestcampaignRegistration(APITestCase):
             "Este campo é obrigatório."
         ) 
         
-    def test_create_campaign_empty_CPC(self):
+    def test_campaign_empty_CPC(self):
         """
         Testa a criação de uma campanha com CPC vazio.
         """
@@ -117,7 +113,7 @@ class TestcampaignRegistration(APITestCase):
             "Este campo é obrigatório."
         )
     
-    def test_create_campaign_invalid_CPV(self):
+    def test_campaign_invalid_CPV(self):
         """
         Testa a criação de uma campanha com CPV vazio.
         """
@@ -136,7 +132,7 @@ class TestcampaignRegistration(APITestCase):
             "Este campo é obrigatório."
         )
     
-    def test_create_campaign_invalid_CPM(self):
+    def test_campaign_invalid_CPM(self):
         """
         Testa a criação de uma campanha com CPM inválido.
         """
@@ -363,7 +359,233 @@ class TestcampaignRegistration(APITestCase):
              '"INVALID_METHOD" não é um escolha válido.'
         )
         
-    def test_create_campaign(self):
+    def test_campaign_invalid_integration(self):
+        """
+        Testa a criação de uma campanha com uma integração inválida.
+        """
+        payload = {
+            "title": namecampaign,
+            "description": descriptionCampaign,
+            "integrations": ["INVALID_INTEGRATION"],
+            "method": methodCampaign,
+            "CPC": amountCampaign
+        }
+        response = self.client.post(self.create_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("integrations", response.data)
+        self.assertEqual(
+            response.data["integrations"][0],
+            'O valor “INVALID_INTEGRATION” não é um UUID válido'
+        )
+    
+    def test_campaign_not_found_uid_integration(self):
+        """
+        Testa a criação de uma campanha com uma integração que não existe.
+        """
+        payload = {
+            "title": namecampaign,
+            "description": descriptionCampaign,
+            "integrations": ["00000000-0000-0000-0000-000000000000"],
+            "method": methodCampaign,
+            "CPC": amountCampaign
+        }
+        response = self.client.post(self.create_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("integrations", response.data)
+        self.assertEqual(
+            response.data["integrations"][0],
+            'Integração não foi encontrada.'
+        )
+        
+    def test_campaign_invalid_CPC(self):
+        """
+        Testa a criação de uma campanha com um CPC inválido.
+        """
+        payload = {
+            "title": namecampaign,
+            "description": descriptionCampaign,
+            "integrations": [self.uid_integration],
+            "method": methodCampaign,
+            "CPC": -1
+        }
+        response = self.client.post(self.create_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("CPC", response.data)
+        self.assertEqual(
+            response.data["CPC"][0],
+            "Este campo deve ser maior que zero."
+        )
+    
+    def test_campaign_invalid_CPV(self):
+        """
+        Testa a criação de uma campanha com um CPV inválido.
+        """
+        payload = {
+            "title": namecampaign,
+            "description": descriptionCampaign,
+            "integrations": [self.uid_integration],
+            "method": "CPV",
+            "CPV": -1
+        }
+        response = self.client.post(self.create_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("CPV", response.data)
+        self.assertEqual(
+            response.data["CPV"][0],
+            "Este campo deve ser maior que zero."
+        )
+        
+    def test_campaign_invalid_CPM(self):
+        """
+        Testa a criação de uma campanha com um CPM inválido.
+        """
+        payload = {
+            "title": namecampaign,
+            "description": descriptionCampaign,
+            "integrations": [self.uid_integration],
+            "method": "CPM",
+            "CPM": -1
+        }
+        response = self.client.post(self.create_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("CPM", response.data)
+        self.assertEqual(
+            response.data["CPM"][0],
+            "Este campo deve ser maior que zero."
+        )
+    
+    def test_campaign_invalid_CPC_type(self):
+        """
+        Testa a criação de uma campanha com um CPC inválido (não numérico).
+        """
+        payload = {
+            "title": namecampaign,
+            "description": descriptionCampaign,
+            "integrations": [self.uid_integration],
+            "method": methodCampaign,
+            "CPC": "invalid"
+        }
+        response = self.client.post(self.create_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("CPC", response.data)
+        self.assertEqual(
+            response.data["CPC"][0],
+            "Um número válido é necessário."
+        )
+        
+    def test_campaign_invalid_CPV_type(self):
+        """
+        Testa a criação de uma campanha com um CPV inválido (não numérico).
+        """
+        payload = {
+            "title": namecampaign,
+            "description": descriptionCampaign,
+            "integrations": [self.uid_integration],
+            "method": "CPV",
+            "CPV": "invalid"
+        }
+        response = self.client.post(self.create_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("CPV", response.data)
+        self.assertEqual(
+            response.data["CPV"][0],
+            "Um número válido é necessário."
+        )
+        
+    def test_campaign_invalid_CPM_type(self):
+        """
+        Testa a criação de uma campanha com um CPM inválido (não numérico).
+        """
+        payload = {
+            "title": namecampaign,
+            "description": descriptionCampaign,
+            "integrations": [self.uid_integration],
+            "method": "CPM",
+            "CPM": "invalid"
+        }
+        response = self.client.post(self.create_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("CPM", response.data)
+        self.assertEqual(
+            response.data["CPM"][0],
+            "Um número válido é necessário."
+        )
+     
+    def test_campaign_with_deleted_integration(self):
+        """
+        Testa a criação de uma campanha com uma integração que foi deletada.
+        """
+        # Criar uma integração
+        integration_payload = {
+            "gateway": gateway,
+            "name": "Integração Deletada"
+        }
+        integration_response = self.client.post(reverse("integration-list"), integration_payload, format="json")
+        self.assertEqual(integration_response.status_code, status.HTTP_201_CREATED)
+        deleted_integration_uid = integration_response.data.get("uid")
+
+        # Deletar a integração
+        delete_url = reverse("integration-list") + deleted_integration_uid + "/"
+        delete_response = self.client.delete(delete_url, format="json")
+        self.assertEqual(delete_response.status_code, status.HTTP_200_OK)
+
+        # Tentar criar uma campanha com a integração deletada
+        payload = {
+            "title": namecampaign,
+            "description": descriptionCampaign,
+            "integrations": [deleted_integration_uid],
+            "method": methodCampaign,
+            "CPC": amountCampaign
+        }
+        response = self.client.post(self.create_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("integrations", response.data)
+        self.assertEqual(
+            response.data["integrations"][0],
+            "Integração não foi encontrada."
+        )
+        
+    def test_campaign_with_integration_in_use(self):
+        """
+        Testa a criação de uma campanha usando uma integração que já está em uso em outra campanha.
+        """
+        # Criar uma integração
+        integration_payload = {
+            "gateway": gateway,
+            "name": "Integração Em Uso"
+        }
+        integration_response = self.client.post(reverse("integration-list"), integration_payload, format="json")
+        self.assertEqual(integration_response.status_code, status.HTTP_201_CREATED)
+        integration_uid = integration_response.data.get("uid")
+
+        # Criar uma campanha usando essa integração
+        campaign_payload = {
+            "title": "Campanha Original",
+            "description": "Descrição da campanha original",
+            "integrations": [integration_uid],
+            "method": methodCampaign,
+            "CPC": amountCampaign
+        }
+        campaign_response = self.client.post(self.create_url, campaign_payload, format="json")
+        self.assertEqual(campaign_response.status_code, status.HTTP_201_CREATED)
+
+        # Tentar criar outra campanha usando a mesma integração
+        new_campaign_payload = {
+            "title": "Campanha Nova",
+            "description": "Descrição da nova campanha",
+            "integrations": [integration_uid],
+            "method": methodCampaign,
+            "CPC": amountCampaign
+        }
+        new_campaign_response = self.client.post(self.create_url, new_campaign_payload, format="json")
+        self.assertEqual(new_campaign_response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("integrations", new_campaign_response.data)
+        self.assertEqual(
+            new_campaign_response.data["integrations"][0],
+            f"A Integração '{integration_response.data['name']}' já está em uso."
+        )
+        
+    def test_campaign(self):
         """
         Testa a criação de uma nova campanha.
         """
