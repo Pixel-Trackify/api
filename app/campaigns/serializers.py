@@ -15,7 +15,7 @@ logger = logging.getLogger('django')
 class CampaignSerializer(serializers.ModelSerializer):
     integrations = serializers.SlugRelatedField(
         slug_field='uid',
-        queryset=Integration.objects.all(),
+        queryset=Integration.objects.filter(deleted=False),
         many=True,
         error_messages={
             'does_not_exist': "Integração não foi encontrada.",
