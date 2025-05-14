@@ -226,7 +226,7 @@ class CampaignSerializer(serializers.ModelSerializer):
 
             if integration.in_use:
                 raise serializers.ValidationError(
-                    f"O gateway '{integration.name}' já está em uso."
+                    f"A Integração '{integration.name}' já está em uso."
                 )
         return value
 
