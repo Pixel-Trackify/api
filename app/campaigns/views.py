@@ -26,7 +26,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
     lookup_field = 'uid'
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
     ordering_fields = ['title', 'created_at']
-    search_fields = ['title', 'created_at']
+    search_fields = ['title', 'description', 'method', 'created_at']
 
     def filter_queryset(self, queryset):
         """
