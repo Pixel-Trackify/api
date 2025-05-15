@@ -13,7 +13,7 @@ from campaigns.models import FinanceLogs
 from .serializers import DashboardSerializer, UsuarioSerializer, ConfigurationSerializer, CaptchaSerializer
 from .models import Configuration
 from rest_framework.views import APIView
-from .schemas import admin_dashboard_schema, configuration_view_get_schema, configuration_view_post_schema
+from .schemas import admin_dashboard_schema, configuration_view_get_schema, configuration_view_post_schema, captcha_view_get_schema, captcha_view_post_schema
 from django.db import models
 import requests
 from django.urls import reverse
@@ -136,12 +136,49 @@ class ConfigurationView(APIView):
 class CaptchaView(APIView):
     permission_classes = [IsSuperUser]
 
+    @captcha_view_get_schema
     def get(self, request):
         config = Configuration.objects.first()
         if not config:
             return Response({"detail": "Not found."}, status=404)
         serializer = CaptchaSerializer(config)
         return Response(serializer.data)
+
+    @captcha_view_post_schema
+    def post(self, request):
+        token = request.data.get("token")
+        site_key = request.data.get("recaptchar_site_key")
+        secret_key = request.data.get("recaptchar_secret_key")
+
+        # Atualiza ou cria a configuração
+        config = Configuration.objects.first()
+        if not config:
+            config = Configuration.objects.create(
+                recaptchar_site_key=site_key,
+                recaptchar_secret_key=secret_key
+            )
+        else:
+            if site_key:
+                config.recaptchar_site_key = site_key
+            if secret_key:
+                config.recaptchar_secret_key = secret_key
+            config.save()
+
+        # Validação básica
+        if not token or not config.recaptchar_secret_key or not config.recaptchar_site_key:
+            return Response({"detail": "Token ou configuração inválida."}, status=400)
+
+        verify_url = config.recaptchar_site_key
+        payload = {
+            "secret": config.recaptchar_secret_key,
+            "response": token
+        }
+        response = requests.post(verify_url, data=payload)
+        result = response.json()
+        if result.get("success"):
+            return Response({"success": True})
+        else:
+            return Response({"success": False, "error-codes": result.get("error-codes")}, status=400)
 
 
 class AdminDashboardViewSet(ViewSet):
