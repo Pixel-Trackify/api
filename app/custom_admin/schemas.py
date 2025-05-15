@@ -83,6 +83,78 @@ configuration_view_post_schema = extend_schema(
         ),
     ]
 )
+captcha_view_get_schema = extend_schema(
+    summary="Obter configuração do captcha",
+    description="Retorna as chaves de configuração do captcha.",
+    responses={
+        200: OpenApiResponse(
+            description="Configuração do captcha retornada com sucesso.",
+            response={
+                "type": "object",
+                "properties": {
+                    "recaptchar_site_key": {"type": "string"},
+                    "recaptchar_secret_key": {"type": "string"},
+                }
+            }
+        ),
+        404: OpenApiResponse(
+            description="Configuração não encontrada."
+        ),
+    }
+)
+
+captcha_view_post_schema = extend_schema(
+    summary="Validar captcha e salvar configuração",
+    description="Salva/atualiza as chaves do captcha e valida o token recebido.",
+    request={
+        "application/json": {
+            "type": "object",
+            "properties": {
+                "token": {"type": "string"},
+                "recaptchar_site_key": {"type": "string"},
+                "recaptchar_secret_key": {"type": "string"},
+            },
+            "required": ["token", "recaptchar_site_key", "recaptchar_secret_key"]
+        }
+    },
+    responses={
+        200: OpenApiResponse(
+            description="Captcha válido.",
+            response={
+                "type": "object",
+                "properties": {
+                    "success": {"type": "boolean"}
+                }
+            }
+        ),
+        400: OpenApiResponse(
+            description="Token ou configuração inválida."
+        ),
+    },
+    examples=[
+        OpenApiExample(
+            "Exemplo de requisição",
+            value={
+                "token": "token_do_captcha",
+                "recaptchar_site_key": "https://www.recaptchar_site_key",
+                "recaptchar_secret_key": "sua_secret_key"
+            },
+            request_only=True
+        ),
+        OpenApiExample(
+            "Exemplo de resposta sucesso",
+            value={"success": True},
+            response_only=True
+        ),
+        OpenApiExample(
+            "Exemplo de resposta erro",
+            value={"success": False,
+                   "error-codes": ["invalid-input-response"]},
+            response_only=True
+        ),
+    ]
+)
+
 admin_dashboard_schema = extend_schema(
     summary="Obter estatísticas do dashboard administrativo",
     description="Retorna estatísticas como total de usuários, pagamentos, visualizações, cliques, e informações de usuários registrados e assinaturas.",
