@@ -17,6 +17,7 @@ class CampaignSerializer(serializers.ModelSerializer):
         slug_field='uid',
         queryset=Integration.objects.filter(deleted=False),
         many=True,
+        required=True,
         error_messages={
             'does_not_exist': "Integração não foi encontrada.",
             'invalid': "Valor inválido."
@@ -40,7 +41,7 @@ class CampaignSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at', 'stats', 'overviews'
         ]
         read_only_fields = ['id', 'uid', 'user', 'created_at', 'updated_at']
-        
+
     def validate_CPM(self, value):
         method = self.initial_data.get('method')
         # Se vier um valor de CPM mas o método não for CPM
@@ -48,17 +49,17 @@ class CampaignSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "Este campo é obrigatório."
             )
-            
+
         if value is None:
             raise serializers.ValidationError(
                 "Este campo é obrigatório."
             )
-            
+
         if value <= 0:
             raise serializers.ValidationError(
                 "Este campo deve ser maior que zero."
             )
-            
+
         # CPM precisa ser > 0
         if value is None or value <= 0:
             raise serializers.ValidationError(
@@ -72,17 +73,17 @@ class CampaignSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "Este campo é obrigatório."
             )
-            
+
         if value is None:
             raise serializers.ValidationError(
                 "Este campo é obrigatório."
             )
-            
+
         if value <= 0:
             raise serializers.ValidationError(
                 "Este campo deve ser maior que zero."
             )
-            
+
         if value is None or value <= 0:
             raise serializers.ValidationError(
                 "Este campo deve ser maior que zero."
@@ -95,23 +96,23 @@ class CampaignSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "Este campo é obrigatório."
             )
-            
+
         if value is None:
             raise serializers.ValidationError(
                 "Este campo é obrigatório."
             )
-            
+
         if value <= 0:
             raise serializers.ValidationError(
                 "Este campo deve ser maior que zero."
             )
-            
+
         if value is None or value <= 0:
             raise serializers.ValidationError(
                 "Este campo deve ser maior que zero."
             )
         return value
-    
+
     def get_stats(self, obj):
 
         stats = obj.finance_logs.aggregate(
@@ -168,7 +169,7 @@ class CampaignSerializer(serializers.ModelSerializer):
         overviews.sort(key=lambda x: x['date'])
 
         return overviews
-    
+
     def validate_title(self, value):
         try:
             value.encode('latin-1')
@@ -229,6 +230,26 @@ class CampaignSerializer(serializers.ModelSerializer):
                     f"A Integração '{integration.name}' já está em uso."
                 )
         return value
+
+    def validate(self, attrs):
+        integrations = attrs.get(
+            'integrations') or self.initial_data.get('integrations')
+        if not integrations:
+            raise serializers.ValidationError(
+                {"integrations": "Selecione pelo menos uma integração."}
+            )
+
+        method = attrs.get('method') or self.initial_data.get('method')
+        if method == 'CPM' and (attrs.get('CPM') is None or attrs.get('CPM', 0) <= 0):
+            raise serializers.ValidationError(
+                {"CPM": "Este campo é obrigatório e deve ser maior que zero."})
+        if method == 'CPC' and (attrs.get('CPC') is None or attrs.get('CPC', 0) <= 0):
+            raise serializers.ValidationError(
+                {"CPC": "Este campo é obrigatório e deve ser maior que zero."})
+        if method == 'CPV' and (attrs.get('CPV') is None or attrs.get('CPV', 0) <= 0):
+            raise serializers.ValidationError(
+                {"CPV": "Este campo é obrigatório e deve ser maior que zero."})
+        return attrs
 
     def create(self, validated_data):
         """Cria uma campanha e associa as integrações"""
