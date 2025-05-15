@@ -72,13 +72,6 @@ class KwaiViewSet(ModelViewSet):
         """
         Cria uma nova conta Kwai.
         """
-        campaigns = request.data.get('campaigns', None)
-        if not campaigns:
-            return Response(
-                {"error": "O campo 'campaigns' é obrigatório e não pode estar vazio."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
         serializer = self.get_serializer(
             data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)

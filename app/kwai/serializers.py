@@ -21,13 +21,21 @@ class CampaignSerializer(serializers.ModelSerializer):
 
 class KwaiSerializer(serializers.ModelSerializer):
 
-    campaigns = serializers.SerializerMethodField()
+    campaigns = serializers.ListField(
+        child=serializers.UUIDField(),
+        write_only=True,
+        required=True
+    )
+    campaigns_info = serializers.SerializerMethodField()
 
     class Meta:
         model = Kwai
         fields = ['uid', 'name', 'user',
-                  'campaigns', 'created_at', 'updated_at']
+                  'campaigns', 'campaigns_info' , 'created_at', 'updated_at']
 
+    def get_campaigns_info(self, obj):
+        return CampaignSerializer(obj.campaigns.all(), many=True).data
+    
     def validate_name(self, value):
         try:
             value.encode('latin-1')
@@ -48,7 +56,17 @@ class KwaiSerializer(serializers.ModelSerializer):
                 "O campo não pode exceder 100 caracteres.")
 
         return value
-
+    
+    def validate_campaigns(self, value):
+        """
+        Valida o campo 'campaigns' para garantir que ele não esteja vazio.
+        """
+        if not value:
+            raise serializers.ValidationError(
+                 "O campo é obrigatório."
+            )
+        return value
+    
     def get_campaigns(self, obj):
         """
         Retorna as campanhas associadas a esta conta do Kwai.
@@ -79,11 +97,6 @@ class KwaiSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         request = self.context.get('request')
         campaigns_data = request.data.get('campaigns', None)
-
-        if not campaigns_data:
-            raise serializers.ValidationError(
-                {"campaigns": "O campo 'campaigns' é obrigatório e não pode estar vazio."}
-            )
 
         # Validação: Verificar se todas as campanhas existem e não estão em uso
         campaigns = []
