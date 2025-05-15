@@ -22,19 +22,19 @@ class CampaignSerializer(serializers.ModelSerializer):
 class KwaiSerializer(serializers.ModelSerializer):
 
     campaigns = serializers.ListField(
-        child=serializers.UUIDField(),
+        child=serializers.DictField(
+            child=serializers.UUIDField(error_messages={'invalid': 'Must be a valid UUID.'})
+        ),
         write_only=True,
         required=True
-    )
-    campaigns_info = serializers.SerializerMethodField()
+    ) 
 
     class Meta:
         model = Kwai
         fields = ['uid', 'name', 'user',
-                  'campaigns', 'campaigns_info' , 'created_at', 'updated_at']
-
-    def get_campaigns_info(self, obj):
-        return CampaignSerializer(obj.campaigns.all(), many=True).data
+                  'campaigns',  'created_at', 'updated_at']
+        read_only_fields = ['uid', 'user', 'created_at', 'updated_at']
+ 
     
     def validate_name(self, value):
         try:
@@ -82,6 +82,10 @@ class KwaiSerializer(serializers.ModelSerializer):
         # Obtém a representação padrão
         representation = super().to_representation(instance)
 
+        # Adiciona as campanhas associadas
+        campaigns = Campaign.objects.filter(kwai_campaigns__kwai=instance)
+        representation["campaigns"] = CampaignSerializer(campaigns, many=True).data
+        
         # Obtém os dados financeiros agregados
         financial_data = get_financial_data(kwai=instance)
 
@@ -95,9 +99,7 @@ class KwaiSerializer(serializers.ModelSerializer):
         return representation
 
     def create(self, validated_data):
-        request = self.context.get('request')
-        campaigns_data = request.data.get('campaigns', None)
-
+        campaigns_data = validated_data.pop('campaigns')
         # Validação: Verificar se todas as campanhas existem e não estão em uso
         campaigns = []
         for campaign_data in campaigns_data:
