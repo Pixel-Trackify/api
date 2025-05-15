@@ -68,10 +68,15 @@ class KwaiAccountTests(APITestCase):
             }
             camp_resp = self.client.post(self.campaign_url, campaign_payload, format="json")
             self.assertEqual(camp_resp.status_code, status.HTTP_201_CREATED)
-            self.campaign_uid = camp_resp.data.get("uid")
-
-            # URL de contas Kwai
+            self.campaign_uid = camp_resp.data.get("uid")            
+            # Criação de conta Kwai para edição
             self.kwai_url = reverse("kwai-list")
+            kwai_payload = {"name": KWAI_ACCOUNT_NAME, "campaigns": [{"uid": self.campaign_uid}]}
+            kwai_resp = self.client.post(self.kwai_url, kwai_payload, format="json")
+            self.assertEqual(kwai_resp.status_code, status.HTTP_201_CREATED)
+            self.kwai_uid = kwai_resp.data.get("uid")
+            self.kwai_update_url = f"{self.kwai_url}{self.kwai_uid}/"
+            
         except NoReverseMatch as e:
             self.fail(f"Rota não encontrada: {e}")
         except Exception as e:
@@ -79,9 +84,9 @@ class KwaiAccountTests(APITestCase):
 
     def test_create_empty_kwai_data(self):
         """
-        Deve falhar ao criar conta Kwai sem nome ou campanhas.
+        Deve falhar ao editar conta Kwai sem nome ou campanhas.
         """
-        resp = self.client.post(self.kwai_url, {}, format="json")
+        resp = self.client.put(self.kwai_update_url, {}, format="json")
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("name", resp.data)
         self.assertIn("campaigns", resp.data)
@@ -94,7 +99,7 @@ class KwaiAccountTests(APITestCase):
         """
         payload = {"name": "<script>alert('XSS')</script>",
                    "campaigns": [{"uid": self.campaign_uid}]}
-        resp = self.client.post(self.kwai_url, payload, format="json")
+        resp = self.client.put(self.kwai_update_url, payload, format="json")
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(resp.data["name"][0], "O campo não pode conter tags HTML.")
 
@@ -104,7 +109,7 @@ class KwaiAccountTests(APITestCase):
         """
         payload = {"name": "&lt;script&gt;alert(&#x27;XRSS&#x27;);&lt;/script&gt;",
                    "campaigns": [{"uid": self.campaign_uid}]}
-        resp = self.client.post(self.kwai_url, payload, format="json")
+        resp = self.client.put(self.kwai_update_url, payload, format="json")
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(resp.data["name"][0], "O campo não pode conter tags HTML.")
 
@@ -113,7 +118,7 @@ class KwaiAccountTests(APITestCase):
         Deve rejeitar caracteres não-ASCII no nome.
         """
         payload = {"name": "😀", "campaigns": [{"uid": self.campaign_uid}]}
-        resp = self.client.post(self.kwai_url, payload, format="json")
+        resp = self.client.put(self.kwai_update_url, payload, format="json")
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(resp.data["name"][0], "O campo só pode conter caracteres ASCII.")
 
@@ -122,7 +127,7 @@ class KwaiAccountTests(APITestCase):
         Deve rejeitar nome com menos de 5 caracteres.
         """
         payload = {"name": "A", "campaigns": [{"uid": self.campaign_uid}]}
-        resp = self.client.post(self.kwai_url, payload, format="json")
+        resp = self.client.put(self.kwai_update_url, payload, format="json")
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(resp.data["name"][0], "O campo deve ter pelo menos 5 caracteres.")
 
@@ -131,7 +136,7 @@ class KwaiAccountTests(APITestCase):
         Deve rejeitar nome com mais de 100 caracteres.
         """
         payload = {"name": "A" * 101, "campaigns": [{"uid": self.campaign_uid}]}
-        resp = self.client.post(self.kwai_url, payload, format="json")
+        resp = self.client.put(self.kwai_update_url, payload, format="json")
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
             resp.data["name"][0],
@@ -143,7 +148,7 @@ class KwaiAccountTests(APITestCase):
         Deve falhar ao informar UUID inválido para campaigns.
         """
         payload = {"name": CAMPAIGN_TITLE, "campaigns": [{"uid": "not-a-uuid"}]}
-        resp = self.client.post(self.kwai_url, payload, format="json")
+        resp = self.client.put(self.kwai_update_url, payload, format="json")
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("campaigns", resp.data)
         self.assertEqual(resp.data["campaigns"][0]['uid'][0], 'Must be a valid UUID.')
@@ -152,27 +157,49 @@ class KwaiAccountTests(APITestCase):
         """
         Deve impedir reutilização de campanha já em uso.
         """
-        # Primeiro registro
-        first = {"name": "Primeiro Kwai", "campaigns": [{"uid": self.campaign_uid}]}
-        resp1 = self.client.post(self.kwai_url, first, format="json")
-        self.assertEqual(resp1.status_code, status.HTTP_201_CREATED)
+        # Primeiro Kwai com a campanha associada
+        # Criação de integração
+        integration_payload = {"gateway": INTEGRATION_GATEWAY, "name": INTEGRATION_NAME}
+        int_resp = self.client.post(self.integration_url, integration_payload, format="json")
+        self.assertEqual(int_resp.status_code, status.HTTP_201_CREATED)
+        self.integration_uid = int_resp.data.get("uid")
 
-        # Reuso de mesma campanha
-        second = {"name": "Segundo Kwai", "campaigns": [{"uid": self.campaign_uid}]}
-        resp2 = self.client.post(self.kwai_url, second, format="json")
-        self.assertEqual(resp2.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(resp2.data["campaigns"], "A campanha já está em uso.")
+        # Criação de campanha
+        self.campaign_url = reverse("campaign-list")
+        campaign_payload = {
+            "title": CAMPAIGN_TITLE,
+            "description": CAMPAIGN_DESCRIPTION,
+            "integrations": [self.integration_uid],
+            "method": CAMPAIGN_METHOD,
+            "CPC": CAMPAIGN_AMOUNT
+        }
+        camp_resp = self.client.post(self.campaign_url, campaign_payload, format="json")
+        self.assertEqual(camp_resp.status_code, status.HTTP_201_CREATED)
+        campaign_uid = camp_resp.data.get("uid")            
+        # Criação de conta Kwai com uma nova campanha e integração associada
+        kwai_payload = {"name": KWAI_ACCOUNT_NAME, "campaigns": [{"uid": campaign_uid}]}
+        kwai_resp = self.client.post(self.kwai_url, kwai_payload, format="json")
+        self.assertEqual(kwai_resp.status_code, status.HTTP_201_CREATED)
+
+        # Segundo Kwai tentando usar a mesma campanha
+        second_kwai_payload = {"name": "Segundo Kwai", "campaigns": [{"uid": campaign_uid}]}
+        second_resp = self.client.post(self.kwai_url, second_kwai_payload, format="json")
+        self.assertEqual(second_resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("campaigns", second_resp.data)
+        self.assertEqual(second_resp.data["campaigns"], "A campanha já está em uso.")
 
     def test_successful_kwai_creation(self):
         """
-        Deve criar conta Kwai quando payload for válido.
+        Deve editar conta Kwai quando payload for válido.
         """
         payload = {"name": "Conta Kwai Teste", "campaigns": [{"uid": self.campaign_uid}]}
-        resp = self.client.post(self.kwai_url, payload, format="json")
-        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        resp = self.client.put(self.kwai_update_url, payload, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertIn("uid", resp.data)
         self.assertIn("name", resp.data)
         self.assertIn("campaigns", resp.data)
         self.assertEqual(resp.data["name"], "Conta Kwai Teste")
         self.assertEqual(len(resp.data["campaigns"]), 1)
         self.assertEqual(resp.data["campaigns"][0]["uid"], self.campaign_uid)
+
+    # falta edição usando uma campanha que antes eu exclui a integração associada a campanha
