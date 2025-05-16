@@ -1,0 +1,5 @@
+0 0,12 * * * cd /app && /venv/bin/python manage.py expire_subscriptions >> /var/log/cron.log 2>&1
+0 0,12 * * * cd /app && /venv/bin/python manage.py send_payment_reminders >> /var/log/cron.log 2>&1
+
+
+
