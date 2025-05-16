@@ -23,7 +23,7 @@ logger = logging.getLogger('django')
 
 @schemas['campaign_view_set']
 class CampaignViewSet(viewsets.ModelViewSet):
-    queryset = Campaign.objects.all()
+    queryset = Campaign.objects.filter(deleted=False)
     serializer_class = CampaignSerializer
     permission_classes = [IsAuthenticated]
     lookup_field = 'uid'
@@ -162,7 +162,8 @@ class CampaignViewSet(viewsets.ModelViewSet):
         if getattr(instance, "in_use", False):
             raise ValidationError(
                 "Não é possível excluir uma campanha que está em uso.")
-        instance.delete()
+        instance.deleted = True
+        instance.save()
 
     @action(detail=False, methods=['post'], url_path='delete-multiple')
     def delete_multiple(self, request):
@@ -205,7 +206,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
                     integration.in_use = False
                     integration.save()
             deleted_count = instances.count()
-            instances.delete()
+            instances.update(deleted=True)
 
         return Response(
             {

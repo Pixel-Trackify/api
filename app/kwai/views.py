@@ -108,21 +108,21 @@ class KwaiViewSet(ModelViewSet):
         kwai = self.get_queryset().filter(uid=uid).first()
         if not kwai:
             return Response({"error": "Conta Kwai não encontrada."}, status=status.HTTP_404_NOT_FOUND)
-        
+
         if not request.data:
             return Response({
-                    "name": [
-                        "Este campo é obrigatório."
-                    ],
-                    "campaigns": [
-                        "Este campo é obrigatório."
-                    ]
-                }, status=status.HTTP_400_BAD_REQUEST)
-                  
+                "name": [
+                    "Este campo é obrigatório."
+                ],
+                "campaigns": [
+                    "Este campo é obrigatório."
+                ]
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         serializer = self.get_serializer(kwai, data=request.data, partial=True)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-               
+
         name = request.data.get('name', None)
         if name:
             kwai.name = name
@@ -139,7 +139,8 @@ class KwaiViewSet(ModelViewSet):
             # Validar e associar campanhas
             campaign_uids = [campaign.get('uid')
                              for campaign in campaigns_data]
-            campaigns = Campaign.objects.filter(uid__in=campaign_uids)
+            campaigns = Campaign.objects.filter(
+                uid__in=campaign_uids, deleted=False)
 
             if len(campaigns) != len(campaign_uids):
                 return Response(
@@ -243,7 +244,7 @@ class CampaignsNotInUseView(APIView):
     @campaigns_not_in_use_view_get_schema
     def get(self, request):
         try:
-            campaigns = Campaign.objects.filter(in_use=False)
+            campaigns = Campaign.objects.filter(in_use=False, deleted=False)
 
             valid_campaigns = []
             for campaign in campaigns:
