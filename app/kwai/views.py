@@ -13,6 +13,8 @@ from .serializers import KwaiSerializer, CampaignSerializer
 from .models import Kwai, KwaiCampaign
 from django.db import transaction
 from rest_framework.exceptions import ValidationError
+from django.utils.html import strip_tags
+import html
 import re
 import logging
 import uuid
@@ -49,16 +51,32 @@ class KwaiViewSet(ModelViewSet):
         search_param = self.request.query_params.get('search', None)
 
         if search_param:
-
-            if not re.match(r'^[a-zA-Z0-9\s\-_,\.;:()áéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ]+$', search_param):
+            try:
+                search_param.encode('latin-1')
+            except UnicodeEncodeError:
                 raise ValidationError(
-                    {"search": "O parâmetro de busca contém caracteres inválidos."}
-                )
+                    {"search": "O parâmetro de busca contém caracteres inválidos."})
+
+            if html.unescape(strip_tags(search_param)) != search_param:
+                raise ValidationError(
+                    {"search": "O parâmetro de busca contém caracteres inválidos."})
 
         return queryset
 
     @kwai_list_view_get_schema
     def list(self, request, *args, **kwargs):
+        try:
+            queryset = self.filter_queryset(self.get_queryset())
+            if not queryset.exists():
+                return Response(
+                    {"count": 0, "detail": "Nenhuma campanha encontrada com os critérios de busca.", "results": []}
+                )
+        except Exception as e:
+            return Response(
+                {"count": 0, "results": [],
+                    "detail": "O parâmetro de busca contém caracteres inválidos."},
+            )
+            
         return super().list(request, *args, **kwargs)
 
     @kwai_create_view_post_schema
