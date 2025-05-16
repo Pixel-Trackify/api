@@ -134,9 +134,12 @@ class IntegrationViewSet(viewsets.ModelViewSet):
         """
         if instance.user != self.request.user:
             raise PermissionDenied(
-                "Você não tem permissão para deletar esta integração.")
+                "Erro ao deletar esta integração.")
+        if Campaign.objects.filter(integrations=instance).exists():
+            raise ValidationError(
+                "Não é possível excluir uma integração que está em uso por uma campanha.")
         instance.deleted = True
-        instance.delete()
+        instance.save()
 
     @action(detail=False, methods=['post'], url_path='delete-multiple')
     def delete_multiple(self, request):
@@ -150,7 +153,6 @@ class IntegrationViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Busca as integrações correspondentes ao usuário autenticado
         instances = self.get_queryset().filter(uid__in=uids)
         not_found_uids = set(
             uids) - set(instances.values_list('uid', flat=True))
@@ -161,15 +163,23 @@ class IntegrationViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # Usa uma transação para garantir consistência
+        in_use = []
+        for integration in instances:
+            if Campaign.objects.filter(integrations=integration).exists():
+                in_use.append(str(integration.uid))
+        if in_use:
+            return Response(
+                {"error": "Não é possível excluir integrações em uso por campanhas.",
+                    "in_use": in_use},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         with transaction.atomic():
             updated_count = instances.update(deleted=True)
 
-        # Retorna uma resposta detalhada
         return Response(
             {
                 "message": f"{updated_count} integração(ões) excluída(s) com sucesso.",
-                # Lista de UUIDs não encontrados
                 "not_found": list(not_found_uids)
             },
             status=status.HTTP_200_OK
