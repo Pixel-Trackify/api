@@ -157,6 +157,13 @@ class KwaiViewSet(ModelViewSet):
         if not kwai:
             return Response({"error": "Conta Kwai não encontrada."}, status=status.HTTP_404_NOT_FOUND)
 
+        # Verifica se o usuário autenticado é o proprietário da conta Kwai
+        if kwai.user != request.user:
+            return Response(
+                {"error": "Você não tem permissão para excluir esta conta Kwai."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
         with transaction.atomic():
             KwaiCampaign.objects.filter(kwai=kwai).delete()
             kwai.deleted = True
