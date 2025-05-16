@@ -91,7 +91,6 @@ class KwaiAccountDetailTests(APITestCase):
         invalid_uid = str(UUID(int=0))
         detail_url = reverse("kwai-detail", kwargs={"uid": invalid_uid})  
         response = self.client.get(detail_url)
-        print(f"Response data: {response.data}")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertIn("error", response.data)
         self.assertEqual(
@@ -150,3 +149,34 @@ class KwaiAccountDetailTests(APITestCase):
         self.assertEqual(response.data["stats"]["PIX"], 0)
         self.assertEqual(response.data["stats"]["BOLETO"], 0)
         
+    def test_get_kwai_detail_other_user(self):
+        """
+        Testa se um usuário não pode acessar os detalhes de uma conta Kwai de outro usuário.
+        """
+        # Criação de um novo usuário
+        other_user_payload = {
+            "email": "otheruser@gmail.com",
+            "cpf": "52641983303",
+            "name": "Outro Usuário",
+            "password": TEST_PASSWORD,
+            "confirm_password": TEST_PASSWORD,
+        }
+        reg_resp = self.client.post(self.register_url, other_user_payload, format="json")
+        self.assertEqual(reg_resp.status_code, status.HTTP_201_CREATED)
+
+        # Autenticação do novo usuário
+        auth_payload = {"identifier": "otheruser@gmail.com", "password": TEST_PASSWORD}
+        auth_resp = self.client.post(self.login_url, auth_payload, format="json")
+        self.assertEqual(auth_resp.status_code, status.HTTP_200_OK)
+        token = auth_resp.data.get("access")
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        # Tentativa de acessar os detalhes da conta Kwai do primeiro usuário
+        response = self.client.get(self.preview_url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn("error", response.data)
+        self.assertEqual(
+            response.data["error"],
+            "Conta Kwai não encontrada."
+        )
+

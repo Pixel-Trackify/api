@@ -94,7 +94,7 @@ class KwaiViewSet(ModelViewSet):
         except (ValueError, TypeError):
             return Response({"error": "UID inválido."}, status=status.HTTP_400_BAD_REQUEST)
 
-        kwai = self.get_queryset().filter(uid=uid, deleted=False).first()
+        kwai = self.get_queryset().filter(uid=uid, user=request.user, deleted=False).first()
         if not kwai:
             return Response({"error": "Conta Kwai não encontrada."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -108,7 +108,7 @@ class KwaiViewSet(ModelViewSet):
         except (ValueError, TypeError):
             return Response({"error": "UID inválido."}, status=status.HTTP_400_BAD_REQUEST)
 
-        kwai = self.get_queryset().filter(uid=uid, deleted=False).first()
+        kwai = self.get_queryset().filter(uid=uid, user=request.user, deleted=False).first()
         if not kwai:
             return Response({"error": "Conta Kwai não encontrada."}, status=status.HTTP_404_NOT_FOUND)
 

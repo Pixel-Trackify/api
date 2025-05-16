@@ -202,4 +202,36 @@ class KwaiAccountTests(APITestCase):
         self.assertEqual(len(resp.data["campaigns"]), 1)
         self.assertEqual(resp.data["campaigns"][0]["uid"], self.campaign_uid)
 
+    def test_user_cannot_edit_another_users_kwai_account(self):
+        """
+        Deve impedir que um usuário edite a conta Kwai de outro usuário.
+        """
+        # Criar um novo usuário
+        new_user_payload = {
+            "email": "newuser@gmail.com",
+            "cpf": "52641983303",
+            "name": "Novo Usuário",
+            "password": TEST_PASSWORD,
+            "confirm_password": TEST_PASSWORD,
+        }
+        reg_resp = self.client.post(self.register_url, new_user_payload, format="json")
+        self.assertEqual(reg_resp.status_code, status.HTTP_201_CREATED)
+
+        # Autenticar como o novo usuário
+        auth_payload = {"identifier": "newuser@gmail.com", "password": TEST_PASSWORD}
+        auth_resp = self.client.post(self.login_url, auth_payload, format="json")
+        self.assertEqual(auth_resp.status_code, status.HTTP_200_OK)
+        new_user_token = auth_resp.data.get("access")
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {new_user_token}")
+
+        # Tentar editar a conta Kwai do usuário original
+        payload = {"name": "Tentativa de Edição", "campaigns": [{"uid": self.campaign_uid}]}
+        resp = self.client.put(self.kwai_update_url, payload, format="json")
+
+        # Verificar que a edição foi bloqueada
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn("error", resp.data)
+        self.assertEqual(resp.data["error"], "Conta Kwai não encontrada.")
+        
     # falta edição usando uma campanha que antes eu exclui a integração associada a campanha
+    # falta o teste no caso cadastra 2 campanhas, ao editar remove uma delas, no endpoint de edição deve mostrar a campanha que ficou
