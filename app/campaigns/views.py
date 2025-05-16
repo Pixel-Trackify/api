@@ -96,7 +96,8 @@ class CampaignViewSet(viewsets.ModelViewSet):
                 )
         except Exception as e:
             return Response(
-                {"count": 0, "results": [], "detail": "O parâmetro de busca contém caracteres inválidos."},
+                {"count": 0, "results": [],
+                    "detail": "O parâmetro de busca contém caracteres inválidos."},
             )
 
         # Caso contrário, retorna os resultados normalmente
@@ -145,22 +146,22 @@ class CampaignViewSet(viewsets.ModelViewSet):
                 {"detail": 'Nenhuma campanha corresponde à consulta fornecida.'},
                 status=status.HTTP_404_NOT_FOUND
             )
-            
+
         instance.delete()
         return Response(
             {"message": "Campanha excluída com sucesso."},
             status=status.HTTP_200_OK
         )
 
-
     def perform_destroy(self, instance):
         """
         Deleta a campanha pelo UUID se o usuário autenticado for o proprietário.
         """
         if instance.user != self.request.user:
-            raise PermissionDenied(
-                "Você não tem permissão para deletar esta campanha."
-            )
+            raise PermissionDenied("Não foi possível deletar esta campanha.")
+        if getattr(instance, "in_use", False):
+            raise ValidationError(
+                "Não é possível excluir uma campanha que está em uso.")
         instance.delete()
 
     @action(detail=False, methods=['post'], url_path='delete-multiple')
@@ -175,7 +176,6 @@ class CampaignViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Busca as campanhas correspondentes ao usuário autenticado
         instances = self.get_queryset().filter(uid__in=uids)
         not_found_uids = set(
             uids) - set(instances.values_list('uid', flat=True))
@@ -186,22 +186,30 @@ class CampaignViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # Usa uma transação para garantir consistência
+        in_use = []
+        for campaign in instances:
+            if getattr(campaign, "in_use", False):
+                in_use.append(str(campaign.uid))
+        if in_use:
+            return Response(
+                {
+                    "error": "Não é possível excluir campanhas em uso.",
+                    "in_use": in_use
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         with transaction.atomic():
-            # Atualiza o campo `in_use` das integrações associadas às campanhas
             for campaign in instances:
                 for integration in campaign.integrations.all():
                     integration.in_use = False
                     integration.save()
-                    
-            deleted_count = instances.count()        
-            instances.delete()[0]
+            deleted_count = instances.count()
+            instances.delete()
 
-        # Retorna uma resposta detalhada
         return Response(
             {
                 "message": f"{deleted_count} campanha(s) excluída(s) com sucesso.",
-                # Lista de UUIDs não encontrados
                 "not_found": list(not_found_uids)
             },
             status=status.HTTP_200_OK
