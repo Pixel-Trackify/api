@@ -254,7 +254,6 @@ class CampaignSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         """Cria uma campanha e associa as integrações"""
         integrations = validated_data.pop('integrations', [])
-        validated_data['in_use'] = True
         campaign = Campaign.objects.create(**validated_data)
         campaign.integrations.set(integrations)
 
