@@ -176,7 +176,7 @@ class KwaiViewSet(ModelViewSet):
     def delete_multiple(self, request):
         if not request.user:
             return Response(
-                {"error": "Apenas administradores podem excluir contas."},
+                {"error": "Nenhum Usuário encontrado."},
                 status=status.HTTP_403_FORBIDDEN
             )
 
@@ -196,7 +196,7 @@ class KwaiViewSet(ModelViewSet):
                     invalid_uids.append(uid)
                     continue
 
-                kwai = Kwai.objects.filter(uid=uid, deleted=False).first()
+                kwai = Kwai.objects.filter(uid=uid, user=request.user, deleted=False).first()
                 if kwai:
                     kwai_campaigns = KwaiCampaign.objects.filter(kwai=kwai)
                     for kwai_campaign in kwai_campaigns:
