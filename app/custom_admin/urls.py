@@ -1,8 +1,15 @@
 from rest_framework.routers import DefaultRouter
-from .views import AdminDashboardViewSet
+from django.urls import path
+from . import views
 
 router = DefaultRouter()
-router.register('admin-dashboard', AdminDashboardViewSet,
+router.register('admin-dashboard', views.AdminDashboardViewSet,
                 basename='admin-dashboard')
 
-urlpatterns = router.urls
+urlpatterns = [
+    path('configuration/', views.ConfigurationView.as_view(), name='configuration'),
+    path('captcha/', views.CaptchaView.as_view(), name='captcha'),
+]
+
+
+urlpatterns += router.urls

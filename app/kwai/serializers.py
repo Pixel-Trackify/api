@@ -2,10 +2,9 @@ from rest_framework import serializers
 from .models import Kwai, KwaiCampaign
 from campaigns.models import FinanceLogs, Campaign
 import uuid
-from django.db.models import Sum
-from django.utils import timezone
-from datetime import timedelta
 from .services import get_financial_data
+from django.utils.html import strip_tags
+import html
 
 
 class FinanceLogsSerializer(serializers.ModelSerializer):
@@ -17,33 +16,76 @@ class FinanceLogsSerializer(serializers.ModelSerializer):
 class CampaignSerializer(serializers.ModelSerializer):
     class Meta:
         model = Campaign
-        fields = ['uid', 'title', 'in_use']
+        fields = ['uid', 'title', 'in_use',
+                  'deleted']
 
 
 class KwaiSerializer(serializers.ModelSerializer):
-    # Campo para leitura das campanhas associadas
-    campaigns = serializers.SerializerMethodField()
-    # financial_overviews = serializers.SerializerMethodField()
+
+    campaigns = serializers.ListField(
+        child=serializers.DictField(
+            child=serializers.UUIDField(
+                error_messages={'invalid': 'Must be a valid UUID.'})
+        ),
+        write_only=True,
+        required=True
+    )
 
     class Meta:
         model = Kwai
         fields = ['uid', 'name', 'user',
-                  'campaigns', 'created_at', 'updated_at']
+                  'campaigns',  'created_at', 'updated_at']
+        read_only_fields = ['uid', 'user', 'created_at', 'updated_at']
+
+    def validate_name(self, value):
+        try:
+            value.encode('latin-1')
+        except UnicodeEncodeError:
+            raise serializers.ValidationError(
+                "O campo só pode conter caracteres ASCII.")
+
+        if html.unescape(strip_tags(value)) != value:
+            raise serializers.ValidationError(
+                "O campo não pode conter tags HTML.")
+
+        if len(value) < 5:
+            raise serializers.ValidationError(
+                "O campo deve ter pelo menos 5 caracteres.")
+
+        if len(value) > 100:
+            raise serializers.ValidationError(
+                "O campo não pode exceder 100 caracteres.")
+
+        return value
+
+    def validate_campaigns(self, value):
+        """
+        Valida o campo 'campaigns' para garantir que ele não esteja vazio.
+        """
+        if not value:
+            raise serializers.ValidationError(
+                "O campo é obrigatório."
+            )
+        return value
 
     def get_campaigns(self, obj):
         """
-        Retorna as campanhas associadas a esta conta do Kwai.
+        Retorna as campanhas associadas a esta conta do Kwai, apenas as não deletadas.
         """
-        campaigns = Campaign.objects.filter(
-            kwai_campaigns__kwai=obj)  # Obtém as campanhas associadas
+        campaigns = obj.campaigns.filter(deleted=False)
         return CampaignSerializer(campaigns, many=True).data
 
     def to_representation(self, instance):
         """
         Personaliza a representação dos dados para incluir os dados financeiros da campanha.
         """
-        # Obtém a representação padrão
         representation = super().to_representation(instance)
+
+        # Adiciona as campanhas associadas (apenas não deletadas)
+        campaigns = Campaign.objects.filter(
+            kwai_campaigns__kwai=instance, deleted=False)
+        representation["campaigns"] = CampaignSerializer(
+            campaigns, many=True).data
 
         # Obtém os dados financeiros agregados
         financial_data = get_financial_data(kwai=instance)
@@ -52,25 +94,18 @@ class KwaiSerializer(serializers.ModelSerializer):
         for field in fields_to_remove:
             financial_data.pop(field, None)
 
-        # Combina os dados financeiros com os dados da conta Kwai
         representation.update(financial_data)
 
         return representation
 
     def create(self, validated_data):
-        request = self.context.get('request')
-        campaigns_data = request.data.get('campaigns', None)
-
-        if not campaigns_data:
-            raise serializers.ValidationError(
-                {"campaigns": "O campo 'campaigns' é obrigatório e não pode estar vazio."}
-            )
-
+        campaigns_data = validated_data.pop('campaigns')
         # Validação: Verificar se todas as campanhas existem e não estão em uso
         campaigns = []
         for campaign_data in campaigns_data:
             try:
-                campaign = Campaign.objects.get(uid=campaign_data['uid'])
+                campaign = Campaign.objects.get(
+                    uid=campaign_data['uid'], deleted=False)
                 if campaign.in_use:
                     raise serializers.ValidationError(
                         {"campaigns": f"A campanha já está em uso."}
@@ -92,11 +127,9 @@ class KwaiSerializer(serializers.ModelSerializer):
         return kwai
 
     def update(self, instance, validated_data):
-
         campaigns_data = validated_data.pop('campaigns', None)
 
         if campaigns_data:
-
             KwaiCampaign.objects.filter(kwai=instance).delete()
 
             campaigns = []
@@ -104,22 +137,23 @@ class KwaiSerializer(serializers.ModelSerializer):
                 uid = campaign_data.get('uid')
 
                 try:
-                    uuid.UUID(uid)
+                    uuid.UUID(str(uid))
                 except ValueError:
                     raise serializers.ValidationError(
                         {"campaigns": f"O valor '{uid}' não é um UUID válido."}
                     )
 
                 try:
-                    campaign = Campaign.objects.get(uid=uid)
-                    if campaign.in_use and campaign not in instance.campaigns.all():
+                    # Só permite campanhas não deletadas
+                    campaign = Campaign.objects.get(uid=uid, deleted=False)
+                    if campaign.in_use and campaign not in instance.campaigns.filter(deleted=False):
                         raise serializers.ValidationError(
                             {"campaigns": f"A campanha '{campaign.uid}' já está em uso."}
                         )
                     campaigns.append(campaign)
                 except Campaign.DoesNotExist:
                     raise serializers.ValidationError(
-                        {"campaigns": f"A campanha com UID '{uid}' não existe."}
+                        {"campaigns": f"A campanha com UID '{uid}' não existe ou está deletada."}
                     )
 
             for campaign in campaigns:

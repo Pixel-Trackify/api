@@ -1,7 +1,4 @@
 from django.db import models
-from django.conf import settings
-from django.utils import timezone
-from datetime import timedelta
 import uuid
 
 
@@ -52,38 +49,3 @@ class PlanFeature(models.Model):
 
     def __str__(self):
         return self.text  # Exibe o texto no admin
-
-
-class UserSubscription(models.Model):
-    """Vincula usuários a planos (histórico de assinaturas)"""
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
-                             related_name='subscriptions',  # Acessar via user.subscriptions.all()
-                             verbose_name="Usuário"
-                             )
-    plan = models.ForeignKey(
-        Plan, on_delete=models.CASCADE, verbose_name="contracted-plan")
-    start_date = models.DateTimeField(
-        auto_now_add=True, verbose_name="start-date")  # Automático na criação
-    end_date = models.DateTimeField(verbose_name="end-date")
-    is_active = models.BooleanField(
-        default=True, verbose_name="active-subscription")  # Pode ser desativada
-
-    def save(self, *args, **kwargs):
-        if not self.end_date:
-            self.end_date = self.calculate_end_date()
-        super().save(*args, **kwargs)
-
-    def calculate_end_date(self):
-        if self.plan.duration == 'day':
-            return self.start_date + timedelta(days=self.plan.duration_value)
-        if self.plan.duration == 'month':
-            return self.start_date + timedelta(days=30 * self.plan.duration_value)
-        elif self.plan.duration == 'year':
-            return self.start_date + timedelta(days=365 * self.plan.duration_value)
-        return self.start_date
-
-    class Meta:
-        db_table = 'user_subscription'
-
-    def __str__(self):
-        return f"{self.user.email} - {self.plan.name}"

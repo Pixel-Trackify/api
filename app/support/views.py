@@ -4,6 +4,7 @@ import os
 from botocore.exceptions import NoCredentialsError, PartialCredentialsError
 from datetime import datetime
 from django.conf import settings
+from rest_framework.exceptions import ValidationError
 from rest_framework import status
 from rest_framework import generics, filters
 from rest_framework.decorators import api_view, permission_classes
@@ -19,6 +20,7 @@ from .schema import (
     support_reply_create_view_schema,
 )
 import logging
+import re
 
 
 logger = logging.getLogger('django')
@@ -41,6 +43,20 @@ class SupportListView(generics.ListAPIView):
             return Support.objects.all()
 
         return Support.objects.filter(user=user)
+
+    def filter_queryset(self, queryset):
+
+        queryset = super().filter_queryset(queryset)
+
+        search_param = self.request.query_params.get('search', None)
+
+        if search_param:
+
+            if not re.match(r'^[a-zA-Z0-9\s\-_,\.;:()áéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ]+$', search_param):
+                raise ValidationError(
+                    {"search": "O parâmetro de busca contém caracteres inválidos."}
+                )
+        return queryset
 
 
 @support_detail_view_schema
@@ -89,14 +105,14 @@ class SupportRepliesView(APIView):
         support = Support.objects.filter(uid=uid).first()
         if not support:
             return Response(
-                {"total": 0, "detail": "Nenhum suporte encontrado.", "results": []},
+                {"count": 0, "detail": "Nenhum suporte encontrado.", "results": []},
                 status=200
             )
 
         # Verifica permissões
         if not user.is_superuser and support.user != user:
             return Response(
-                {"total": 0, "detail": "Nenhum suporte encontrado.", "results": []},
+                {"count": 0, "detail": "Nenhum suporte encontrado.", "results": []},
                 status=200
             )
 
@@ -159,11 +175,13 @@ class SupportCreateView(APIView):
         files = request.FILES.getlist(
             'files') or request.FILES.getlist('files[]')
 
-        # Valida título e descrição
         if not title or not description:
             return Response({"error": "Título e descrição são obrigatórios."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Cria o ticket
+        serializer = SupportSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
         support = Support.objects.create(
             user=user, title=title, description=description, user_read=True
         )
@@ -211,6 +229,10 @@ class SupportReplyCreateView(APIView):
         # Obtém os dados da requisição
         description = request.data.get('description')
         files = request.FILES.getlist('files')
+
+        serializer = SupportReplySerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         # Valida descrição
         if not description:

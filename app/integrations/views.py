@@ -2,7 +2,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from django.db import transaction
 from django.db.models import Q
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -12,6 +12,7 @@ from campaigns.models import Campaign
 from .serializers import IntegrationSerializer, IntegrationRequestSerializer
 from django.conf import settings
 import logging
+import re
 from .schema import schemas
 
 logger = logging.getLogger('django')
@@ -22,19 +23,34 @@ class IntegrationViewSet(viewsets.ModelViewSet):
     """
     ViewSet para gerenciar integrações.
     """
-    queryset = Integration.objects.all()
+    queryset = Integration.objects.all().order_by("-created_at")
     serializer_class = IntegrationSerializer
     permission_classes = [IsAuthenticated]
     lookup_field = 'uid'
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
     ordering_fields = ['created_at']
-    search_fields = ['name', 'created_at', 'gateway']
+    search_fields = ['name', 'gateway']
 
     def get_queryset(self):
         """
         Retorna as integrações do usuário autenticado.
         """
-        queryset = self.queryset.filter(user=self.request.user)
+        return self.queryset.filter(user=self.request.user, deleted=False)
+
+    def filter_queryset(self, queryset):
+        """
+        Sobrescreve o método filter_queryset para validar os parâmetros de busca.
+        """
+        queryset = super().filter_queryset(queryset)
+
+        search_param = self.request.query_params.get('search', None)
+
+        if search_param:
+
+            if not re.match(r'^[a-zA-Z0-9\s\-_,\.;:()áéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ]+$', search_param):
+                raise ValidationError(
+                    {"search": "O parâmetro de busca contém caracteres inválidos."}
+                )
 
         return queryset
 
@@ -48,7 +64,7 @@ class IntegrationViewSet(viewsets.ModelViewSet):
         # Verifica se o queryset está vazio
         if not queryset.exists():
             return Response(
-                {"total": 0, "detail": "Nenhuma campanha encontrada com os critérios de busca.", "results": []}
+                {"count": 0, "detail": "Nenhuma campanha encontrada com os critérios de busca.", "results": []}
             )
 
         # Caso contrário, retorna os resultados normalmente
@@ -65,7 +81,7 @@ class IntegrationViewSet(viewsets.ModelViewSet):
         Sobrescreve o método para buscar a integração pelo campo `uid` em vez de `id`.
         """
         obj = get_object_or_404(self.get_queryset(),
-                                uid=self.kwargs.get(self.lookup_field))
+                                uid=self.kwargs.get(self.lookup_field), deleted=False)
 
         return obj
 
@@ -118,8 +134,12 @@ class IntegrationViewSet(viewsets.ModelViewSet):
         """
         if instance.user != self.request.user:
             raise PermissionDenied(
-                "Você não tem permissão para deletar esta integração.")
-        instance.delete()
+                "Erro ao deletar esta integração.")
+        if Campaign.objects.filter(integrations=instance).exists():
+            raise ValidationError(
+                "Não é possível excluir uma integração que está em uso por uma campanha.")
+        instance.deleted = True
+        instance.save()
 
     @action(detail=False, methods=['post'], url_path='delete-multiple')
     def delete_multiple(self, request):
@@ -133,7 +153,6 @@ class IntegrationViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Busca as integrações correspondentes ao usuário autenticado
         instances = self.get_queryset().filter(uid__in=uids)
         not_found_uids = set(
             uids) - set(instances.values_list('uid', flat=True))
@@ -144,15 +163,23 @@ class IntegrationViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # Usa uma transação para garantir consistência
-        with transaction.atomic():
-            deleted_count = instances.delete()[0]
+        in_use = []
+        for integration in instances:
+            if Campaign.objects.filter(integrations=integration).exists():
+                in_use.append(str(integration.uid))
+        if in_use:
+            return Response(
+                {"error": "Não é possível excluir integrações em uso por campanhas.",
+                    "in_use": in_use},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        # Retorna uma resposta detalhada
+        with transaction.atomic():
+            updated_count = instances.update(deleted=True)
+
         return Response(
             {
-                "message": f"{deleted_count} integração(ões) excluída(s) com sucesso.",
-                # Lista de UUIDs não encontrados
+                "message": f"{updated_count} integração(ões) excluída(s) com sucesso.",
                 "not_found": list(not_found_uids)
             },
             status=status.HTTP_200_OK

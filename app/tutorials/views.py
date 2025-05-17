@@ -1,8 +1,9 @@
 from rest_framework import viewsets, status, filters
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAdminUser
+from .permissions import IsAdminUserOrReadOnly
 from rest_framework.decorators import action
-from django.shortcuts import get_object_or_404
+from rest_framework.exceptions import ValidationError
+import re
 from .models import Tutorial
 from .serializers import TutorialSerializer
 from django.core.exceptions import PermissionDenied
@@ -15,11 +16,11 @@ class TutorialViewSet(viewsets.ModelViewSet):
     """
     queryset = Tutorial.objects.all()
     serializer_class = TutorialSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAdminUserOrReadOnly]
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
     ordering_fields = ['title', 'description']
     ordering = ['created_at']
-    search_fields = ['title', 'description']
+    search_fields = ['title', 'description', 'youtube_url']
     lookup_field = 'uid'
 
     def get_queryset(self):
@@ -40,6 +41,23 @@ class TutorialViewSet(viewsets.ModelViewSet):
 
         return queryset.order_by(ordering)
 
+    def filter_queryset(self, queryset):
+        """
+        Sobrescreve o método filter_queryset para validar os parâmetros de busca.
+        """
+        queryset = super().filter_queryset(queryset)
+
+        search_param = self.request.query_params.get('search', None)
+
+        if search_param:
+
+            if not re.match(r'^[a-zA-Z0-9\s\-_,\.;:()áéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ]+$', search_param):
+                raise ValidationError(
+                    {"search": "O parâmetro de busca contém caracteres inválidos."}
+                )
+
+        return queryset
+
     def list(self, request, *args, **kwargs):
         """
         Sobrescreve o método list para adicionar uma mensagem de erro
@@ -49,7 +67,7 @@ class TutorialViewSet(viewsets.ModelViewSet):
 
         if not queryset.exists():
             return Response(
-                {"total": 0, "detail": "Nenhum tutorial encontrado com os critérios de busca.", "results": []},
+                {"count": 0, "detail": "Nenhum tutorial encontrado com os critérios de busca.", "results": []},
                 status=status.HTTP_200_OK
             )
 

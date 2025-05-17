@@ -18,7 +18,8 @@ from rest_framework.exceptions import NotFound
 from rest_framework import generics
 import logging
 from .models import Usuario, LoginLog
-from plans.models import Plan, UserSubscription
+from plans.models import Plan
+from payments.models import UserSubscription
 from rest_framework_simplejwt.tokens import RefreshToken
 from .filters import UsuarioFilter
 import user_agents
@@ -199,7 +200,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
         if not queryset.exists():
             return Response(
-                {"total": 0, "detail": "Nenhum usuário encontrado.", "results": []},
+                {"count": 0, "detail": "Nenhum usuário encontrado.", "results": []},
                 status=status.HTTP_200_OK
             )
 

@@ -1,6 +1,159 @@
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
-from .serializers import DashboardSerializer
+from .serializers import DashboardSerializer, ConfigurationSerializer
+
+
+configuration_view_get_schema = extend_schema(
+    summary="Obter configuração",
+    description="Retorna a configuração global do sistema.",
+    responses={200: ConfigurationSerializer}
+)
+
+configuration_view_post_schema = extend_schema(
+    summary="Criar/Atualizar configuração",
+    description=(
+        "Cria ou atualiza a configuração global do sistema. "
+        "Se os campos zeroone_webhook e zeroone_webhook_code estiverem vazios, "
+        "o sistema irá cadastrar o webhook na ZeroOne automaticamente."
+    ),
+    request=ConfigurationSerializer,
+    responses={
+        200: ConfigurationSerializer,
+        400: OpenApiResponse(description="Erro de validação ou integração com ZeroOne"),
+        500: OpenApiResponse(description="Erro interno ao comunicar com ZeroOne"),
+    },
+    examples=[
+        OpenApiExample(
+            "Exemplo de configuração mínima",
+            value={
+                "email_register_subject": "Bem-vindo!",
+                "email_recovery_subject": "Recupere sua senha",
+                "email_reminder_subject": "Lembrete",
+                "email_expired_subject": "Assinatura expirada",
+                "email_subscription_paid_subject": "Pagamento recebido",
+                "email_register": "Conteúdo do email de registro",
+                "email_recovery": "Conteúdo do email de recuperação",
+                "email_reminder": "Conteúdo do email de lembrete",
+                "email_expired": "Conteúdo do email expirado",
+                "email_subscription_paid": "Conteúdo do email pago",
+                "require_email_confirmation": True,
+                "default_pix": "zeroone",
+                "firebanking_api_key": None,
+                "zeroone_webhook": "https://pay.zeroonepay.com.br/api/v1/webhook.create",
+                "zeroone_webhook_code": None,
+                "zeroone_secret_key": "seu-secret-key",
+                "recaptchar_enable": True,
+                "recaptchar_site_key": "sua-chave-site",
+                "recaptchar_secret_key": "sua-chave-secreta",
+                "days_to_reminder": 3,
+                "days_to_expire": 7,
+                "late_payment_interest": 2.0,
+                "daily_late_payment_interest": 0.0333
+            },
+            request_only=True,
+        ),
+        OpenApiExample(
+            "Exemplo de configuração completa",
+            value={
+                "email_register_subject": "Bem-vindo!",
+                "email_recovery_subject": "Recupere sua senha",
+                "email_reminder_subject": "Lembrete",
+                "email_expired_subject": "Assinatura expirada",
+                "email_subscription_paid_subject": "Pagamento recebido",
+                "email_register": "Conteúdo do email de registro",
+                "email_recovery": "Conteúdo do email de recuperação",
+                "email_reminder": "Conteúdo do email de lembrete",
+                "email_expired": "Conteúdo do email expirado",
+                "email_subscription_paid": "Conteúdo do email pago",
+                "require_email_confirmation": True,
+                "default_pix": "zeroone",
+                "firebanking_api_key": None,
+                "zeroone_webhook": "https://pay.zeroonepay.com.br/api/v1/webhook.create",
+                "zeroone_webhook_code": None,
+                "zeroone_secret_key": "seu-secret-key",
+                "recaptchar_enable": True,
+                "recaptchar_site_key": "sua-chave-site",
+                "recaptchar_secret_key": "sua-chave-secreta",
+                "days_to_reminder": 3,
+                "days_to_expire": 7,
+                "late_payment_interest": 2.0,
+                "daily_late_payment_interest": 0.0333
+            },
+            request_only=True,
+        ),
+    ]
+)
+captcha_view_get_schema = extend_schema(
+    summary="Obter configuração do captcha",
+    description="Retorna as chaves de configuração do captcha.",
+    responses={
+        200: OpenApiResponse(
+            description="Configuração do captcha retornada com sucesso.",
+            response={
+                "type": "object",
+                "properties": {
+                    "recaptchar_site_key": {"type": "string"},
+                    "recaptchar_secret_key": {"type": "string"},
+                }
+            }
+        ),
+        404: OpenApiResponse(
+            description="Configuração não encontrada."
+        ),
+    }
+)
+
+captcha_view_post_schema = extend_schema(
+    summary="Validar captcha e salvar configuração",
+    description="Salva/atualiza as chaves do captcha e valida o token recebido.",
+    request={
+        "application/json": {
+            "type": "object",
+            "properties": {
+                "token": {"type": "string"},
+                "recaptchar_site_key": {"type": "string"},
+                "recaptchar_secret_key": {"type": "string"},
+            },
+            "required": ["token", "recaptchar_site_key", "recaptchar_secret_key"]
+        }
+    },
+    responses={
+        200: OpenApiResponse(
+            description="Captcha válido.",
+            response={
+                "type": "object",
+                "properties": {
+                    "success": {"type": "boolean"}
+                }
+            }
+        ),
+        400: OpenApiResponse(
+            description="Token ou configuração inválida."
+        ),
+    },
+    examples=[
+        OpenApiExample(
+            "Exemplo de requisição",
+            value={
+                "token": "token_do_captcha",
+                "recaptchar_site_key": "https://www.recaptchar_site_key",
+                "recaptchar_secret_key": "sua_secret_key"
+            },
+            request_only=True
+        ),
+        OpenApiExample(
+            "Exemplo de resposta sucesso",
+            value={"success": True},
+            response_only=True
+        ),
+        OpenApiExample(
+            "Exemplo de resposta erro",
+            value={"success": False,
+                   "error-codes": ["invalid-input-response"]},
+            response_only=True
+        ),
+    ]
+)
 
 admin_dashboard_schema = extend_schema(
     summary="Obter estatísticas do dashboard administrativo",

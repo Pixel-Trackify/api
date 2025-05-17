@@ -47,6 +47,19 @@ class TestAccountRegistration(APITestCase):
         self.assertIn("cpf", response.data)
         self.assertEqual(response.data["cpf"], ["CPF inválido."])
 
+    def test_registration_fails_with_javascript_injection_in_name(self):
+        """Deve retornar 400 quando o campo 'name' contiver injeção de código JavaScript."""
+        payload = {
+            "email": email,
+            "cpf": cpf,
+            "name": "<script>alert('XSS');</script>",
+            "password": password,
+            "confirm_password": password
+        }
+        response = self.client.post(self.url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("name", response.data)
+
     def test_registration_fails_when_passwords_mismatch(self):
         """Deve retornar 400 quando 'password' e 'confirm_password' não coincidirem."""
         payload = {"email": email, "cpf": cpf, "name": name,
@@ -215,6 +228,13 @@ class TestProfileUpdate(APITestCase):
         self.assertEqual(response.data["cpf"], [
                          "Certifique-se de que este campo não tenha mais de 11 caracteres."])
 
+    def test_update_profile_with_javascript_injection_in_name_returns_400(self):
+        """Deve retornar 400 quando o campo 'name' contiver injeção de código JavaScript."""
+        payload = {"email": email, "name": "<script>alert('XSS');</script>", "cpf": cpf}
+        response = self.client.put(self.detail_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('name', response.data)
+        
     def test_update_profile_with_invalid_cpf_numbers_returns_400(self):
         """Deve retornar 400 quando o CPF tiver sequência numérica inválida."""
         payload = {"email": email, "name": name, "cpf": "00000000000"}

@@ -82,11 +82,11 @@ INSTALLED_APPS = [
     'tutorials',
     'campaigns',
     'integrations',
-    'payments',
     'support',
     'goals',
     'kwai',
     'custom_admin',
+    'payments',
 ]
 
 SITE_ID = 1
@@ -327,6 +327,9 @@ DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 # Carregar o domínio do webhook
 WEBHOOK_BASE_URL = os.getenv('WEBHOOK_BASE_URL', 'http://localhost')
 
+# Configuração do gateway de pagamento ZeroOne
+ZEROONE_SECRET_KEY = os.getenv('ZEROONE_SECRET_KEY', 'default-secret-key')
+ZEROONE_API_URL = os.getenv('ZEROONE_API_URL', 'https://default-url.com')
 
 CACHES = {
     'default': {

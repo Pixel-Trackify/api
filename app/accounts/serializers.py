@@ -1,14 +1,18 @@
 import socket
 import re
+from custom_admin.models import Configuration
 from django.contrib.auth.password_validation import validate_password
-from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.utils.html import strip_tags
+import html
+
+
 from accounts.models import Usuario
 from django.conf import settings
-from plans.models import Plan, UserSubscription
+from plans.models import Plan
+from payments.models import UserSubscription
 from django.utils import timezone
 from datetime import timedelta
 import uuid
@@ -19,11 +23,12 @@ class RegisterSerializer(serializers.ModelSerializer):
     confirm_password = serializers.CharField(write_only=True, required=True)
     plan_uid = serializers.UUIDField(
         write_only=True, required=False)  # Usar UID em vez de ID
+    captcha = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = Usuario
         fields = ['uid', 'email', 'cpf', 'name', 'password',
-                  'confirm_password', 'date_joined', 'plan_uid', 'avatar']
+                  'confirm_password', 'date_joined', 'plan_uid', 'avatar', 'captcha']
         read_only_fields = ['date_joined']
 
     def validate(self, data):
@@ -45,6 +50,11 @@ class RegisterSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"plan_uid": "Plano não encontrado."})
 
+        # Valida o captcha se necessário
+        config = Configuration.objects.first()
+        if config and config.recaptchar_enable and not data.get('captcha'):
+            raise serializers.ValidationError(
+                {'captcha': 'Este campo é obrigatório.'})
         return data
 
     def create(self, validated_data):
@@ -58,13 +68,25 @@ class RegisterSerializer(serializers.ModelSerializer):
         if avatar:
             user.avatar = avatar
             user.save()
-        return user
 
-        # Se o usuário escolheu um plano, cria a assinatura
+        config = Configuration.objects.first()
+        if config and config.require_email_confirmation:
+            user.is_active = False
+            user.save()
+
+        else:
+            user.is_active = True
+            user.save()
+
         if plan_uid:
             plan = Plan.objects.get(uid=plan_uid)
-            UserSubscription.objects.create(user=user, plan=plan, start_date=timezone.now(
-            ), end_date=timezone.now() + timedelta(days=30), is_active=True)
+            UserSubscription.objects.create(
+                user=user,
+                plan=plan,
+                start_date=timezone.now(),
+                end_date=timezone.now() + timedelta(days=30),
+                is_active=True
+            )
 
         return user
 
@@ -280,7 +302,7 @@ class UserSubscriptionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserSubscription
-        fields = ['plan', 'start_date', 'end_date', 'is_active']
+        fields = ['plan', 'start_date', 'expiration', 'is_active']
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -290,6 +312,27 @@ class UserProfileSerializer(serializers.ModelSerializer):
         model = Usuario
         fields = ['uid', 'name', 'email', 'cpf',
                   'avatar', 'date_joined', 'active_plan', 'profit']
+
+    def validate_name(self, value):
+
+        try:
+            value.encode('latin-1')
+        except UnicodeEncodeError:
+            raise serializers.ValidationError(
+                "O campo só pode conter caracteres ASCII.")
+
+        if html.unescape(strip_tags(value)) != value:
+            raise serializers.ValidationError(
+                "O campo não pode conter tags HTML.")
+
+        if len(value) < 5:
+            raise serializers.ValidationError(
+                "O campo deve ter pelo menos 5 caracteres.")
+        if len(value) > 100:
+            raise serializers.ValidationError(
+                "O campo não pode exceder 100 caracteres.")
+
+        return value
 
     def validate(self, data):
         """
@@ -326,7 +369,7 @@ class UpdateUserPlanSerializer(serializers.Serializer):
 
         # Criar nova assinatura
         UserSubscription.objects.create(user=instance, plan=plan, start_date=timezone.now(
-        ), end_date=timezone.now() + timedelta(days=30), is_active=True)
+        ), expiration=timezone.now() + timedelta(days=30), is_active=True)
 
         # Atualizar o tipo de conta do usuário
         instance.account_type = plan

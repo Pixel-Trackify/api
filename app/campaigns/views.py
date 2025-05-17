@@ -1,23 +1,21 @@
 from rest_framework import viewsets, status, filters
-from django.utils.timezone import now
 from rest_framework.decorators import action
-from rest_framework.views import APIView
+from rest_framework import serializers
+import re
+from django.utils.html import strip_tags
+import html
+from datetime import datetime, timedelta
 from rest_framework.response import Response
-from rest_framework.exceptions import PermissionDenied
-from django.shortcuts import get_object_or_404
+from rest_framework.exceptions import PermissionDenied, ValidationError, NotFound
 from django.db import transaction
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from .models import Campaign, FinanceLogs
-from integrations.models import Integration
-from .serializers import CampaignSerializer, CampaignViewSerializer
-from user_agents import parse
-from integrations.campaign_utils import recalculate_campaigns
-from .finance_log_utils import update_finance_logs
+from rest_framework.permissions import IsAuthenticated
+from .models import Campaign
+from .serializers import CampaignSerializer
 from django.conf import settings
 import logging
 from .schema import schemas
-from decimal import Decimal
-import os
+
+
 from django.urls import reverse
 
 logger = logging.getLogger('django')
@@ -25,13 +23,60 @@ logger = logging.getLogger('django')
 
 @schemas['campaign_view_set']
 class CampaignViewSet(viewsets.ModelViewSet):
-    queryset = Campaign.objects.all()
+    queryset = Campaign.objects.filter(deleted=False)
     serializer_class = CampaignSerializer
     permission_classes = [IsAuthenticated]
     lookup_field = 'uid'
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
     ordering_fields = ['title', 'created_at']
-    search_fields = ['title', 'created_at']
+    search_fields = ['title', 'description', 'method', 'created_at']
+
+    def filter_queryset(self, queryset):
+        """
+        Sobrescreve o método filter_queryset para validar os parâmetros de busca.
+        """
+        queryset = super().filter_queryset(queryset)
+
+        # Validação do parâmetro de busca
+        search_param = self.request.query_params.get('search', None)
+        if search_param:
+            try:
+                search_param.encode('latin-1')
+            except UnicodeEncodeError:
+                raise ValidationError(
+                    {"search": "O parâmetro de busca contém caracteres inválidos."})
+
+            if html.unescape(strip_tags(search_param)) != search_param:
+                raise ValidationError(
+                    {"search": "O parâmetro de busca contém caracteres inválidos."})
+
+        # Filtros de intervalo de datas
+        start_date = self.request.query_params.get('start', None)
+        end_date = self.request.query_params.get('end', None)
+
+        try:
+
+            if not start_date and not end_date:
+                end_date = datetime.now().date()
+                start_date = end_date - timedelta(days=30)
+
+            elif start_date and not end_date:
+                start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+                end_date = start_date
+
+            elif start_date and end_date:
+                start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+                end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+
+            queryset = queryset.filter(
+                created_at__date__gte=start_date, created_at__date__lte=end_date)
+
+        except ValueError:
+
+            raise ValidationError(
+                {"detail": "Os parâmetros de data devem estar no formato YYYY-MM-DD."})
+
+        return queryset
 
     def get_queryset(self):
         """Retorna as campanhas do usuário autenticado"""
@@ -42,12 +87,17 @@ class CampaignViewSet(viewsets.ModelViewSet):
         Sobrescreve o método list para adicionar uma mensagem de erro
         caso nenhum dado seja encontrado na busca.
         """
-        queryset = self.filter_queryset(self.get_queryset())
-
-        # Verifica se o queryset está vazio
-        if not queryset.exists():
+        try:
+            queryset = self.filter_queryset(self.get_queryset())
+            # Verifica se o queryset está vazio
+            if not queryset.exists():
+                return Response(
+                    {"count": 0, "detail": "Nenhuma campanha encontrada com os critérios de busca.", "results": []}
+                )
+        except Exception as e:
             return Response(
-                {"total": 0, "detail": "Nenhuma campanha encontrada com os critérios de busca.", "results": []}
+                {"count": 0, "results": [],
+                    "detail": "O parâmetro de busca contém caracteres inválidos."},
             )
 
         # Caso contrário, retorna os resultados normalmente
@@ -86,9 +136,18 @@ class CampaignViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         """
         Permite deletar uma única campanha pela `uid` na URL.
+        Se o UID não existir, retorna mensagem personalizada.
         """
-        instance = self.get_object()
-        self.perform_destroy(instance)
+        uid = kwargs.get('uid')
+        try:
+            instance = self.get_queryset().get(uid=uid)
+        except Campaign.DoesNotExist:
+            return Response(
+                {"detail": 'Nenhuma campanha corresponde à consulta fornecida.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        instance.delete()
         return Response(
             {"message": "Campanha excluída com sucesso."},
             status=status.HTTP_200_OK
@@ -99,10 +158,12 @@ class CampaignViewSet(viewsets.ModelViewSet):
         Deleta a campanha pelo UUID se o usuário autenticado for o proprietário.
         """
         if instance.user != self.request.user:
-            raise PermissionDenied(
-                "Você não tem permissão para deletar esta campanha."
-            )
-        instance.delete()
+            raise PermissionDenied("Não foi possível deletar esta campanha.")
+        if getattr(instance, "in_use", False):
+            raise ValidationError(
+                "Não é possível excluir uma campanha que está em uso.")
+        instance.deleted = True
+        instance.save()
 
     @action(detail=False, methods=['post'], url_path='delete-multiple')
     def delete_multiple(self, request):
@@ -116,7 +177,6 @@ class CampaignViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Busca as campanhas correspondentes ao usuário autenticado
         instances = self.get_queryset().filter(uid__in=uids)
         not_found_uids = set(
             uids) - set(instances.values_list('uid', flat=True))
@@ -127,20 +187,30 @@ class CampaignViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # Usa uma transação para garantir consistência
+        in_use = []
+        for campaign in instances:
+            if getattr(campaign, "in_use", False):
+                in_use.append(str(campaign.uid))
+        if in_use:
+            return Response(
+                {
+                    "error": "Não é possível excluir campanhas em uso.",
+                    "in_use": in_use
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         with transaction.atomic():
-            # Atualiza o campo `in_use` das integrações associadas às campanhas
             for campaign in instances:
                 for integration in campaign.integrations.all():
                     integration.in_use = False
                     integration.save()
-            deleted_count = instances.delete()[0]
+            deleted_count = instances.count()
+            instances.update(deleted=True)
 
-        # Retorna uma resposta detalhada
         return Response(
             {
                 "message": f"{deleted_count} campanha(s) excluída(s) com sucesso.",
-                # Lista de UUIDs não encontrados
                 "not_found": list(not_found_uids)
             },
             status=status.HTTP_200_OK

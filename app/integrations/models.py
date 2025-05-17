@@ -11,7 +11,7 @@ class Integration(models.Model):
     uid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='integrations')
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=100)
     gateway = models.CharField(max_length=255, choices=[
         ('zeroone', 'ZeroOne'),
         ('ghostspay', 'GhostsPay'),
@@ -27,16 +27,29 @@ class Integration(models.Model):
 
 
     ])
-    in_use = models.BooleanField(default=False) 
+    in_use = models.BooleanField(default=False)
     deleted = models.BooleanField(default=False)
+    objects = models.Manager()
+    active_objects = models.Manager()
     status = models.CharField(max_length=10, choices=[(
         'active', 'Active'), ('inactive', 'Inactive')], default='active')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(null=True, blank=True)
 
+    def delete(self, *args, **kwargs):
+        """Sobrescreve o método delete para realizar soft delete."""
+        self.deleted = True
+        self.save()
+
     def save(self, *args, **kwargs):
-        if self.pk:
+        """
+        Atualiza o campo 'updated_at' e garante que o status seja 'inactive'
+        se a integração estiver marcada como deletada.
+        """
+        if self.pk:  # Verifica se o objeto já existe no banco
             self.updated_at = timezone.now()
+            if self.deleted:
+                self.status = 'inactive'
         super().save(*args, **kwargs)
 
     def __str__(self):

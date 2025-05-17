@@ -1,6 +1,20 @@
 from rest_framework import serializers
 from accounts.models import Usuario
 from campaigns.models import FinanceLogs
+from custom_admin.models import Configuration
+
+
+class ConfigurationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Configuration
+        exclude = ['id']
+
+
+class CaptchaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Configuration
+        fields = ['recaptchar_enable',
+                  'recaptchar_site_key', 'recaptchar_secret_key']
 
 
 class UsuarioSerializer(serializers.ModelSerializer):

@@ -82,6 +82,45 @@ Este comando irá gerar certificados SSL para o domínio `api.onetracking.io` e 
 - Selecione o arquivo postman_collection.json do projeto.
 - Clique no botão "Import".
 
+
+## Tarefas Automáticas: Expiração e Lembrete de Assinaturas
+
+O sistema possui comandos automáticos para:
+
+- **Expirar assinaturas vencidas:** Desativa assinaturas cujo campo `expiration` já passou, marcando-as como `is_active=False` e `status='expired'`.
+- **Enviar lembretes de pagamento:** Envia e-mails para usuários cujas assinaturas estão próximas do vencimento, conforme o intervalo configurado em `days_to_reminder`. O envio é controlado para evitar duplicidade.
+
+### Como executar manualmente
+
+```sh
+python manage.py expire_subscriptions
+python manage.py send_payment_reminders
+```
+
+### Como agendar no cron (Linux)
+
+Para rodar os comandos automaticamente todos os dias à meia-noite e ao meio-dia, adicione ao seu crontab (`crontab -e`):
+
+```
+0 0,12 * * * /caminho/para/seu/venv/bin/python /caminho/para/seu/projeto/manage.py expire_subscriptions >> /caminho/para/seu/cron_expire.log 2>&1
+0 0,12 * * * /caminho/para/seu/venv/bin/python /caminho/para/seu/projeto/manage.py send_payment_reminders >> /caminho/para/seu/cron_reminder.log 2>&1
+```
+
+> **Dica:** Ajuste os caminhos conforme o local do seu projeto e virtualenv.
+
+### Logs
+
+A saída dos comandos será registrada nos arquivos de log definidos (`cron_expire.log` e `cron_reminder.log`).  
+Você pode visualizar os logs com:
+
+```sh
+tail -n 50 /caminho/para/seu/cron_expire.log
+tail -n 50 /caminho/para/seu/cron_reminder.log
+```
+
+---
+
+Essas tarefas garantem que assinaturas sejam expiradas automaticamente e que os usuários recebam lembretes antes do vencimento, melhorando a experiência e reduzindo inadimplência.
 ## Endpoints da API
 
 Desenvolvimento: 

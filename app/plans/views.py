@@ -3,8 +3,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import generics, filters
 from rest_framework import status
-from .models import Plan, UserSubscription
-from .serializers import PlanSerializer, UserSubscriptionSerializer
+from .models import Plan
+from .serializers import PlanSerializer
 from .schema import plan_viewset_schema, multiple_delete_schema
 
 from .permissions import IsAdminUserOrReadOnly
@@ -45,13 +45,3 @@ class PlanViewSet(viewsets.ModelViewSet):
         )
 
 
-class UserSubscriptionCreateView(generics.CreateAPIView):
-    """Endpoint para criação de assinaturas (requer autenticação JWT)"""
-    queryset = UserSubscription.objects.all()
-    serializer_class = UserSubscriptionSerializer
-    # Apenas usuários autenticados
-    permission_classes = [permissions.IsAuthenticated]
-
-    def perform_create(self, serializer):
-        """Vincula automaticamente o usuário logado à assinatura"""
-        serializer.save(user=self.request.user)

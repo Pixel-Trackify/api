@@ -1,8 +1,10 @@
 from rest_framework import serializers
 from .models import Integration, Transaction, IntegrationRequest
-from django.urls import reverse
 from django.conf import settings
 import logging
+from django.utils.html import strip_tags
+import html
+
 
 logger = logging.getLogger('django')
 
@@ -17,6 +19,27 @@ class IntegrationSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'uid', 'user', 'deleted',
                             'status', 'created_at', 'updated_at']
 
+    def validate_name(self, value):
+        try:
+            value.encode('latin-1')
+        except UnicodeEncodeError:
+            raise serializers.ValidationError(
+                "O campo só pode conter caracteres ASCII.")
+
+        if html.unescape(strip_tags(value)) != value:
+            raise serializers.ValidationError(
+                "O campo não pode conter tags HTML.")
+
+        if len(value) < 5:
+            raise serializers.ValidationError(
+                "O campo deve ter pelo menos 5 caracteres.")
+
+        if len(value) > 100:
+            raise serializers.ValidationError(
+                "O campo não pode exceder 100 caracteres.")
+
+        return value
+
     def validate_gateway(self, value):
         """
         Valida o campo `gateway` para aceitar tanto o `id` quanto o `name` dos `choices`.
@@ -27,10 +50,6 @@ class IntegrationSerializer(serializers.ModelSerializer):
         gateway_mapping.update(
             # Adiciona id -> id
             {choice[0]: choice[0] for choice in valid_gateways})
-
-        # Log para depuração
-        logger.debug(f"Valor recebido para gateway: {value}")
-        logger.debug(f"Gateways válidos: {gateway_mapping}")
 
         if value not in gateway_mapping:
             raise serializers.ValidationError(

@@ -43,6 +43,24 @@ schemas = {
                     type=OpenApiTypes.STR,
                     location=OpenApiParameter.QUERY,
                 ),
+                OpenApiParameter(
+                    name="search",
+                    description="Busca campanhas pelo título ou data de criação. Aceita apenas caracteres alfanuméricos e alguns caracteres especiais.",
+                    required=False,
+                    type=OpenApiTypes.STR,
+                ),
+                OpenApiParameter(
+                    name="start",
+                    description="Data inicial no formato YYYY-MM-DD. Filtra campanhas criadas a partir desta data.",
+                    required=False,
+                    type=OpenApiTypes.DATE,
+                ),
+                OpenApiParameter(
+                    name="end",
+                    description="Data final no formato YYYY-MM-DD. Filtra campanhas criadas até esta data.",
+                    required=False,
+                    type=OpenApiTypes.DATE,
+                ),
             ],
             responses={
                 200: {

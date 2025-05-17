@@ -1,13 +1,14 @@
 from django.urls import path
-from .views import CreatePaymentView, PaymentStatusView, PaymentWebhookView, PaymentStatusCheckView, TransactionStatusView
+from . import views
 
 urlpatterns = [
-    path('payment/', CreatePaymentView.as_view(), name='create_payment'),
-    path('payment/<uuid:uid>/', PaymentStatusView.as_view(), name='payment_status'),
-    path('payment/status/<uuid:uid>/',
-         PaymentStatusCheckView.as_view(), name='payment_status_check'),
-    path('webhook/firebanking/', PaymentWebhookView.as_view(),
-         name='payment_webhook'),
-    path('transactions/<uuid:id>/', TransactionStatusView.as_view(),
-         name='transaction_status'),
+    path('payments/', views.PaymentCreateView.as_view(),
+         name='payments'),
+    path('payments/change/<uuid:uid>/', views.PaymentChangePlanView.as_view(),
+         name='payment-change-plan'),
+    path('payments/<uuid:uid>/status/',
+         views.PaymentStatusView.as_view(), name='payment-status'),
+    path('webhook/zeroone/',
+         views.PaymentWebhookView.as_view(), name='payment-webhook'),
+
 ]

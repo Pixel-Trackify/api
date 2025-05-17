@@ -6,11 +6,16 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.decorators import action
 from campaigns.models import Campaign
+from datetime import datetime, timedelta
 from .services import get_financial_data
 from .models import KwaiCampaign
 from .serializers import KwaiSerializer, CampaignSerializer
 from .models import Kwai, KwaiCampaign
 from django.db import transaction
+from rest_framework.exceptions import ValidationError
+from django.utils.html import strip_tags
+import html
+import re
 import logging
 import uuid
 from .schema import (
@@ -30,10 +35,7 @@ logger = logging.getLogger('django')
 
 
 class KwaiViewSet(ModelViewSet):
-    """
-    ViewSet para gerenciar contas Kwai.
-    """
-    queryset = Kwai.objects.all()
+    queryset = Kwai.objects.filter(deleted=False)
     serializer_class = KwaiSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [SearchFilter, OrderingFilter]
@@ -43,25 +45,42 @@ class KwaiViewSet(ModelViewSet):
     lookup_field = 'uid'
     http_method_names = ['get', 'post', 'put', 'delete']
 
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+
+        search_param = self.request.query_params.get('search', None)
+
+        if search_param:
+            try:
+                search_param.encode('latin-1')
+            except UnicodeEncodeError:
+                raise ValidationError(
+                    {"search": "O parâmetro de busca contém caracteres inválidos."})
+
+            if html.unescape(strip_tags(search_param)) != search_param:
+                raise ValidationError(
+                    {"search": "O parâmetro de busca contém caracteres inválidos."})
+
+        return queryset
+
     @kwai_list_view_get_schema
     def list(self, request, *args, **kwargs):
-        """
-        Lista todas as contas Kwai.
-        """
+        try:
+            queryset = self.filter_queryset(self.get_queryset())
+            if not queryset.exists():
+                return Response(
+                    {"count": 0, "detail": "Nenhuma campanha encontrada com os critérios de busca.", "results": []}
+                )
+        except Exception as e:
+            return Response(
+                {"count": 0, "results": [],
+                    "detail": "O parâmetro de busca contém caracteres inválidos."},
+            )
+            
         return super().list(request, *args, **kwargs)
 
     @kwai_create_view_post_schema
     def create(self, request, *args, **kwargs):
-        """
-        Cria uma nova conta Kwai.
-        """
-        campaigns = request.data.get('campaigns', None)
-        if not campaigns:
-            return Response(
-                {"error": "O campo 'campaigns' é obrigatório e não pode estar vazio."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
         serializer = self.get_serializer(
             data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
@@ -70,15 +89,12 @@ class KwaiViewSet(ModelViewSet):
 
     @kwai_get_view_schema
     def retrieve(self, request, uid=None, *args, **kwargs):
-        """
-        Retorna os detalhes de uma conta Kwai específica.
-        """
         try:
-            uuid.UUID(uid)  
+            uuid.UUID(uid)
         except (ValueError, TypeError):
             return Response({"error": "UID inválido."}, status=status.HTTP_400_BAD_REQUEST)
 
-        kwai = self.get_queryset().filter(uid=uid).first()
+        kwai = self.get_queryset().filter(uid=uid, user=request.user, deleted=False).first()
         if not kwai:
             return Response({"error": "Conta Kwai não encontrada."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -87,17 +103,28 @@ class KwaiViewSet(ModelViewSet):
 
     @kwai_put_view_schema
     def update(self, request, uid=None, *args, **kwargs):
-        """
-        Atualiza os dados de uma conta Kwai específica, incluindo campanhas associadas.
-        """
         try:
-            uuid.UUID(uid)  
+            uuid.UUID(uid)
         except (ValueError, TypeError):
             return Response({"error": "UID inválido."}, status=status.HTTP_400_BAD_REQUEST)
 
-        kwai = self.get_queryset().filter(uid=uid).first()
+        kwai = self.get_queryset().filter(uid=uid, user=request.user, deleted=False).first()
         if not kwai:
             return Response({"error": "Conta Kwai não encontrada."}, status=status.HTTP_404_NOT_FOUND)
+
+        if not request.data:
+            return Response({
+                "name": [
+                    "Este campo é obrigatório."
+                ],
+                "campaigns": [
+                    "Este campo é obrigatório."
+                ]
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = self.get_serializer(kwai, data=request.data, partial=True)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         name = request.data.get('name', None)
         if name:
@@ -115,7 +142,8 @@ class KwaiViewSet(ModelViewSet):
             # Validar e associar campanhas
             campaign_uids = [campaign.get('uid')
                              for campaign in campaigns_data]
-            campaigns = Campaign.objects.filter(uid__in=campaign_uids)
+            campaigns = Campaign.objects.filter(
+                uid__in=campaign_uids, deleted=False)
 
             if len(campaigns) != len(campaign_uids):
                 return Response(
@@ -138,34 +166,35 @@ class KwaiViewSet(ModelViewSet):
 
     @kwai_delete_view_schema
     def destroy(self, request, uid=None, *args, **kwargs):
-        """
-        Exclui uma conta Kwai específica.
-        """
         try:
-            uuid.UUID(uid)  # Valida se o 'uid' é um UUID válido
+            uuid.UUID(uid)
         except (ValueError, TypeError):
             return Response({"error": "UID inválido."}, status=status.HTTP_400_BAD_REQUEST)
 
-        kwai = self.get_queryset().filter(uid=uid).first()
+        kwai = self.get_queryset().filter(uid=uid, deleted=False).first()
         if not kwai:
             return Response({"error": "Conta Kwai não encontrada."}, status=status.HTTP_404_NOT_FOUND)
 
+        # Verifica se o usuário autenticado é o proprietário da conta Kwai
+        if kwai.user != request.user:
+            return Response(
+                {"error": "Você não tem permissão para excluir esta conta Kwai."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
         with transaction.atomic():
             KwaiCampaign.objects.filter(kwai=kwai).delete()
-            kwai.delete()
+            kwai.deleted = True
+            kwai.save()
 
         return Response({"message": "Conta Kwai excluída com sucesso."}, status=status.HTTP_200_OK)
 
     @kwai_multiple_delete_schema
     @action(detail=False, methods=['post'], url_path='delete-multiple')
     def delete_multiple(self, request):
-        """
-        Permite que administradores excluam múltiplas contas Kwai de uma vez.
-        - Recebe uma lista de UIDs no corpo da requisição.
-        """
-        if not request.user.is_superuser:
+        if not request.user:
             return Response(
-                {"error": "Apenas administradores podem excluir contas."},
+                {"error": "Nenhum Usuário encontrado."},
                 status=status.HTTP_403_FORBIDDEN
             )
 
@@ -185,15 +214,15 @@ class KwaiViewSet(ModelViewSet):
                     invalid_uids.append(uid)
                     continue
 
-                kwai = Kwai.objects.filter(uid=uid).first()
+                kwai = Kwai.objects.filter(uid=uid, user=request.user, deleted=False).first()
                 if kwai:
                     kwai_campaigns = KwaiCampaign.objects.filter(kwai=kwai)
                     for kwai_campaign in kwai_campaigns:
                         campaign = kwai_campaign.campaign
                         campaign.in_use = False
                         campaign.save()
-
-                    kwai.delete()
+                    kwai.deleted = True
+                    kwai.save()
                 else:
                     invalid_uids.append(uid)
 
@@ -219,7 +248,7 @@ class CampaignsNotInUseView(APIView):
     @campaigns_not_in_use_view_get_schema
     def get(self, request):
         try:
-            campaigns = Campaign.objects.filter(in_use=False)
+            campaigns = Campaign.objects.filter(in_use=False, deleted=False)
 
             valid_campaigns = []
             for campaign in campaigns:
@@ -241,5 +270,31 @@ class Dashboard_campaigns(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        data = get_financial_data(user=request.user)
+
+        start_date = request.query_params.get('start', None)
+        end_date = request.query_params.get('end', None)
+
+        try:
+
+            if not start_date and not end_date:
+                end_date = datetime.now().date()
+                start_date = end_date - timedelta(days=30)
+
+            elif start_date and not end_date:
+                start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+                # Inclui o dia inteiro no filtro
+                end_date = start_date + timedelta(days=1)
+
+            elif start_date and end_date:
+                start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+                end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+
+        except ValueError:
+
+            raise ValidationError(
+                {"detail": "Os parâmetros de data devem estar no formato YYYY-MM-DD."})
+
+        # Obtém os dados financeiros filtrados pelo intervalo de datas
+        data = get_financial_data(
+            user=request.user, start_date=start_date, end_date=end_date)
         return Response(data, status=status.HTTP_200_OK)
