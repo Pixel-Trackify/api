@@ -12,7 +12,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('plans', '0006_delete_usersubscription'),
+        ('plans', '0001_initial'),
     ]
 
     operations = [
