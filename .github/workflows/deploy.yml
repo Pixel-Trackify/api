@@ -82,6 +82,6 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             cd ${{ secrets.SSH_TARGET }}
+            find app/ -type d -name migrations -exec rm -rf {} +
             sudo docker compose build --no-cache django-command-runner
-            sudo docker compose run --rm django-command-runner python manage.py makemigrations
             sudo docker compose run --rm django-command-runner python manage.py migrate
