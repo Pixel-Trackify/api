@@ -24,6 +24,9 @@ class Migration(migrations.Migration):
                 ('index', models.CharField(db_index=True, max_length=255)),
                 ('date', models.DateField(auto_now_add=True)),
             ],
+            options={
+                'db_table': 'subscription_notification_send',
+            },
         ),
         migrations.CreateModel(
             name='UserSubscription',
@@ -67,5 +70,8 @@ class Migration(migrations.Migration):
                 ('subscription', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE,
                  related_name='payments', to='payments.usersubscription')),
             ],
+            options={
+                'db_table': 'subscription_payment',
+            },
         ),
     ]
