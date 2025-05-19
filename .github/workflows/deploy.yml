@@ -58,18 +58,18 @@ jobs:
             cd ${{ secrets.SSH_TARGET }}
             
             echo "🔄 Criando nova imagem sem derrubar tudo..."
-            docker compose run --rm 
-            docker compose build app
+            sudo docker compose run --rm 
+            sudo docker compose build app
   
             echo "🚀 Reiniciando containers um por um..."
             for container in $(docker ps --format "{{.Names}}" | grep app); do
               echo "🔄 Reiniciando $container"
-              docker restart $container
+              sudo docker restart $container
               sleep 5
             done
             
             echo "🧹 Limpando imagens antigas..."
-            docker image prune -f
+            sudo docker image prune -f
 
             echo "✅ Deploy concluído!"
 
@@ -82,6 +82,6 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             cd ${{ secrets.SSH_TARGET }}
-            docker compose build --no-cache django-command-runner
-            docker compose run --rm django-command-runner python manage.py makemigrations
-            docker compose run --rm django-command-runner python manage.py migrate
+            sudo docker compose build --no-cache django-command-runner
+            sudo docker compose run --rm django-command-runner python manage.py makemigrations
+            sudo docker compose run --rm django-command-runner python manage.py migrate
