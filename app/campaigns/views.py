@@ -147,6 +147,12 @@ class CampaignViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+        if getattr(instance, "in_use", False):
+            return Response(
+                {"error": "Não é possível excluir uma campanha que está em uso."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         instance.delete()
         return Response(
             {"message": "Campanha excluída com sucesso."},
