@@ -228,3 +228,57 @@ payment_webhook_schema = {
         ),
     },
 }
+
+
+subscription_info_schema = {
+    "summary": "Informações da assinatura do usuário",
+    "description": "Retorna informações detalhadas sobre a assinatura, pagamentos em aberto, histórico de pagamentos e planos disponíveis para o usuário autenticado.",
+    "responses": {
+        200: OpenApiResponse(
+            response=OpenApiTypes.OBJECT,
+            examples=[
+                OpenApiExample(
+                    'Exemplo de resposta',
+                    value={
+                        "plan": {
+                            "uid": "60a65e44-11d6-4fa9-8f55-3daffe065873",
+                            "name": "PRO",
+                            "price": 499.29,
+                            "status": "active",
+                            "method": "PIX",
+                            "duration": "days",
+                            "duration_value": "14",
+                            "expiration": "2025-04-25 14:32:10",
+                        },
+                        "payments_opened": [
+                            {
+                                "uid": "60a65e44-11d6-4fa9-8f55-3daffe065873",
+                                "amount": 499.29,
+                                "date": "2025-05-25 14:32:10"
+                            }
+                        ],
+                        "payments_historic": [
+                            {
+                                "uid": "60a65e44-11d6-4fa9-8f55-3daffe065873",
+                                "amount": 499.29,
+                                "status": "paid",
+                                "data": "2025-04-25 14:32:10"
+                            }
+                        ],
+                        "plans": [
+                            {
+                                "uid": "60a65e44-11d6-4fa9-8f55-3daffe065873",
+                                "amount": 499.29,
+                                "name": "PRO",
+                                "duration": "days",
+                                "duration_value": "14",
+                            }
+                        ]
+                    },
+                    response_only=True
+                )
+            ]
+        )
+    },
+    "tags": ["Assinatura e Pagamentos"]
+}
