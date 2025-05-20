@@ -12,11 +12,11 @@ logger = logging.getLogger('django')
 
 
 class ZeroOneGateway(PaymentGatewayBase):
-    def generate_payment(self, user, plan, payment_method):
+    def generate_payment(self, user, plan, payment_method, idempotency_key=None):
         """
         Compatível com o seletor dinâmico de gateways.
         """
-        return self.create_subscription_and_payment(user, plan, payment_method)
+        return self.create_subscription_and_payment(user, plan, payment_method, idempotency_key)
 
     def generate_pix_payment(self, payload):
         config = Configuration.objects.first()
@@ -39,7 +39,7 @@ class ZeroOneGateway(PaymentGatewayBase):
             raise Exception(
                 f"Erro ao comunicar com o gateway ZeroOne: {str(e)}")
 
-    def create_subscription_and_payment(self, user, plan, payment_method):
+    def create_subscription_and_payment(self, user, plan, payment_method, idempotency_key=None):
         subscription = UserSubscription.objects.create(
             user=user,
             plan=plan,
@@ -64,8 +64,10 @@ class ZeroOneGateway(PaymentGatewayBase):
         }
 
         gateway_response = self.generate_pix_payment(payload)
-        raw_key = f"{user.pk}-{plan.uid}-{payment_method}-{uuid.uuid4()}"
-        idempotency_key = hashlib.sha256(raw_key.encode()).hexdigest()[:100]
+        if not idempotency_key:
+            raw_key = f"{user.pk}-{plan.uid}-{payment_method}-{uuid.uuid4()}"
+            idempotency_key = hashlib.sha256(
+                raw_key.encode()).hexdigest()[:100]
 
         payment = SubscriptionPayment.objects.create(
             uid=uuid.uuid4(),
