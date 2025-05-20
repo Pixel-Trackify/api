@@ -14,9 +14,9 @@ class IntegrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Integration
-        fields = ['id', 'uid', 'user', 'name', 'gateway',
+        fields = ['uid', 'user', 'name', 'gateway',
                   'deleted', 'status', 'created_at', 'updated_at', 'webhook_url', 'in_use']
-        read_only_fields = ['id', 'uid', 'user', 'deleted',
+        read_only_fields = ['uid', 'user',
                             'status', 'created_at', 'updated_at']
 
     def validate_name(self, value):
