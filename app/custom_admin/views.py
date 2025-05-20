@@ -225,6 +225,8 @@ class AdminDashboardViewSet(ViewSet):
         ).annotate(
             value=Count('uid')  # Conta as assinaturas por data
         ).order_by('date')
+        
+        return stats
 
     def fill_missing_days(self, users, start_date, end_date):
         """Preenche os dias ausentes no intervalo de datas com valores 0."""

@@ -24,11 +24,13 @@ class CustomTokenVerifyView(TokenVerifyView):
             user = User.objects.get(uid=user_uid)
 
             # Obter o profit do usuário
-            user_profit = user.profit
-
+            fup = user_profit = user.profit
+            if user_profit < 0:
+                fup = 0
+                
             # Determinar a regra da meta com base no range de faturamento
             goal_rule = Goal.objects.filter(
-                min__lte=user_profit, max__gte=user_profit).first()
+                min__lte=fup, max__gte=user_profit).first()
 
             # Construir o objeto goals com min e max
             goals_data = {
