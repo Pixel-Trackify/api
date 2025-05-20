@@ -130,9 +130,13 @@ class KwaiSerializer(serializers.ModelSerializer):
         campaigns_data = validated_data.pop('campaigns', None)
 
         if campaigns_data:
-            KwaiCampaign.objects.filter(kwai=instance).delete()
-
+            current_campaigns = set(
+                Campaign.objects.filter(
+                    kwai_campaigns__kwai=instance, deleted=False)
+            )
+            new_campaigns = set()
             campaigns = []
+
             for campaign_data in campaigns_data:
                 uid = campaign_data.get('uid')
 
@@ -144,17 +148,24 @@ class KwaiSerializer(serializers.ModelSerializer):
                     )
 
                 try:
-                    # Só permite campanhas não deletadas
                     campaign = Campaign.objects.get(uid=uid, deleted=False)
-                    if campaign.in_use and campaign not in instance.campaigns.filter(deleted=False):
+                    if campaign.in_use and campaign not in current_campaigns:
                         raise serializers.ValidationError(
                             {"campaigns": f"A campanha '{campaign.uid}' já está em uso."}
                         )
                     campaigns.append(campaign)
+                    new_campaigns.add(campaign)
                 except Campaign.DoesNotExist:
                     raise serializers.ValidationError(
                         {"campaigns": f"A campanha com UID '{uid}' não existe ou está deletada."}
                     )
+
+            removed_campaigns = current_campaigns - new_campaigns
+            for campaign in removed_campaigns:
+                campaign.in_use = False
+                campaign.save()
+
+            KwaiCampaign.objects.filter(kwai=instance).delete()
 
             for campaign in campaigns:
                 campaign.in_use = True

@@ -76,7 +76,7 @@ class KwaiViewSet(ModelViewSet):
                 {"count": 0, "results": [],
                     "detail": "O parâmetro de busca contém caracteres inválidos."},
             )
-            
+
         return super().list(request, *args, **kwargs)
 
     @kwai_create_view_post_schema
@@ -139,7 +139,6 @@ class KwaiViewSet(ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # Validar e associar campanhas
             campaign_uids = [campaign.get('uid')
                              for campaign in campaigns_data]
             campaigns = Campaign.objects.filter(
@@ -151,13 +150,23 @@ class KwaiViewSet(ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # Atualizar o campo 'in_use' das campanhas
-            with transaction.atomic():
-                KwaiCampaign.objects.filter(kwai=kwai).delete()
-                for campaign in campaigns:
-                    campaign.in_use = True
-                    campaign.save()
-                    KwaiCampaign.objects.create(kwai=kwai, campaign=campaign)
+        with transaction.atomic():
+            current_campaigns = set(Campaign.objects.filter(
+                kwai_campaigns__kwai=kwai, deleted=False))
+            new_campaigns = set(campaigns)
+
+            removed_campaigns = current_campaigns - new_campaigns
+
+            for campaign in removed_campaigns:
+                campaign.in_use = False
+                campaign.save()
+
+            KwaiCampaign.objects.filter(kwai=kwai).delete()
+
+            for campaign in campaigns:
+                campaign.in_use = True
+                campaign.save()
+                KwaiCampaign.objects.create(kwai=kwai, campaign=campaign)
 
         kwai.save()
 
@@ -181,7 +190,7 @@ class KwaiViewSet(ModelViewSet):
                 {"error": "Você não tem permissão para excluir esta conta Kwai."},
                 status=status.HTTP_403_FORBIDDEN
             )
-            
+
         with transaction.atomic():
             KwaiCampaign.objects.filter(kwai=kwai).delete()
             kwai.deleted = True
@@ -214,7 +223,8 @@ class KwaiViewSet(ModelViewSet):
                     invalid_uids.append(uid)
                     continue
 
-                kwai = Kwai.objects.filter(uid=uid, user=request.user, deleted=False).first()
+                kwai = Kwai.objects.filter(
+                    uid=uid, user=request.user, deleted=False).first()
                 if kwai:
                     kwai_campaigns = KwaiCampaign.objects.filter(kwai=kwai)
                     for kwai_campaign in kwai_campaigns:
