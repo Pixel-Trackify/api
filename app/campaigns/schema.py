@@ -347,7 +347,10 @@ schemas = {
                                     "value": 000.0,
                                     "date": "2025-04-02"
                                 },
-                            ]
+                            ],
+                            "view_webhook_url": "https://webhook.onetracking.io/6a04adb4-ea41-4eb8-8a47-e0160921506f/?action=view",
+                            "click_webhook_url": "https://webhook.onetracking.io/6a04adb4-ea41-4eb8-8a47-e0160921506f/?action=click",
+
                         }
 
 
