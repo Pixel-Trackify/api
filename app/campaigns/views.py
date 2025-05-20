@@ -133,6 +133,26 @@ class CampaignViewSet(viewsets.ModelViewSet):
 
         return response
 
+    def retrieve(self, request, *args, **kwargs):
+        """Adiciona os links do webhook na resposta do detalhe da campanha"""
+        response = super().retrieve(request, *args, **kwargs)
+
+        # Recuperar a campanha detalhada
+        campaign = Campaign.objects.get(uid=response.data['uid'])
+
+        # Usar o domínio configurado no .env
+        base_webhook_url = settings.WEBHOOK_BASE_URL
+
+        # Construir as URLs do webhook
+        view_webhook_url = f"{base_webhook_url}{campaign.uid}/?action=view"
+        click_webhook_url = f"{base_webhook_url}{campaign.uid}/?action=click"
+
+        # Adicionar as URLs do webhook na resposta
+        response.data['view_webhook_url'] = view_webhook_url
+        response.data['click_webhook_url'] = click_webhook_url
+
+        return response
+
     def destroy(self, request, *args, **kwargs):
         """
         Permite deletar uma única campanha pela `uid` na URL.
