@@ -37,7 +37,7 @@ class CampaignSerializer(serializers.ModelSerializer):
         fields = [
             'uid', 'integrations', 'user', 'source', 'title', 'description', 'CPM', 'CPC', 'CPV', 'method',
             'total_approved', 'total_pending', 'amount_approved', 'amount_pending', 'total_abandoned', 'amount_abandoned', 'total_canceled', 'amount_canceled', 'total_refunded', 'amount_refunded', 'total_rejected', 'amount_rejected', 'total_chargeback', 'amount_chargeback',
-            'total_ads', 'profit', 'ROI', 'total_views', 'total_clicks', 'in_use', 'deleted',
+            'total_ads', 'profit', 'ROI', 'total_views', 'total_clicks', 'in_use',
             'created_at', 'updated_at', 'stats', 'overviews'
         ]
         read_only_fields = ['id', 'uid', 'user', 'created_at', 'updated_at']
