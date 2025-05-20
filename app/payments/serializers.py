@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from plans.models import Plan
-from .models import SubscriptionPayment
+from .models import SubscriptionPayment, UserSubscription
 
 
 class PaymentSerializer(serializers.Serializer):
@@ -46,3 +46,49 @@ class PaymentSerializer(serializers.Serializer):
         ]
 
         return data
+
+
+class PlanInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Plan
+        fields = ["uid", "name", "price", "duration", "duration_value"]
+
+
+class SubscriptionPlanSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(source="plan.name")
+    price = serializers.FloatField(source="plan.price")
+    duration = serializers.CharField(source="plan.duration")
+    duration_value = serializers.CharField(source="plan.duration_value")
+    uid = serializers.UUIDField(source="plan.uid")
+    method = serializers.SerializerMethodField()
+    expiration = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S")
+
+    class Meta:
+        model = UserSubscription
+        fields = ["uid", "name", "price", "status", "method",
+                  "duration", "duration_value", "expiration"]
+
+    def get_method(self, obj):
+        last_payment = SubscriptionPayment.objects.filter(
+            subscription=obj).order_by('-created_at').first()
+        return last_payment.payment_method if last_payment else None
+
+
+class PaymentOpenedSerializer(serializers.ModelSerializer):
+    date = serializers.DateTimeField(
+        source="created_at", format="%Y-%m-%d %H:%M:%S")
+    amount = serializers.FloatField(source="price")
+
+    class Meta:
+        model = SubscriptionPayment
+        fields = ["uid", "amount", "date"]
+
+
+class PaymentHistoricSerializer(serializers.ModelSerializer):
+    data = serializers.DateTimeField(
+        source="created_at", format="%Y-%m-%d %H:%M:%S")
+    amount = serializers.FloatField(source="price")
+
+    class Meta:
+        model = SubscriptionPayment
+        fields = ["uid", "amount", "status", "data"]
