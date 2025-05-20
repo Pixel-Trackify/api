@@ -27,7 +27,7 @@ class CustomTokenVerifyView(TokenVerifyView):
 
             # Determinar a regra da meta com base no range de faturamento
             if user.profit <= 0:
-                goal_rule = Goal.objects.filter(min=0).order_by('-max').first()
+                goal_rule = Goal.objects.order_by('min').first()
             else:
                 goal_rule = Goal.objects.filter(min__lte=user_profit, max__gte=user_profit).first()
 
