@@ -1,33 +1,24 @@
-
 from rest_framework.views import APIView
 from rest_framework import viewsets, status, filters
-from rest_framework.exceptions import NotFound
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import RegisterSerializer, LoginSerializer, UserUpdateSerializer, UpdateUserPlanSerializer, UserProfileSerializer, ChangePasswordSerializer, UserSubscriptionSerializer, PlanSerializer, MultipleDeleteSerializer, AdminUserUpdateSerializer
-from rest_framework.filters import SearchFilter, OrderingFilter
+from .serializers import RegisterSerializer, LoginSerializer, UpdateUserPlanSerializer, UserProfileSerializer, ChangePasswordSerializer, UserSubscriptionSerializer, PlanSerializer, MultipleDeleteSerializer, AdminUserUpdateSerializer
 from rest_framework.decorators import action
-from django_filters.rest_framework import DjangoFilterBackend
 from django.utils.crypto import get_random_string
 from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
-from rest_framework.exceptions import NotFound
-from rest_framework import generics
 import logging
 from .models import Usuario, LoginLog
-from plans.models import Plan
 from payments.models import UserSubscription
 from rest_framework_simplejwt.tokens import RefreshToken
-from .filters import UsuarioFilter
 import user_agents
 import uuid
 from django.utils import timezone
 from django.conf import settings
 from .permissions import IsAdminUserForList
-from project.pagination import DefaultPagination
 import os
 import boto3
 from datetime import timedelta
@@ -372,48 +363,6 @@ class LogoutView(APIView):
                 {"error": "Ocorreu um erro durante o logout."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
-
-@update_user_plan_view_schema
-class UpdateUserPlanView(APIView):
-    """
-    Endpoint para atualizar o plano do usuário autenticado.
-    """
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, *args, **kwargs):
-        serializer = UpdateUserPlanSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.update(request.user, serializer.validated_data)
-        return Response({"message": "Plano atualizado com sucesso."}, status=status.HTTP_200_OK)
-
-
-@user_plan_view_schema
-class UserPlanView(APIView):
-    """Retorna o plano do usuário autenticado"""
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        subscription = request.user.subscriptions.filter(
-            is_active=True).first()
-        if not subscription:
-            return Response({"message": "Nenhum plano ativo encontrado."}, status=404)
-
-        plan_data = PlanSerializer(subscription.plan).data
-        return Response(plan_data)
-
-
-@user_subscription_history_view_schema
-class UserSubscriptionHistoryView(APIView):
-    """
-    Retorna o histórico de assinaturas do usuário autenticado.
-    """
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        subscriptions = UserSubscription.objects.filter(user=request.user)
-        serializer = UserSubscriptionSerializer(subscriptions, many=True)
-        return Response(serializer.data)
 
 
 @upload_avatar_view_schema

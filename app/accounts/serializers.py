@@ -7,8 +7,6 @@ from django.core.exceptions import ValidationError
 from rest_framework import serializers
 from django.utils.html import strip_tags
 import html
-
-
 from accounts.models import Usuario
 from django.conf import settings
 from plans.models import Plan
@@ -290,21 +288,6 @@ class LoginSerializer(serializers.Serializer):
         return attrs
 
 
-class PlanSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Plan
-        fields = ['id', 'uid', 'name', 'description',
-                  'price', 'duration', 'duration_value']
-
-
-class UserSubscriptionSerializer(serializers.ModelSerializer):
-    plan = PlanSerializer()
-
-    class Meta:
-        model = UserSubscription
-        fields = ['plan', 'start_date', 'expiration', 'is_active']
-
-
 class UserProfileSerializer(serializers.ModelSerializer):
     active_plan = serializers.SerializerMethodField()
 
@@ -344,38 +327,6 @@ class UserProfileSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({"cpf": "CPF inválido."})
 
         return data
-
-    def get_active_plan(self, obj):
-        active_subscription = obj.subscriptions.filter(is_active=True).first()
-        if active_subscription:
-            return PlanSerializer(active_subscription.plan).data
-        return None
-
-
-class UpdateUserPlanSerializer(serializers.Serializer):
-    plan_uid = serializers.UUIDField(write_only=True)
-
-    def validate_plan_uid(self, plan_uid):
-        if not Plan.objects.filter(uid=plan_uid).exists():
-            raise serializers.ValidationError("Plano não encontrado.")
-        return plan_uid
-
-    def update(self, instance, validated_data):
-        plan = Plan.objects.get(uid=validated_data['plan_uid'])
-
-        # Desativar a assinatura anterior
-        UserSubscription.objects.filter(
-            user=instance, is_active=True).update(is_active=False)
-
-        # Criar nova assinatura
-        UserSubscription.objects.create(user=instance, plan=plan, start_date=timezone.now(
-        ), expiration=timezone.now() + timedelta(days=30), is_active=True)
-
-        # Atualizar o tipo de conta do usuário
-        instance.account_type = plan
-        instance.save()
-
-        return instance
 
 
 class ChangePasswordSerializer(serializers.Serializer):
