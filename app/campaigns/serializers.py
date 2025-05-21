@@ -4,7 +4,7 @@ from integrations.models import IntegrationRequest
 from .models import Campaign, CampaignView, Integration
 import logging
 from django.db.models import Sum
-from datetime import timedelta
+from datetime import datetime, timedelta
 from django.utils import timezone
 from django.utils.html import strip_tags
 import html
@@ -129,16 +129,106 @@ class CampaignSerializer(serializers.ModelSerializer):
             "BOLETO": stats.get('boleto_amount', 0) or 0,
         }
 
+    def get_filtered_finance_logs(self, obj):
+        """
+        Retorna os FinanceLogs filtrados pelo intervalo de datas da request.
+        """
+        request = self.context.get('request')
+        today = timezone.now().date()
+        start_date = None
+        end_date = None
+
+        if request:
+            start_date = request.query_params.get('start', None)
+            end_date = request.query_params.get('end', None)
+
+        try:
+            if not start_date and not end_date:
+                end_date = today
+                start_date = end_date - timedelta(days=30)
+            elif start_date and not end_date:
+                start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+                end_date = start_date + timedelta(days=1)
+            elif start_date and end_date:
+                start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+                end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        except ValueError:
+            raise serializers.ValidationError(
+                {"detail": "Os parâmetros de data devem estar no formato YYYY-MM-DD."})
+
+        return obj.finance_logs.filter(date__gte=start_date, date__lte=end_date)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        finance_logs = self.get_filtered_finance_logs(instance)
+
+        # Agregações filtradas
+        data['total_approved'] = finance_logs.aggregate(total=Sum('total_approved'))['total'] or 0
+        data['total_pending'] = finance_logs.aggregate(total=Sum('total_pending'))['total'] or 0
+        data['amount_approved'] = str(finance_logs.aggregate(total=Sum('amount_approved'))['total'] or 0)
+        data['amount_pending'] = str(finance_logs.aggregate(total=Sum('amount_pending'))['total'] or 0)
+        data['total_abandoned'] = finance_logs.aggregate(total=Sum('total_abandoned'))['total'] or 0
+        data['amount_abandoned'] = str(finance_logs.aggregate(total=Sum('amount_abandoned'))['total'] or 0)
+        #data['total_canceled'] = finance_logs.aggregate(total=Sum('total_canceled'))['total'] or 0
+        #data['amount_canceled'] = str(finance_logs.aggregate(total=Sum('amount_canceled'))['total'] or 0)
+        data['total_refunded'] = finance_logs.aggregate(total=Sum('total_refunded'))['total'] or 0
+        data['amount_refunded'] = str(finance_logs.aggregate(total=Sum('amount_refunded'))['total'] or 0)
+        data['total_rejected'] = finance_logs.aggregate(total=Sum('total_rejected'))['total'] or 0
+        data['amount_rejected'] = str(finance_logs.aggregate(total=Sum('amount_rejected'))['total'] or 0)
+        data['total_chargeback'] = finance_logs.aggregate(total=Sum('total_chargeback'))['total'] or 0
+        data['amount_chargeback'] = str(finance_logs.aggregate(total=Sum('amount_chargeback'))['total'] or 0)
+        data['total_ads'] = str(finance_logs.aggregate(total=Sum('total_ads'))['total'] or 0)
+        data['total_views'] = finance_logs.aggregate(total=Sum('total_views'))['total'] or 0
+        data['total_clicks'] = finance_logs.aggregate(total=Sum('total_clicks'))['total'] or 0
+
+        # Calcula profit e ROI filtrados
+        amount_approved = finance_logs.aggregate(total=Sum('amount_approved'))['total'] or 0
+        total_ads = finance_logs.aggregate(total=Sum('total_ads'))['total'] or 0
+        profit = float(amount_approved) - float(total_ads)
+        data['profit'] = f"{profit:.5f}"
+        data['ROI'] = f"{(profit / float(total_ads) * 100) if total_ads else 0:.5f}"
+
+        # Stats filtrados
+        data['stats'] = {
+            "CREDIT_CARD": finance_logs.aggregate(total=Sum('credit_card_amount'))['total'] or 0,
+            "DEBIT_CARD": finance_logs.aggregate(total=Sum('debit_card_amount'))['total'] or 0,
+            "PIX": finance_logs.aggregate(total=Sum('pix_amount'))['total'] or 0,
+            "BOLETO": finance_logs.aggregate(total=Sum('boleto_amount'))['total'] or 0,
+        }
+
+        return data
+    
     def get_overviews(self, obj):
         """
-        Obtém os dados de despesas (EXPENSE) e receitas (REVENUE) diretamente da tabela FinanceLogs.
+        Obtém os dados de despesas (EXPENSE) e receitas (REVENUE) diretamente da tabela FinanceLogs,
+        filtrando pelo intervalo de datas informado via query params (?start=YYYY-MM-DD&end=YYYY-MM-DD).
         """
+        request = self.context.get('request')
         today = timezone.now().date()
-        start_date = today - timedelta(days=30)
+        start_date = None
+        end_date = None
 
-        # Obtém os registros de FinanceLogs associados à campanha no intervalo de 30 dias
+        if request:
+            start_date = request.query_params.get('start', None)
+            end_date = request.query_params.get('end', None)
+
+        try:
+            if not start_date and not end_date:
+                end_date = today
+                start_date = end_date - timedelta(days=30)
+            elif start_date and not end_date:
+                start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+                end_date = start_date + timedelta(days=1)
+            elif start_date and end_date:
+                start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+                end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        except ValueError:
+            raise serializers.ValidationError(
+                {"detail": "Os parâmetros de data devem estar no formato YYYY-MM-DD."})
+
+        # Obtém os registros de FinanceLogs associados à campanha no intervalo filtrado
         finance_logs = obj.finance_logs.filter(
-            date__gte=start_date, date__lte=today)
+            date__gte=start_date, date__lte=end_date)
 
         # Inicializa a lista de overviews
         overviews = []
