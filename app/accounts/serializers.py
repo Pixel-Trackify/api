@@ -9,10 +9,8 @@ from django.utils.html import strip_tags
 import html
 from accounts.models import Usuario
 from django.conf import settings
-from payments.models import UserSubscription
-from django.utils import timezone
-from datetime import timedelta
-import uuid
+
+
 
 
 class RegisterSerializer(serializers.ModelSerializer):
