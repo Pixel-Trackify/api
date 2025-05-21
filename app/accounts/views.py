@@ -5,14 +5,13 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import RegisterSerializer, LoginSerializer, UpdateUserPlanSerializer, UserProfileSerializer, ChangePasswordSerializer, UserSubscriptionSerializer, PlanSerializer, MultipleDeleteSerializer, AdminUserUpdateSerializer
+from .serializers import RegisterSerializer, LoginSerializer, UserProfileSerializer, ChangePasswordSerializer, MultipleDeleteSerializer, AdminUserUpdateSerializer
 from rest_framework.decorators import action
 from django.utils.crypto import get_random_string
 from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
 import logging
 from .models import Usuario, LoginLog
-from payments.models import UserSubscription
 from rest_framework_simplejwt.tokens import RefreshToken
 import user_agents
 import uuid
@@ -27,7 +26,7 @@ from botocore.exceptions import NoCredentialsError, PartialCredentialsError, Bot
 from .schema import (
     register_view_schema, user_profile_view_schema, change_password_view_schema,
     login_view_schema, logout_view_schema,
-    update_user_plan_view_schema, user_plan_view_schema, user_subscription_history_view_schema, upload_avatar_view_schema, create_user_view_schema, multiple_delete_schema
+    upload_avatar_view_schema, create_user_view_schema, multiple_delete_schema
 )
 
 logger = logging.getLogger('django')

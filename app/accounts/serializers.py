@@ -9,7 +9,6 @@ from django.utils.html import strip_tags
 import html
 from accounts.models import Usuario
 from django.conf import settings
-from plans.models import Plan
 from payments.models import UserSubscription
 from django.utils import timezone
 from datetime import timedelta
@@ -19,14 +18,12 @@ import uuid
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     confirm_password = serializers.CharField(write_only=True, required=True)
-    plan_uid = serializers.UUIDField(
-        write_only=True, required=False)  # Usar UID em vez de ID
     captcha = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = Usuario
         fields = ['uid', 'email', 'cpf', 'name', 'password',
-                  'confirm_password', 'date_joined', 'plan_uid', 'avatar', 'captcha']
+                  'confirm_password', 'date_joined', 'avatar', 'captcha']
         read_only_fields = ['date_joined']
 
     def validate(self, data):
@@ -42,12 +39,6 @@ class RegisterSerializer(serializers.ModelSerializer):
         if cpf and not CPFValidator.validar_cpf(cpf):
             raise serializers.ValidationError({"cpf": "CPF inválido."})
 
-        # Valida se o plano existe, se fornecido
-        plan_uid = data.get('plan_uid')
-        if plan_uid and not Plan.objects.filter(uid=plan_uid).exists():
-            raise serializers.ValidationError(
-                {"plan_uid": "Plano não encontrado."})
-
         # Valida o captcha se necessário
         config = Configuration.objects.first()
         if config and config.recaptchar_enable and not data.get('captcha'):
@@ -58,8 +49,6 @@ class RegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         # Remove o campo extra antes de criar o usuário
         validated_data.pop('confirm_password')
-        # Obtém o UID do plano se fornecido
-        plan_uid = validated_data.pop('plan_uid', None)
 
         user = Usuario.objects.create_user(**validated_data)
         avatar = validated_data.pop('avatar', None)
@@ -75,16 +64,6 @@ class RegisterSerializer(serializers.ModelSerializer):
         else:
             user.is_active = True
             user.save()
-
-        if plan_uid:
-            plan = Plan.objects.get(uid=plan_uid)
-            UserSubscription.objects.create(
-                user=user,
-                plan=plan,
-                start_date=timezone.now(),
-                end_date=timezone.now() + timedelta(days=30),
-                is_active=True
-            )
 
         return user
 
@@ -289,12 +268,11 @@ class LoginSerializer(serializers.Serializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
-    active_plan = serializers.SerializerMethodField()
 
     class Meta:
         model = Usuario
         fields = ['uid', 'name', 'email', 'cpf',
-                  'avatar', 'date_joined', 'active_plan', 'profit']
+                  'avatar', 'date_joined', 'profit']
 
     def validate_name(self, value):
 

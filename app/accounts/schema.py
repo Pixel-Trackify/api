@@ -1,5 +1,5 @@
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample, OpenApiTypes
-from .serializers import RegisterSerializer, UserProfileSerializer, ChangePasswordSerializer, UserUpdateSerializer, UpdateUserPlanSerializer, PlanSerializer, UserSubscriptionSerializer, LoginSerializer, MultipleDeleteSerializer
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample
+from .serializers import RegisterSerializer, UserProfileSerializer, ChangePasswordSerializer, LoginSerializer, MultipleDeleteSerializer
 
 register_view_schema = extend_schema_view(
     post=extend_schema(
@@ -185,27 +185,6 @@ logout_view_schema = extend_schema_view(
     )
 )
 
-update_user_plan_view_schema = extend_schema_view(
-    post=extend_schema(
-        request=UpdateUserPlanSerializer,
-        responses={200: UpdateUserPlanSerializer},
-        description="Endpoint para atualizar o plano do usuário autenticado."
-    )
-)
-
-user_plan_view_schema = extend_schema_view(
-    get=extend_schema(
-        description="Endpoint para retornar o plano do usuário autenticado.",
-        responses={200: PlanSerializer}
-    )
-)
-
-user_subscription_history_view_schema = extend_schema_view(
-    get=extend_schema(
-        description="Endpoint para retornar o histórico de assinaturas do usuário autenticado.",
-        responses={200: UserSubscriptionSerializer(many=True)}
-    )
-)
 
 upload_avatar_view_schema = extend_schema_view(
     post=extend_schema(
