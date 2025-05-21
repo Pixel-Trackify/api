@@ -232,6 +232,3 @@ class KwaiAccountTests(APITestCase):
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
         self.assertIn("error", resp.data)
         self.assertEqual(resp.data["error"], "Conta Kwai não encontrada.")
-        
-    # falta edição usando uma campanha que antes eu exclui a integração associada a campanha
-    # falta o teste no caso cadastra 2 campanhas, ao editar remove uma delas, no endpoint de edição deve mostrar a campanha que ficou

@@ -192,7 +192,13 @@ class KwaiViewSet(ModelViewSet):
             )
 
         with transaction.atomic():
-            KwaiCampaign.objects.filter(kwai=kwai).delete()
+            kwai_campaigns = KwaiCampaign.objects.filter(kwai=kwai)
+            for kwai_campaign in kwai_campaigns:
+                campaign = kwai_campaign.campaign
+                campaign.in_use = False
+                campaign.save()
+                
+            kwai_campaigns.delete()
             kwai.deleted = True
             kwai.save()
 
@@ -258,7 +264,7 @@ class CampaignsNotInUseView(APIView):
     @campaigns_not_in_use_view_get_schema
     def get(self, request):
         try:
-            campaigns = Campaign.objects.filter(in_use=False, deleted=False)
+            campaigns = Campaign.objects.filter(in_use=False, deleted=False).order_by('-created_at')
 
             valid_campaigns = []
             for campaign in campaigns:
