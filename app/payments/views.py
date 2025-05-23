@@ -28,6 +28,56 @@ class PaymentCreateView(APIView):
 
     @extend_schema(**payment_create_schema)
     def post(self, request):
+        data = request.data
+        user = request.user
+
+        payment_uid = data.get('payment_uid')
+        if payment_uid:
+            # pagamento já existe, mas ainda não foi processado
+            try:
+                payment = SubscriptionPayment.objects.get(uid=payment_uid)
+            except SubscriptionPayment.DoesNotExist:
+                return Response({"error": "Pagamento não encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+            # Verifica se os campos são nulos 
+            if any([
+                payment.payment_method, payment.gateway,
+                payment.token, payment.gateway_response
+            ]):
+                return Response({"error": "Esse pagamento já foi processado ou está em processamento."}, status=status.HTTP_400_BAD_REQUEST)
+
+            plan = payment.subscription.plan if payment.subscription else None
+            if not plan:
+                return Response({"error": "Plano não encontrado para esse pagamento."}, status=status.HTTP_404_NOT_FOUND)
+
+            # processa o pagamento usando os dados do registro
+            try:
+                gateway_name = data.get('gateway')
+                payment_method = data.get('paymentMethod')
+                if not gateway_name or not payment_method:
+                    return Response({"error": "gateway e paymentMethod são obrigatórios."}, status=status.HTTP_400_BAD_REQUEST)
+                gateway = get_gateway(gateway_name)
+                payment.payment_method = payment_method
+                payment.gateway = gateway_name
+                gateway.generate_payment(
+                    user, plan, payment_method, idempotency_key=payment.idempotency, payment=payment
+                )
+                payment.save()
+            except Exception as e:
+                return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            return Response({
+                "message": "Pagamento criado com sucesso.",
+                "payment": {
+                    "uid": payment.uid,
+                    "status": payment.status,
+                    "price": payment.price,
+                    "payment_method": payment.payment_method,
+                    "gateway": payment.gateway,
+                    "gateway_response": payment.gateway_response
+                }
+            }, status=status.HTTP_201_CREATED)
+
         serializer = PaymentSerializer(
             data=request.data, context={'request': request})
         if not serializer.is_valid():
