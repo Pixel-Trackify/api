@@ -77,7 +77,8 @@ class KwaiSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         """
-        Personaliza a representação dos dados para incluir os dados financeiros da campanha.
+        Personaliza a representação dos dados para incluir os dados financeiros da campanha,
+        filtrando por intervalo de datas se fornecido na request.
         """
         representation = super().to_representation(instance)
 
@@ -87,8 +88,19 @@ class KwaiSerializer(serializers.ModelSerializer):
         representation["campaigns"] = CampaignSerializer(
             campaigns, many=True).data
 
-        # Obtém os dados financeiros agregados
-        financial_data = get_financial_data(kwai=instance)
+        # Obtém os parâmetros de data da request, se existirem
+        request = self.context.get('request')
+        start_date = request.query_params.get('start') if request else None
+        end_date = request.query_params.get('end') if request else None
+
+        if start_date and end_date < start_date:
+            raise serializers.ValidationError(
+                {"start": "A data de início não pode ser maior que a data de fim."}
+            )
+        
+        # Obtém os dados financeiros agregados filtrados por data
+        financial_data = get_financial_data(
+            kwai=instance, start_date=start_date, end_date=end_date)
 
         fields_to_remove = ['source', 'CPM', 'CPC', 'CPV', 'method']
         for field in fields_to_remove:
