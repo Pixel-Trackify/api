@@ -119,11 +119,13 @@ class KwaiAccountListingTests(APITestCase):
         self.assertEqual(len(response.data["results"]), 2)
         
         kwai_1 = response.data["results"][1]
+        self.assertIsNotNone(kwai_1.get("created_at"))
         self.assertIn("uid", kwai_1)
         self.assertEqual(kwai_1["name"], KWAI_ACCOUNT_NAME) 
 
         # Verifica os dados da segunda campanha
         kwai_2 = response.data["results"][0]
+        self.assertIsNotNone(kwai_2.get("created_at"))
         self.assertIn("uid", kwai_2)
         self.assertEqual(kwai_2["name"], "Segunda Conta Kwai")
         
@@ -136,6 +138,7 @@ class KwaiAccountListingTests(APITestCase):
         self.assertEqual(response.data["count"], 1)
         result = response.data["results"][0]
         self.assertEqual(result["name"], KWAI_ACCOUNT_NAME)
+        self.assertIsNotNone(result.get("created_at"))
         self.assertEqual(result["uid"], str(self.kwai_uid_1))
         self.assertEqual(str(result["campaigns"][0]['uid']), str(self.campaign_uid_1))
         
