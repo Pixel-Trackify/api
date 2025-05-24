@@ -9,6 +9,8 @@ router.register('admin-dashboard', views.AdminDashboardViewSet,
 urlpatterns = [
     path('configuration/', views.ConfigurationView.as_view(), name='configuration'),
     path('captcha/', views.CaptchaView.as_view(), name='captcha'),
+    path('subscription-report/',
+         views.AdminSubscriptionReportView.as_view()),
 ]
 
 
