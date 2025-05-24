@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import Kwai, KwaiCampaign
 from campaigns.models import FinanceLogs, Campaign
+from payments.models import UserSubscription
 import uuid
 from .services import get_financial_data
 from django.utils.html import strip_tags
@@ -21,7 +22,8 @@ class CampaignSerializer(serializers.ModelSerializer):
 
 
 class KwaiSerializer(serializers.ModelSerializer):
-
+    created_at = serializers.DateTimeField(read_only=True)
+    updated_at = serializers.DateTimeField(read_only=True)
     campaigns = serializers.ListField(
         child=serializers.DictField(
             child=serializers.UUIDField(
@@ -34,8 +36,29 @@ class KwaiSerializer(serializers.ModelSerializer):
     class Meta:
         model = Kwai
         fields = ['uid', 'name', 'user',
-                  'campaigns',  'created_at', 'updated_at']
+                  'campaigns',  'created_at', 'updated_at'
+                  ]
         read_only_fields = ['uid', 'user', 'created_at', 'updated_at']
+
+    def validate(self, attrs):
+        user = self.context['request'].user
+
+        # Validação de assinatura ativa
+        subscription = UserSubscription.objects.filter(
+            user=user, is_active=True).first()
+        if not subscription or not subscription.is_active:
+            raise serializers.ValidationError(
+                "Assinatura inativa. Não é possível cadastrar contas Kwai."
+            )
+
+        plan = subscription.plan
+        kwai_count = Kwai.objects.filter(user=user).count()
+        if kwai_count >= plan.kwai_limit:
+            raise serializers.ValidationError(
+                "Limite de contas Kwai atingido para seu plano."
+            )
+
+        return attrs
 
     def validate_name(self, value):
         try:
@@ -76,10 +99,6 @@ class KwaiSerializer(serializers.ModelSerializer):
         return CampaignSerializer(campaigns, many=True).data
 
     def to_representation(self, instance):
-        """
-        Personaliza a representação dos dados para incluir os dados financeiros da campanha,
-        filtrando por intervalo de datas se fornecido na request.
-        """
         representation = super().to_representation(instance)
 
         # Adiciona as campanhas associadas (apenas não deletadas)
@@ -97,12 +116,13 @@ class KwaiSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"start": "A data de início não pode ser maior que a data de fim."}
             )
-        
+
         # Obtém os dados financeiros agregados filtrados por data
         financial_data = get_financial_data(
             kwai=instance, start_date=start_date, end_date=end_date)
 
-        fields_to_remove = ['source', 'CPM', 'CPC', 'CPV', 'method']
+        fields_to_remove = ['source', 'CPM', 'CPC',
+                            'CPV', 'method', 'created_at', 'updated_at']
         for field in fields_to_remove:
             financial_data.pop(field, None)
 
@@ -111,7 +131,9 @@ class KwaiSerializer(serializers.ModelSerializer):
         return representation
 
     def create(self, validated_data):
+        user = self.context['request'].user
         campaigns_data = validated_data.pop('campaigns')
+
         # Validação: Verificar se todas as campanhas existem e não estão em uso
         campaigns = []
         for campaign_data in campaigns_data:
@@ -126,11 +148,15 @@ class KwaiSerializer(serializers.ModelSerializer):
             except Campaign.DoesNotExist:
                 raise serializers.ValidationError(
                     {"campaigns":
-                        f"A campanha com UID não existe."}
+                        f"A campanha com UID {campaign_data['uid']} não existe."}
                 )
 
-        kwai = Kwai.objects.create(**validated_data)
+        # Cria o objeto Kwai associando o usuário
+        validated_data.pop('user', None)  # Remove se existir
 
+        kwai = Kwai.objects.create(user=user, **validated_data)
+
+        # Associa as campanhas e marca como em uso
         for campaign in campaigns:
             campaign.in_use = True
             campaign.save()

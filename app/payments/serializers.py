@@ -60,7 +60,7 @@ class PlanInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Plan
         fields = ["uid", "name", "price",
-                  "duration", "duration_value", "features"]
+                  "duration", "duration_value", "features", "integration_limit", "campaign_limit", "kwai_limit"]
 
 
 class SubscriptionPlanSerializer(serializers.ModelSerializer):

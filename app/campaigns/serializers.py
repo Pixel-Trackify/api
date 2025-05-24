@@ -1,7 +1,6 @@
 from rest_framework import serializers
-from collections import Counter
-from integrations.models import IntegrationRequest
 from .models import Campaign, CampaignView, Integration
+from payments.models import UserSubscription
 import logging
 from django.db.models import Sum
 from datetime import datetime, timedelta
@@ -163,27 +162,44 @@ class CampaignSerializer(serializers.ModelSerializer):
         finance_logs = self.get_filtered_finance_logs(instance)
 
         # Agregações filtradas
-        data['total_approved'] = finance_logs.aggregate(total=Sum('total_approved'))['total'] or 0
-        data['total_pending'] = finance_logs.aggregate(total=Sum('total_pending'))['total'] or 0
-        data['amount_approved'] = str(finance_logs.aggregate(total=Sum('amount_approved'))['total'] or 0)
-        data['amount_pending'] = str(finance_logs.aggregate(total=Sum('amount_pending'))['total'] or 0)
-        data['total_abandoned'] = finance_logs.aggregate(total=Sum('total_abandoned'))['total'] or 0
-        data['amount_abandoned'] = str(finance_logs.aggregate(total=Sum('amount_abandoned'))['total'] or 0)
-        #data['total_canceled'] = finance_logs.aggregate(total=Sum('total_canceled'))['total'] or 0
-        #data['amount_canceled'] = str(finance_logs.aggregate(total=Sum('amount_canceled'))['total'] or 0)
-        data['total_refunded'] = finance_logs.aggregate(total=Sum('total_refunded'))['total'] or 0
-        data['amount_refunded'] = str(finance_logs.aggregate(total=Sum('amount_refunded'))['total'] or 0)
-        data['total_rejected'] = finance_logs.aggregate(total=Sum('total_rejected'))['total'] or 0
-        data['amount_rejected'] = str(finance_logs.aggregate(total=Sum('amount_rejected'))['total'] or 0)
-        data['total_chargeback'] = finance_logs.aggregate(total=Sum('total_chargeback'))['total'] or 0
-        data['amount_chargeback'] = str(finance_logs.aggregate(total=Sum('amount_chargeback'))['total'] or 0)
-        data['total_ads'] = str(finance_logs.aggregate(total=Sum('total_ads'))['total'] or 0)
-        data['total_views'] = finance_logs.aggregate(total=Sum('total_views'))['total'] or 0
-        data['total_clicks'] = finance_logs.aggregate(total=Sum('total_clicks'))['total'] or 0
+        data['total_approved'] = finance_logs.aggregate(
+            total=Sum('total_approved'))['total'] or 0
+        data['total_pending'] = finance_logs.aggregate(
+            total=Sum('total_pending'))['total'] or 0
+        data['amount_approved'] = str(finance_logs.aggregate(
+            total=Sum('amount_approved'))['total'] or 0)
+        data['amount_pending'] = str(finance_logs.aggregate(
+            total=Sum('amount_pending'))['total'] or 0)
+        data['total_abandoned'] = finance_logs.aggregate(
+            total=Sum('total_abandoned'))['total'] or 0
+        data['amount_abandoned'] = str(finance_logs.aggregate(
+            total=Sum('amount_abandoned'))['total'] or 0)
+        # data['total_canceled'] = finance_logs.aggregate(total=Sum('total_canceled'))['total'] or 0
+        # data['amount_canceled'] = str(finance_logs.aggregate(total=Sum('amount_canceled'))['total'] or 0)
+        data['total_refunded'] = finance_logs.aggregate(
+            total=Sum('total_refunded'))['total'] or 0
+        data['amount_refunded'] = str(finance_logs.aggregate(
+            total=Sum('amount_refunded'))['total'] or 0)
+        data['total_rejected'] = finance_logs.aggregate(
+            total=Sum('total_rejected'))['total'] or 0
+        data['amount_rejected'] = str(finance_logs.aggregate(
+            total=Sum('amount_rejected'))['total'] or 0)
+        data['total_chargeback'] = finance_logs.aggregate(
+            total=Sum('total_chargeback'))['total'] or 0
+        data['amount_chargeback'] = str(finance_logs.aggregate(
+            total=Sum('amount_chargeback'))['total'] or 0)
+        data['total_ads'] = str(finance_logs.aggregate(
+            total=Sum('total_ads'))['total'] or 0)
+        data['total_views'] = finance_logs.aggregate(
+            total=Sum('total_views'))['total'] or 0
+        data['total_clicks'] = finance_logs.aggregate(
+            total=Sum('total_clicks'))['total'] or 0
 
         # Calcula profit e ROI filtrados
-        amount_approved = finance_logs.aggregate(total=Sum('amount_approved'))['total'] or 0
-        total_ads = finance_logs.aggregate(total=Sum('total_ads'))['total'] or 0
+        amount_approved = finance_logs.aggregate(
+            total=Sum('amount_approved'))['total'] or 0
+        total_ads = finance_logs.aggregate(
+            total=Sum('total_ads'))['total'] or 0
         profit = float(amount_approved) - float(total_ads)
         data['profit'] = f"{profit:.5f}"
         data['ROI'] = f"{(profit / float(total_ads) * 100) if total_ads else 0:.5f}"
@@ -197,7 +213,7 @@ class CampaignSerializer(serializers.ModelSerializer):
         }
 
         return data
-    
+
     def get_overviews(self, obj):
         """
         Obtém os dados de despesas (EXPENSE) e receitas (REVENUE) diretamente da tabela FinanceLogs,
@@ -322,6 +338,25 @@ class CampaignSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
+        user = self.context['request'].user
+
+        # Validação de assinatura ativa
+        subscription = UserSubscription.objects.filter(
+            user=user, is_active=True).first()
+        if not subscription or not subscription.is_active:
+            raise serializers.ValidationError(
+                "Assinatura inativa. Não é possível cadastrar campanhas."
+            )
+
+        plan = subscription.plan
+        campaign_count = Campaign.objects.filter(
+            user=user, deleted=False).count()
+        if campaign_count >= plan.campaign_limit:
+            raise serializers.ValidationError(
+                "Limite de campanhas atingido para seu plano."
+            )
+
+        # Validação já existente
         integrations = attrs.get(
             'integrations') or self.initial_data.get('integrations')
         if not integrations:
@@ -339,6 +374,7 @@ class CampaignSerializer(serializers.ModelSerializer):
         if method == 'CPV' and (attrs.get('CPV') is None or attrs.get('CPV', 0) <= 0):
             raise serializers.ValidationError(
                 {"CPV": "Este campo é obrigatório e deve ser maior que zero."})
+
         return attrs
 
     def create(self, validated_data):
