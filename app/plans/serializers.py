@@ -17,8 +17,8 @@ class PlanSerializer(serializers.ModelSerializer):
         model = Plan
         fields = [
             'uid', 'name', 'price', 'duration', 'duration_value',
-            'is_current', 'description', 'created_at', 'features', 'features_response'
-        ]  # Incluímos 'features_response' aqui
+            'is_current', 'description', 'created_at', 'features', 'features_response', 'integration_limit', 'campaign_limit', 'kwai_limit'
+        ]  
         read_only_fields = ['uid', 'created_at']
 
     def get_features_response(self, instance):
