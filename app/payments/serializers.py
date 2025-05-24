@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from plans.models import Plan
+from plans.models import Plan, PlanFeature
 from .models import SubscriptionPayment, UserSubscription
 
 
@@ -48,10 +48,19 @@ class PaymentSerializer(serializers.Serializer):
         return data
 
 
+class PlanFeatureSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PlanFeature
+        fields = ["text"]
+
+
 class PlanInfoSerializer(serializers.ModelSerializer):
+    features = PlanFeatureSerializer(many=True, read_only=True)
+
     class Meta:
         model = Plan
-        fields = ["uid", "name", "price", "duration", "duration_value"]
+        fields = ["uid", "name", "price",
+                  "duration", "duration_value", "features"]
 
 
 class SubscriptionPlanSerializer(serializers.ModelSerializer):
