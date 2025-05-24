@@ -27,15 +27,13 @@ class IntegrationSerializer(serializers.ModelSerializer):
         subscription = UserSubscription.objects.filter(
             user=user, is_active=True).first()
         if not subscription or not subscription.is_active:
-            raise serializers.ValidationError(
-                "Assinatura inativa. Não é possível cadastrar integrações.")
+            raise serializers.ValidationError({"error":"Assinatura inativa. Não é possível cadastrar integrações."})
 
         plan = subscription.plan
         integration_count = Integration.objects.filter(
             user=user, deleted=False).count()
         if integration_count >= plan.integration_limit:
-            raise serializers.ValidationError(
-                "Limite de integrações atingido para seu plano.")
+            raise serializers.ValidationError({"error": "Limite de integrações atingido para seu plano."})
 
         return data
 
