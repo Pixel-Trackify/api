@@ -13,7 +13,7 @@ from campaigns.models import FinanceLogs
 from .serializers import DashboardSerializer, UsuarioSerializer, ConfigurationSerializer, CaptchaSerializer
 from .models import Configuration
 from rest_framework.views import APIView
-from .schemas import admin_dashboard_schema, configuration_view_get_schema, configuration_view_post_schema, captcha_view_get_schema, captcha_view_post_schema
+from .schemas import admin_dashboard_schema, configuration_view_get_schema, configuration_view_post_schema, captcha_view_get_schema, captcha_view_post_schema, admin_subscription_report_schema
 from django.db import models
 import requests
 from django.urls import reverse
@@ -317,6 +317,7 @@ class AdminDashboardViewSet(ViewSet):
 class AdminSubscriptionReportView(APIView):
     permission_classes = [IsSuperUser]
 
+    @admin_subscription_report_schema
     def get(self, request):
         start = request.query_params.get('start')
         end = request.query_params.get('end')
