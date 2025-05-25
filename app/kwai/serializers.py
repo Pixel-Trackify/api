@@ -48,15 +48,13 @@ class KwaiSerializer(serializers.ModelSerializer):
             user=user, is_active=True).first()
         if not subscription or not subscription.is_active:
             raise serializers.ValidationError(
-                "Assinatura inativa. Não é possível cadastrar contas Kwai."
-            )
+                {"error": "Assinatura não ativa. Não é possível cadastrar contas Kwai."})
 
         plan = subscription.plan
         kwai_count = Kwai.objects.filter(user=user).count()
         if kwai_count >= plan.kwai_limit:
             raise serializers.ValidationError(
-                "Limite de contas Kwai atingido para seu plano."
-            )
+                "error: Você atingiu o limite de contas Kwai permitidas para o seu plano.")
 
         return attrs
 

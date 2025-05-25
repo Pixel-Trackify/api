@@ -345,16 +345,14 @@ class CampaignSerializer(serializers.ModelSerializer):
             user=user, is_active=True).first()
         if not subscription or not subscription.is_active:
             raise serializers.ValidationError(
-                "Assinatura inativa. Não é possível cadastrar campanhas."
-            )
+                {"error": "Assinatura não encontrada ou não está ativa."})
 
         plan = subscription.plan
         campaign_count = Campaign.objects.filter(
             user=user, deleted=False).count()
         if campaign_count >= plan.campaign_limit:
             raise serializers.ValidationError(
-                "Limite de campanhas atingido para seu plano."
-            )
+                {"error": "Limite de campanhas atingido."})
 
         # Validação já existente
         integrations = attrs.get(
