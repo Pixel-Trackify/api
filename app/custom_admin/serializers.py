@@ -13,8 +13,8 @@ class ConfigurationSerializer(serializers.ModelSerializer):
 class CaptchaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Configuration
-        fields = ['recaptchar_enable',
-                  'recaptchar_site_key', 'recaptchar_secret_key']
+        fields = [
+            'recaptchar_site_key']
 
 
 class UsuarioSerializer(serializers.ModelSerializer):
