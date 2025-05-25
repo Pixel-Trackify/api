@@ -39,7 +39,7 @@ class PaymentCreateView(APIView):
             except SubscriptionPayment.DoesNotExist:
                 return Response({"error": "Pagamento não encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
-            # Verifica se os campos são nulos 
+            # Verifica se os campos são nulos
             if any([
                 payment.payment_method, payment.gateway,
                 payment.token, payment.gateway_response
@@ -238,16 +238,19 @@ class SubscriptionInfoView(APIView):
 
         # Assinatura do usuário
         subscription = UserSubscription.objects.filter(
-            user=user).select_related('plan').order_by('-expiration').first()
+            user=user, status="active"
+        ).select_related('plan').order_by('-expiration').first()
         plan_data = SubscriptionPlanSerializer(
             subscription).data if subscription else {}
 
         # Pagamentos em aberto
-        payments_opened = SubscriptionPayment.objects.filter(
+        payment_opened = SubscriptionPayment.objects.filter(
             subscription__user=user, status='False'
-        ).order_by('-created_at')
-        payments_opened_list = PaymentOpenedSerializer(
-            payments_opened, many=True).data
+        ).order_by('-created_at').first()
+        payments_opened_list = (
+            [PaymentOpenedSerializer(
+                payment_opened).data] if payment_opened else []
+        )
 
         # Histórico de pagamentos pagos
         payments_historic = SubscriptionPayment.objects.filter(
