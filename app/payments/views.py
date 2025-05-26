@@ -15,6 +15,7 @@ import uuid
 import hashlib
 import requests
 import logging
+from django.conf import settings
 
 logger = logging.getLogger('django')
 
@@ -230,7 +231,7 @@ class PaymentWebhookView(APIView):
         zeroone_secret_key = zeroone_config.zeroone_secret_key
 
         # Consulta o status do pagamento na API ZeroOne
-        url = "https://pay.zeroonepay.com.br/api/v1/transaction.getPayment/"
+        url =  f"{settings.ZEROONE_API_URL}transaction.getPayment/"
         params = {"id": payment.token}
         headers = {"Authorization": zeroone_secret_key}
         response = requests.get(url, params=params, headers=headers)

@@ -31,7 +31,7 @@ class ZeroOneGateway(PaymentGatewayBase):
 
         try:
             response = requests.post(
-                settings.ZEROONE_API_URL, json=payload, headers=headers)
+                f"{settings.ZEROONE_API_URL}transaction.purchase", json=payload, headers=headers)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
