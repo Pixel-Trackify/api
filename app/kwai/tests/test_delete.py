@@ -3,7 +3,11 @@ from django.urls import reverse, NoReverseMatch
 from rest_framework import status
 from rest_framework.test import APITestCase
 from uuid import UUID
-
+from datetime import timedelta
+from django.utils import timezone
+from plans.models import Plan
+from payments.models import UserSubscription, SubscriptionPayment
+import uuid
 User = get_user_model()
 
 # Dados de exemplo para criação de usuário
@@ -43,7 +47,46 @@ class KwaiAccountDeleteTests(APITestCase):
             }
             reg_resp = self.client.post(self.register_url, user_payload, format="json")
             self.assertEqual(reg_resp.status_code, status.HTTP_201_CREATED)
+            # Adicionar uma assinatura para o usuário
+            user = User.objects.get(email=TEST_EMAIL)
+            user.subscription_active = True
+            user.subscription_expiration = timezone.now() + timedelta(days=30)
+            user.save()
+            
+            # Crie um plano de teste
+            self.plan = Plan.objects.create(
+                name="Plano Teste",
+                price=49.99,
+                duration="month",
+                duration_value=1,
+                is_current=True,
+                campaign_limit=5,
+                integration_limit=5,
+                kwai_limit=5,
+                description="Plano de teste para integração"
+            )
 
+            # Crie uma assinatura ativa para o usuário
+            subscription = UserSubscription.objects.create(
+                user=user,
+                plan=self.plan,
+                start_date=timezone.now(),
+                expiration=timezone.now() + timedelta(days=30),
+                is_active=True,
+                status="active"
+            )
+
+            # Crie um pagamento para a assinatura
+            SubscriptionPayment.objects.create(
+                uid=uuid.uuid4(),
+                idempotency=f"{user.pk}-{self.plan.uid}-PIX",
+                payment_method="PIX",
+                gateway="zeroone",
+                price=self.plan.price,
+                status=True,
+                subscription=subscription
+            )
+            
             # Autenticação
             auth_payload = {"identifier": TEST_EMAIL, "password": TEST_PASSWORD}
             auth_resp = self.client.post(self.login_url, auth_payload, format="json")
@@ -129,6 +172,32 @@ class KwaiAccountDeleteTests(APITestCase):
         }
         reg_resp = self.client.post(self.register_url, other_user_payload, format="json")
         self.assertEqual(reg_resp.status_code, status.HTTP_201_CREATED)
+        # Adicionar uma assinatura para o usuário
+        user = User.objects.get(email="seconduser@gmail.com")
+        user.subscription_active = True
+        user.subscription_expiration = timezone.now() + timedelta(days=30)
+        user.save()
+
+        # Crie uma assinatura ativa para o usuário
+        subscription = UserSubscription.objects.create(
+            user=user,
+            plan=self.plan,
+            start_date=timezone.now(),
+            expiration=timezone.now() + timedelta(days=30),
+            is_active=True,
+            status="active"
+        )
+
+        # Crie um pagamento para a assinatura
+        SubscriptionPayment.objects.create(
+            uid=uuid.uuid4(),
+            idempotency=f"{user.pk}-{self.plan.uid}-PIX",
+            payment_method="PIX",
+            gateway="zeroone",
+            price=self.plan.price,
+            status=True,
+            subscription=subscription
+        )
 
         # Autenticação do outro usuário
         auth_payload = {"identifier": "seconduser@gmail.com", "password": TEST_PASSWORD}
@@ -139,10 +208,10 @@ class KwaiAccountDeleteTests(APITestCase):
 
         # Tentativa de exclusão da conta Kwai do usuário original
         response = self.client.delete(self.delete_url)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertIn("error", response.data)
         self.assertEqual(
             response.data["error"],
-            "Você não tem permissão para excluir esta conta Kwai."
+            "Conta Kwai não encontrada."
         )
 
