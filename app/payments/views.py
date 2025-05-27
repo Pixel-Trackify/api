@@ -15,6 +15,7 @@ import uuid
 import hashlib
 import requests
 import logging
+import os
 from django.conf import settings
 
 logger = logging.getLogger('django')
@@ -273,24 +274,35 @@ class PaymentWebhookView(APIView):
         except SubscriptionPayment.DoesNotExist:
             return Response({"error": "Pagamento não encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
-        zeroone_config = Configuration.objects.first()
-        if not zeroone_config or not zeroone_config.zeroone_secret_key:
-            return Response({"error": "Chave de autorização ZeroOne não configurada."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        zeroone_secret_key = zeroone_config.zeroone_secret_key
+        # Verifica se está em produção, se não, o estado do pagamento vem no payload
+        if bool(int(os.getenv('DEBUG', 0))):
+            payment_status = data.get("status")
+            if not payment_status:
+                return Response({"error": "Status não informado no payload."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            payment_data = {
+                "status": payment_status,
+            }
+            
+        else:
+            zeroone_config = Configuration.objects.first()
+            if not zeroone_config or not zeroone_config.zeroone_secret_key:
+                return Response({"error": "Chave de autorização ZeroOne não configurada."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            zeroone_secret_key = zeroone_config.zeroone_secret_key
 
-        # Consulta o status do pagamento na API ZeroOne
-        url = f"{settings.ZEROONE_API_URL}transaction.getPayment/"
-        params = {"id": payment.token}
-        headers = {"Authorization": zeroone_secret_key}
-        response = requests.get(url, params=params, headers=headers)
-        if response.status_code != 200:
-            return Response({"error": "Erro ao consultar status na ZeroOne."}, status=status.HTTP_502_BAD_GATEWAY)
+            # Consulta o status do pagamento na API ZeroOne
+            url = f"{settings.ZEROONE_API_URL}transaction.getPayment/"
+            params = {"id": payment.token}
+            headers = {"Authorization": zeroone_secret_key}
+            response = requests.get(url, params=params, headers=headers)
+            if response.status_code != 200:
+                return Response({"error": "Erro ao consultar status na ZeroOne."}, status=status.HTTP_502_BAD_GATEWAY)
 
-        payment_data = response.json()
-        payment_status = payment_data.get("status")
+            payment_data = response.json()
+            payment_status = payment_data.get("status")
 
-        if not payment_status:
-            return Response({"error": "Resposta inválida da ZeroOne."}, status=status.HTTP_502_BAD_GATEWAY)
+            if not payment_status:
+                return Response({"error": "Resposta inválida da ZeroOne."}, status=status.HTTP_502_BAD_GATEWAY)
 
         # Atualiza o status do pagamento no sistema
         gateway_name = payment.gateway
