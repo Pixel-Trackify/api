@@ -183,6 +183,11 @@ class PaymentChangePlanView(APIView):
         except Plan.DoesNotExist:
             return Response({"error": "Plano não encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
+        # Exclui todos os pagamentos em aberto do usuário antes de criar o novo
+        SubscriptionPayment.objects.filter(
+            subscription__user=user, status=False
+        ).delete()
+
         try:
             gateway_name = data['gateway']
             gateway = get_gateway(gateway_name)
@@ -206,6 +211,46 @@ class PaymentChangePlanView(APIView):
         }, status=status.HTTP_201_CREATED)
 
 
+class SubscriptionInfoView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(**subscription_info_schema)
+    def get(self, request):
+        user = request.user
+
+        # Assinatura do usuário
+        subscription = UserSubscription.objects.filter(
+            user=user
+        ).select_related('plan').order_by('-expiration').first()
+        plan_data = SubscriptionPlanSerializer(
+            subscription).data if subscription else {}
+
+        # Pagamentos em aberto
+        payment_opened = SubscriptionPayment.objects.filter(
+            subscription__user=user, status=False
+        ).order_by('-created_at')
+        payments_opened_list = PaymentOpenedSerializer(
+            payment_opened, many=True).data
+
+        # Histórico de pagamentos pagos
+        payments_historic = SubscriptionPayment.objects.filter(
+            subscription__user=user, status=True
+        ).order_by('-created_at')
+        payments_historic_list = PaymentHistoricSerializer(
+            payments_historic, many=True).data
+
+        # Planos disponíveis
+        plans = Plan.objects.all()
+        plans_list = PlanInfoSerializer(plans, many=True).data
+
+        return Response({
+            "plan": plan_data,
+            "payments_opened": payments_opened_list,
+            "payments_historic": payments_historic_list,
+            "plans": plans_list
+        })
+
+
 class PaymentWebhookView(APIView):
     """
     Endpoint para processar notificações do gateway de pagamento.
@@ -218,20 +263,18 @@ class PaymentWebhookView(APIView):
         if not payment_id:
             return Response({"error": "Dados inválidos."}, status=status.HTTP_400_BAD_REQUEST)
 
-        
         try:
             payment = SubscriptionPayment.objects.get(token=payment_id)
         except SubscriptionPayment.DoesNotExist:
             return Response({"error": "Pagamento não encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
-        
         zeroone_config = Configuration.objects.first()
         if not zeroone_config or not zeroone_config.zeroone_secret_key:
             return Response({"error": "Chave de autorização ZeroOne não configurada."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         zeroone_secret_key = zeroone_config.zeroone_secret_key
 
         # Consulta o status do pagamento na API ZeroOne
-        url =  f"{settings.ZEROONE_API_URL}transaction.getPayment/"
+        url = f"{settings.ZEROONE_API_URL}transaction.getPayment/"
         params = {"id": payment.token}
         headers = {"Authorization": zeroone_secret_key}
         response = requests.get(url, params=params, headers=headers)
@@ -250,45 +293,3 @@ class PaymentWebhookView(APIView):
         gateway.update_payment_status(payment.uid, payment_status)
 
         return Response(payment_data, status=status.HTTP_200_OK)
-
-
-class SubscriptionInfoView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    @extend_schema(**subscription_info_schema)
-    def get(self, request):
-        user = request.user
-
-        # Assinatura do usuário
-        subscription = UserSubscription.objects.filter(
-            user=user, status="active"
-        ).select_related('plan').order_by('-expiration').first()
-        plan_data = SubscriptionPlanSerializer(
-            subscription).data if subscription else {}
-
-        # Pagamentos em aberto
-        payment_opened = SubscriptionPayment.objects.filter(
-            subscription__user=user, status='False'
-        ).order_by('-created_at').first()
-        payments_opened_list = (
-            [PaymentOpenedSerializer(
-                payment_opened).data] if payment_opened else []
-        )
-
-        # Histórico de pagamentos pagos
-        payments_historic = SubscriptionPayment.objects.filter(
-            subscription__user=user, status='True'
-        ).order_by('-created_at')
-        payments_historic_list = PaymentHistoricSerializer(
-            payments_historic, many=True).data
-
-        # Planos disponíveis
-        plans = Plan.objects.all()
-        plans_list = PlanInfoSerializer(plans, many=True).data
-
-        return Response({
-            "plan": plan_data,
-            "payments_opened": payments_opened_list,
-            "payments_historic": payments_historic_list,
-            "plans": plans_list
-        })
