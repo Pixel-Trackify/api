@@ -71,11 +71,14 @@ class SubscriptionPlanSerializer(serializers.ModelSerializer):
     uid = serializers.UUIDField(source="plan.uid")
     method = serializers.SerializerMethodField()
     expiration = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S")
+    integration_limit = serializers.IntegerField(source="plan.integration_limit", read_only=True)
+    campaign_limit = serializers.IntegerField(source="plan.campaign_limit", read_only=True)
+    kwai_limit = serializers.IntegerField(source="plan.kwai_limit", read_only=True)
 
     class Meta:
         model = UserSubscription
         fields = ["uid", "name", "price", "status", "method",
-                  "duration", "duration_value", "expiration"]
+                  "duration", "duration_value", "expiration", "integration_limit", "campaign_limit", "kwai_limit"]
 
     def get_method(self, obj):
         last_payment = SubscriptionPayment.objects.filter(
