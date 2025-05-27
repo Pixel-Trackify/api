@@ -37,33 +37,77 @@ class PaymentCreateView(APIView):
 
     @extend_schema(**payment_create_schema)
     def post(self, request):
-        serializer = PaymentSerializer(
-            data=request.data, context={'request': request})
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        data = serializer.validated_data
+        """
+        1) Verificar o tipo de pagamento (plan_uid, paymentMethod, gateway ou uid )
+            UID é da tabela subscription_payment (deve pertencer ao mesmo usuário da request), caso esse parametro seja passado, o plan_uid e paymentMethod não devem ser passados.
+            verificar se o usuário já gerou um pagamento e está em aberto no intervalo de 1 hora, se sim, retornar o pagamento existente.
+            se não existir, geralmente no cenário que gera o pagamento via cron, deve gerar o pagamento normalmente. 
+             
+             
+
+        2) Se não for passado o uid, deve validar os parametros plan_uid, paymentMethod e gateway.
+           Geralmente é usado para escolher um plano e gerar o pagamento. 
+           Segue a lógica como está atualmente, se houver uma assinatura seja ativa ou não vai remove-la, e vai editar os pagamentos existentes para subscription_id = NULL.
+           
+           Aqui tbm segue a mesma lógica de idempotência, se o usuário já tiver um pagamento em aberto no intervalo de 1 hora, deve retornar o pagamento existente.
+           Caso não exista, deve gerar o pagamento normalmente.
+        
+        """  
         user = request.user
+        uid = request.data.get('uid')
+        # Primeiro cenário, pode ser pagar uma fatura aberta ou gerar um novo pagamento ( Cenário quando o cron gera o pagamento ou quando o usuário fecha a tela do QR Code )
+        if uid:
+            logger.info(f"Usuário {user} solicitou pagamento com UID: {uid}")
+            try:
+               
+                payment = SubscriptionPayment.objects.get(uid=uid, subscription__user=user, status=False)
+            except SubscriptionPayment.DoesNotExist:
+                return Response({"error": "Pagamento não encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
-        try:
-            plan = Plan.objects.get(uid=data['plan_uid'])
-        except Plan.DoesNotExist:
-            return Response({"error": "Plano não encontrado."}, status=status.HTTP_404_NOT_FOUND)
-
-        # Checagem de idempotência via utilitário
-        existing_payment, is_recent = get_idempotent_payment(
-            user, plan, data['paymentMethod'])
-        if is_recent and existing_payment:
-            return Response({
-                "message": "Pagamento já processado recentemente.",
-                "payment": {
-                    "uid": existing_payment.uid,
-                    "status": existing_payment.status,
-                    "price": existing_payment.price,
-                    "payment_method": existing_payment.payment_method,
-                    "gateway": existing_payment.gateway,
-                    "gateway_response": existing_payment.gateway_response
-                }
-            }, status=status.HTTP_200_OK)
+            # Verifica se o pagamento está em aberto e dentro do intervalo de 1 hora
+            if (payment.gateway_response and payment.token and now() - payment.created_at) < timedelta(hours=1):
+                return Response({
+                    "message": "Pagamento criado com sucesso.",
+                    "payment": {
+                        "uid": payment.uid,
+                        "status": payment.status,
+                        "price": payment.price,
+                        "payment_method": payment.payment_method,
+                        "gateway": payment.gateway,
+                        "gateway_response": payment.gateway_response
+                    }
+                }, status=status.HTTP_200_OK) 
+            
+            plan = payment.subscription.plan if payment.subscription.plan else None
+            data = {
+                "paymentMethod": payment.payment_method if payment.payment_method else 'PIX',
+                "gateway": payment.gateway if payment.gateway else 'zeroone',
+            }
+        else:        
+           # try:
+           #     plan = Plan.objects.get(uid=data['plan_uid'])
+           # except Plan.DoesNotExist:
+           #     return Response({"error": "Plano não encontrado."}, status=status.HTTP_404_NOT_FOUND)
+            serializer = PaymentSerializer(
+                data=request.data, context={'request': request})
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            data = serializer.validated_data
+            plan = data['plan']
+            # Checagem de idempotência via utilitário
+            existing_payment, is_recent = get_idempotent_payment(user, plan, data['paymentMethod'])
+            if is_recent and existing_payment:
+                return Response({
+                    "message": "Pagamento criado com sucesso.",
+                    "payment": {
+                        "uid": existing_payment.uid,
+                        "status": existing_payment.status,
+                        "price": existing_payment.price,
+                        "payment_method": existing_payment.payment_method,
+                        "gateway": existing_payment.gateway,
+                        "gateway_response": existing_payment.gateway_response
+                    }
+                }, status=status.HTTP_200_OK)
 
         # Criação do pagamento
         try:
@@ -126,8 +170,13 @@ class PaymentChangePlanView(APIView):
 
         # Exclui assinatura atual do usuário
         SubscriptionPayment.objects.filter(
-            subscription__user=user
-            # Não exclui porque essa tabela é usada no relatório de pagamentos
+            subscription__user=user,
+            status=False
+        ).delete()
+        
+        SubscriptionPayment.objects.filter(
+            subscription__user=user,
+            status=True
         ).update(subscription=None)
 
         UserSubscription.objects.filter(

@@ -40,12 +40,20 @@ class ZeroOneGateway(PaymentGatewayBase):
                 f"Erro ao comunicar com o gateway ZeroOne: {str(e)}")
 
     def create_subscription_and_payment(self, user, plan, payment_method, idempotency_key=None):
-        subscription = UserSubscription.objects.create(
+        subscription, created = UserSubscription.objects.get_or_create(
             user=user,
-            plan=plan,
-            is_active=False
+            defaults={
+                "plan": plan,
+                "is_active": False
+            }
         )
-
+        
+        if not created:
+            # Atualiza a assinatura existente
+            subscription.plan = plan
+            subscription.is_active = False
+            subscription.save()
+            
         payload = {
             "name": user.name,
             "email": user.email,
@@ -69,16 +77,28 @@ class ZeroOneGateway(PaymentGatewayBase):
             idempotency_key = hashlib.sha256(
                 raw_key.encode()).hexdigest()[:100]
 
-        payment = SubscriptionPayment.objects.create(
-            uid=uuid.uuid4(),
-            idempotency=idempotency_key,
+        # Busca ou cria o pagamento
+        payment, created = SubscriptionPayment.objects.get_or_create(
+            subscription=subscription,
             payment_method=payment_method,
-            token=gateway_response.get('id', 'unknown'),
-            price=plan.price,
-            gateway_response=gateway_response,
             status=False,
-            subscription=subscription
+            defaults={
+                "uid": uuid.uuid4(),
+                "idempotency": idempotency_key,
+                "token": gateway_response.get('id', 'zeroone'),
+                "price": plan.price,
+                "gateway_response": gateway_response,
+            }
         )
+        
+        if not created:
+            # Atualiza o pagamento existente
+            payment.idempotency = idempotency_key
+            payment.token = gateway_response.get('id', 'zeroone')
+            payment.price = plan.price
+            payment.gateway_response = gateway_response
+            payment.save()
+        
         return payment
 
     def update_payment_status(self, payment_uid, status):
