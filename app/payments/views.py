@@ -183,9 +183,13 @@ class PaymentChangePlanView(APIView):
         except Plan.DoesNotExist:
             return Response({"error": "Plano não encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Exclui todos os pagamentos em aberto do usuário antes de criar o novo
+        # Exclui todos os pagamentos do usuário antes de criar o novo
+        UserSubscription.objects.filter(
+            user=user
+        ).delete()
+        
         SubscriptionPayment.objects.filter(
-            subscription__user=user, status=False
+            subscription__user=user
         ).delete()
 
         try:
