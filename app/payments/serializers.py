@@ -51,7 +51,7 @@ class PaymentSerializer(serializers.Serializer):
 class PlanFeatureSerializer(serializers.ModelSerializer):
     class Meta:
         model = PlanFeature
-        fields = ["text"]
+        fields = ["text", "active"]
 
 
 class PlanInfoSerializer(serializers.ModelSerializer):
