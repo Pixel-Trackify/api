@@ -74,6 +74,11 @@ class UserSubscription(models.Model):
 class SubscriptionPayment(models.Model):
     id = models.AutoField(primary_key=True)
     uid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='payments',
+        null=True, blank=True)
     idempotency = models.CharField(max_length=100, unique=True)
     payment_method = models.CharField(max_length=20, choices=[
         ('PIX', 'PIX'),
