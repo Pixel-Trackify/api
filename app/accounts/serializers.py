@@ -11,8 +11,6 @@ from accounts.models import Usuario
 from django.conf import settings
 
 
-
-
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     confirm_password = serializers.CharField(write_only=True, required=True)
@@ -406,3 +404,23 @@ class MultipleDeleteSerializer(serializers.Serializer):
         child=serializers.UUIDField(),
         help_text="Lista de UIDs dos usuários a serem excluídos."
     )
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    recovery_code = serializers.CharField()
+    new_password = serializers.CharField()
+    confirm_password = serializers.CharField()
+
+    def validate(self, data):
+        if data['new_password'] != data['confirm_password']:
+            raise serializers.ValidationError("As senhas não coincidem.")
+
+        password_validator = PasswordValidator()
+        password_validator(data['new_password'])
+
+        return data

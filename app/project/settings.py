@@ -314,7 +314,7 @@ REQUIRE_EMAIL_CONFIRMATION = os.getenv(
 AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
 AWS_BUCKET = os.getenv('AWS_BUCKET')
-AWS_DEFAULT_REGION = os.getenv('AWS_DEFAULT_REGION', 'sa-east-1')
+AWS_DEFAULT_REGION = os.getenv('AWS_DEFAULT_REGION', 'us-east-1')
 AWS_S3_CUSTOM_DOMAIN = f'{AWS_BUCKET}.s3.amazonaws.com'
 AWS_SES_SOURCE_EMAIL = os.getenv(
     'AWS_SES_SOURCE_EMAIL', 'default-email@dominio.com')

@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import RegisterSerializer, LoginSerializer, UserProfileSerializer, ChangePasswordSerializer, MultipleDeleteSerializer, AdminUserUpdateSerializer
+from .serializers import RegisterSerializer, LoginSerializer, UserProfileSerializer, ChangePasswordSerializer, MultipleDeleteSerializer, AdminUserUpdateSerializer, PasswordResetRequestSerializer, PasswordResetConfirmSerializer
 from rest_framework.decorators import action
 from django.utils.crypto import get_random_string
 from django.core.cache import cache
@@ -26,7 +26,7 @@ from botocore.exceptions import NoCredentialsError, PartialCredentialsError, Bot
 from .schema import (
     register_view_schema, user_profile_view_schema, change_password_view_schema,
     login_view_schema, logout_view_schema,
-    upload_avatar_view_schema, create_user_view_schema, multiple_delete_schema
+    upload_avatar_view_schema, create_user_view_schema, multiple_delete_schema, password_reset_request_schema, password_reset_confirm_schema
 )
 
 logger = logging.getLogger('django')
@@ -451,25 +451,21 @@ class PasswordResetRequestView(APIView):
     Endpoint para solicitar a recuperação de senha.
     Envia um código de recuperação por e-mail usando AWS SES.
     """
-
+    @password_reset_request_schema
     def post(self, request):
-        email = request.data.get("email")
-        if not email:
-            return Response({"error": "O campo 'email' é obrigatório."}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email']
 
-        # Verificar se o e-mail está associado a um usuário
         try:
             user = Usuario.objects.get(email=email)
         except Usuario.DoesNotExist:
             return Response({"error": "Usuário não encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Gerar um código de recuperação
         recovery_code = get_random_string(length=6, allowed_chars="0123456789")
-
-        # Salvar o código no cache com validade de X minutos
         cache_key = f"password_reset_{user.uid}"
-        cache.set(cache_key, recovery_code, timeout=timedelta(
-            minutes=10).total_seconds())  # Código válido por 10 minutos
+        cache.set(cache_key, recovery_code,
+                  timeout=timedelta(minutes=10).total_seconds())
 
         # Configurar o cliente SES
         ses_client = boto3.client(
@@ -479,7 +475,6 @@ class PasswordResetRequestView(APIView):
             region_name=settings.AWS_DEFAULT_REGION
         )
 
-        # Enviar o e-mail com o código de recuperação
         try:
             ses_client.send_email(
                 Source=settings.AWS_SES_SOURCE_EMAIL,
@@ -503,33 +498,27 @@ class PasswordResetConfirmView(APIView):
     """
     Endpoint para confirmar o código de recuperação e redefinir a senha.
     """
-
+    @password_reset_confirm_schema
     def post(self, request):
-        email = request.data.get("email")
-        recovery_code = request.data.get("recovery_code")
-        new_password = request.data.get("new_password")
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email']
+        recovery_code = serializer.validated_data['recovery_code']
+        new_password = serializer.validated_data['new_password']
 
-        if not email or not recovery_code or not new_password:
-            return Response({"error": "Os campos 'email', 'recovery_code' e 'new_password' são obrigatórios."}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Verificar se o e-mail está associado a um usuário
         try:
             user = Usuario.objects.get(email=email)
         except Usuario.DoesNotExist:
             return Response({"error": "Usuário não encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Verificar o código de recuperação no cache
         cache_key = f"password_reset_{user.uid}"
         cached_code = cache.get(cache_key)
 
         if not cached_code or cached_code != recovery_code:
             return Response({"error": "Código de recuperação inválido ou expirado."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Atualizar a senha do usuário
         user.set_password(new_password)
         user.save()
-
-        # Remover o código do cache
         cache.delete(cache_key)
 
         return Response({"message": "Senha redefinida com sucesso."}, status=status.HTTP_200_OK)

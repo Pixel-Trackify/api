@@ -1,5 +1,7 @@
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiExample, OpenApiParameter, extend_schema
 from .serializers import RegisterSerializer, UserProfileSerializer, ChangePasswordSerializer, LoginSerializer, MultipleDeleteSerializer
+from drf_spectacular.types import OpenApiTypes
+
 
 register_view_schema = extend_schema_view(
     post=extend_schema(
@@ -326,4 +328,82 @@ multiple_delete_schema = extend_schema(
             response_only=True,
         ),
     ],
+)
+
+password_reset_request_schema = extend_schema(
+    summary="Solicitar recuperação de senha",
+    description="Envia um código de recuperação para o e-mail informado.",
+    request={
+        "application/json": {
+            "type": "object",
+            "properties": {
+                "email": {"type": "string", "format": "email", "example": "usuario@email.com"}
+            },
+            "required": ["email"]
+        }
+    },
+    responses={
+        200: OpenApiTypes.OBJECT,
+
+    },
+    examples=[
+        OpenApiExample(
+            "Exemplo de solicitação",
+            value={"email": "usuario@email.com"},
+            request_only=True,
+        ),
+        OpenApiExample(
+            "Exemplo de resposta de sucesso",
+            value={"message": "Código de recuperação enviado com sucesso."},
+            response_only=True,
+        ),
+        OpenApiExample(
+            "Exemplo de resposta de erro",
+            value={"error": "Usuário não encontrado."},
+            response_only=True,
+        ),
+    ]
+)
+
+password_reset_confirm_schema = extend_schema(
+    summary="Confirmar código de recuperação e redefinir senha",
+    description="Confirma o código de recuperação e redefine a senha do usuário.",
+    request={
+        "application/json": {
+            "type": "object",
+            "properties": {
+                "email": {"type": "string", "format": "email", "example": "usuario@email.com"},
+                "recovery_code": {"type": "string", "example": "123456"},
+                "new_password": {"type": "string", "example": "NovaSenhaForte123"},
+                "confirm_password": {"type": "string", "example": "NovaSenhaForte123"}
+            },
+            "required": ["email", "recovery_code", "new_password", "confirm_password"]
+        }
+    },
+    responses={
+        200: OpenApiTypes.OBJECT,
+
+    },
+    examples=[
+        OpenApiExample(
+            "Exemplo de solicitação",
+            value={
+                "email": "usuario@email.com",
+                "recovery_code": "123456",
+                "new_password": "NovaSenhaForte123",
+                "confirm_password": "NovaSenhaForte123"
+            },
+            request_only=True,
+        ),
+        OpenApiExample(
+            "Exemplo de resposta de sucesso",
+            value={"message": "Senha redefinida com sucesso."},
+            response_only=True,
+        ),
+        OpenApiExample(
+            "Exemplo de resposta de erro",
+            value={"error": "Código de recuperação inválido ou expirado."},
+            response_only=True,
+        ),
+    ]
 )
