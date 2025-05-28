@@ -40,12 +40,12 @@ class PaymentCreateView(APIView):
         1) Verificar o tipo de pagamento (plan_uid, paymentMethod, gateway ou uid )
             UID é da tabela subscription_payment (deve pertencer ao mesmo usuário da request), caso esse parametro seja passado, o plan_uid e paymentMethod não devem ser passados.
             verificar se o usuário já gerou um pagamento e está em aberto no intervalo de 1 hora, se sim, retornar o pagamento existente.
-            se não existir, geralmente no cenário que gera o pagamento via cron, deve gerar o pagamento normalmente. 
+            se não existir, geralmente no cenário que gera o pagamento via cron, deve gerar o pagamento normalmente.
 
 
 
         2) Se não for passado o uid, deve validar os parametros plan_uid, paymentMethod e gateway.
-           Geralmente é usado para escolher um plano e gerar o pagamento. 
+           Geralmente é usado para escolher um plano e gerar o pagamento.
            Segue a lógica como está atualmente, se houver uma assinatura seja ativa ou não vai remove-la, e vai editar os pagamentos existentes para subscription_id = NULL.
 
            Aqui tbm segue a mesma lógica de idempotência, se o usuário já tiver um pagamento em aberto no intervalo de 1 hora, deve retornar o pagamento existente.
@@ -65,7 +65,12 @@ class PaymentCreateView(APIView):
                 return Response({"error": "Pagamento não encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
             # Verifica se o pagamento está em aberto e dentro do intervalo de 1 hora
-            if (payment.gateway_response and payment.token and now() - payment.created_at) < timedelta(hours=1):
+            if (
+                payment.gateway_response and
+                payment.token and
+                payment.created_at and
+                (now() - payment.created_at) < timedelta(hours=1)
+            ):
                 return Response({
                     "message": "Pagamento criado com sucesso.",
                     "payment": {
@@ -307,5 +312,15 @@ class PaymentWebhookView(APIView):
                 to_email=payment.user.email,
                 user_name=payment.user.name
             )
+            # RENOVAÇÃO DE ASSINATURA APÓS PAGAMENTO APROVADO
+            signature = payment.subscription
+            if signature:
+                if signature.expiration and signature.expiration > now():
 
+                    signature.start_date = signature.expiration
+                else:
+
+                    signature.start_date = now()
+                signature.expiration = signature.calculate_end_date()
+                signature.save()
         return Response(payment_data, status=status.HTTP_200_OK)

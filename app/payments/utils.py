@@ -1,5 +1,8 @@
+import uuid
+from payments.models import SubscriptionPayment
 from .models import SubscriptionPayment
 from django.utils.timezone import now, timedelta
+
 
 def get_idempotent_payment(user, plan, payment_method, interval_minutes=60):
     base_idempotency_key = f"{user.pk}-{plan.uid}-{payment_method}"
@@ -21,3 +24,17 @@ def get_idempotent_payment(user, plan, payment_method, interval_minutes=60):
         else:
             return existing_payment, True
     return None, False
+
+
+def create_subscription_payment(user, subscription, payment_method, price, status=False, token=None, gateway_response=None):
+    return SubscriptionPayment.objects.create(
+        user=user,
+        subscription=subscription,
+        payment_method=payment_method,
+        status=status,
+        uid=uuid.uuid4(),
+        idempotency=str(uuid.uuid4()),
+        token=token,
+        price=price,
+        gateway_response=gateway_response
+    )
