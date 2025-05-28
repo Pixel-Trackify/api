@@ -4,17 +4,16 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from plans.models import Plan
+from accounts.models import Usuario
 from .models import SubscriptionPayment, UserSubscription
 from custom_admin.models import Configuration
 from .serializers import PaymentSerializer, SubscriptionPlanSerializer, PlanInfoSerializer, PaymentOpenedSerializer, PaymentHistoricSerializer
 from django.utils.timezone import now, timedelta
 from .utils import get_idempotent_payment
 from drf_spectacular.utils import extend_schema
-from django.contrib.auth import get_user_model
+from .email_utils import send_subscription_paid_email
 from .gateways import get_gateway
 from .schemas import payment_status_schema, payment_create_schema, payment_webhook_schema, payment_change_plan_schema, subscription_info_schema
-import uuid
-import hashlib
 import requests
 import logging
 import os
@@ -42,25 +41,26 @@ class PaymentCreateView(APIView):
             UID é da tabela subscription_payment (deve pertencer ao mesmo usuário da request), caso esse parametro seja passado, o plan_uid e paymentMethod não devem ser passados.
             verificar se o usuário já gerou um pagamento e está em aberto no intervalo de 1 hora, se sim, retornar o pagamento existente.
             se não existir, geralmente no cenário que gera o pagamento via cron, deve gerar o pagamento normalmente. 
-             
-             
+
+
 
         2) Se não for passado o uid, deve validar os parametros plan_uid, paymentMethod e gateway.
            Geralmente é usado para escolher um plano e gerar o pagamento. 
            Segue a lógica como está atualmente, se houver uma assinatura seja ativa ou não vai remove-la, e vai editar os pagamentos existentes para subscription_id = NULL.
-           
+
            Aqui tbm segue a mesma lógica de idempotência, se o usuário já tiver um pagamento em aberto no intervalo de 1 hora, deve retornar o pagamento existente.
            Caso não exista, deve gerar o pagamento normalmente.
-        
-        """  
+
+        """
         user = request.user
         uid = request.data.get('uid')
         # Primeiro cenário, pode ser pagar uma fatura aberta ou gerar um novo pagamento ( Cenário quando o cron gera o pagamento ou quando o usuário fecha a tela do QR Code )
         if uid:
             logger.info(f"Usuário {user} solicitou pagamento com UID: {uid}")
             try:
-               
-                payment = SubscriptionPayment.objects.get(uid=uid, subscription__user=user, status=False)
+
+                payment = SubscriptionPayment.objects.get(
+                    uid=uid, subscription__user=user, status=False)
             except SubscriptionPayment.DoesNotExist:
                 return Response({"error": "Pagamento não encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -76,14 +76,14 @@ class PaymentCreateView(APIView):
                         "gateway": payment.gateway,
                         "gateway_response": payment.gateway_response
                     }
-                }, status=status.HTTP_200_OK) 
-            
+                }, status=status.HTTP_200_OK)
+
             plan = payment.subscription.plan if payment.subscription.plan else None
             data = {
                 "paymentMethod": payment.payment_method if payment.payment_method else 'PIX',
                 "gateway": payment.gateway if payment.gateway else 'zeroone',
             }
-        else:        
+        else:
            # try:
            #     plan = Plan.objects.get(uid=data['plan_uid'])
            # except Plan.DoesNotExist:
@@ -95,7 +95,8 @@ class PaymentCreateView(APIView):
             data = serializer.validated_data
             plan = data['plan']
             # Checagem de idempotência via utilitário
-            existing_payment, is_recent = get_idempotent_payment(user, plan, data['paymentMethod'])
+            existing_payment, is_recent = get_idempotent_payment(
+                user, plan, data['paymentMethod'])
             if is_recent and existing_payment:
                 return Response({
                     "message": "Pagamento criado com sucesso.",
@@ -173,7 +174,7 @@ class PaymentChangePlanView(APIView):
             subscription__user=user,
             status=False
         ).delete()
-        
+
         SubscriptionPayment.objects.filter(
             subscription__user=user,
             status=True
@@ -260,7 +261,8 @@ class PaymentWebhookView(APIView):
             return Response({"error": "Dados inválidos."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            payment = SubscriptionPayment.objects.get(token=payment_id)
+            payment = SubscriptionPayment.objects.get(
+                token=payment_id)
         except SubscriptionPayment.DoesNotExist:
             return Response({"error": "Pagamento não encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -298,5 +300,12 @@ class PaymentWebhookView(APIView):
         gateway_name = payment.gateway
         gateway = get_gateway(gateway_name)
         gateway.update_payment_status(payment.uid, payment_status)
+
+        # Dispara o e-mail se o pagamento foi concluído
+        if payment_status == "APPROVED":
+            send_subscription_paid_email(
+                to_email=payment.user.email,
+                user_name=payment.user.name
+            )
 
         return Response(payment_data, status=status.HTTP_200_OK)
