@@ -2,7 +2,7 @@ from django.core.management.base import BaseCommand
 from django.utils.timezone import now, timedelta
 from payments.models import UserSubscription, NotificationSend
 from custom_admin.models import Configuration
-from django.core.mail import send_mail
+from payments.email_utils import send_subscription_reminder_email
 
 
 class Command(BaseCommand):
@@ -30,15 +30,13 @@ class Command(BaseCommand):
             if NotificationSend.objects.filter(index=index, date=today).exists():
                 continue
 
-            # Envia o e-mail (ajuste conforme seu sistema)
-            send_mail(
-                subject=config.email_reminder_subject,
-                message=config.email_reminder,
-                from_email=None,
-                recipient_list=[sub.user.email],
+            # Envia o e-mail de lembrete personalizado
+            send_subscription_reminder_email(
+                to_email=sub.user.email,
+                user_name=getattr(sub.user, "name", sub.user.email)
             )
 
-            # Registra o envio
+            # Registra o envio para não duplicar no mesmo dia
             NotificationSend.objects.create(index=index, date=today)
             self.stdout.write(self.style.SUCCESS(
                 f"Lembrete enviado para {sub.user.email}"))
