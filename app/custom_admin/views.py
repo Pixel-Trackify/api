@@ -134,7 +134,6 @@ class ConfigurationView(APIView):
 
 
 class CaptchaView(APIView):
-    permission_classes = [IsSuperUser]
 
     @captcha_view_get_schema
     def get(self, request):
