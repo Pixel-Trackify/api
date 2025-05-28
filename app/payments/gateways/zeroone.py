@@ -97,6 +97,7 @@ class ZeroOneGateway(PaymentGatewayBase):
             payment.token = gateway_response.get('id', 'zeroone')
             payment.price = plan.price
             payment.gateway_response = gateway_response
+            payment.created_at = now()
             payment.save()
         
         return payment
