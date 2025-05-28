@@ -10,8 +10,10 @@ from rest_framework.decorators import action
 from django.utils.crypto import get_random_string
 from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
+from custom_admin.models import Configuration
 import logging
 from .models import Usuario, LoginLog
+from .email_utils import send_register_email, send_password_reset_email
 from rest_framework_simplejwt.tokens import RefreshToken
 import user_agents
 import uuid
@@ -43,15 +45,23 @@ class RegisterView(APIView):
         if serializer.is_valid():
             user = serializer.save()
 
-            # Verificar se a confirmação de e-mail é necessária
-            require_email_confirmation = os.getenv(
-                "REQUIRE_EMAIL_CONFIRMATION", "True") == "False"
+            # configuração de confirmação de e-mail
+            config = Configuration.objects.first()
+            require_email_confirmation = config.require_email_confirmation if config else False
+
+            # Dispara e-mail
+            try:
+                send_register_email(
+                    to_email=user.email,
+                    user_name=user.name
+                )
+            except Exception as e:
+                pass
 
             # Gerar tokens JWT
             refresh = RefreshToken.for_user(user)
             access_token = str(refresh.access_token)
 
-            # Adicionar todas as chaves esperadas na resposta
             response_data = {
                 "message": "Usuário registrado com sucesso!",
                 "user": {
@@ -447,10 +457,6 @@ class UploadAvatarView(APIView):
 
 
 class PasswordResetRequestView(APIView):
-    """
-    Endpoint para solicitar a recuperação de senha.
-    Envia um código de recuperação por e-mail usando AWS SES.
-    """
     @password_reset_request_schema
     def post(self, request):
         serializer = PasswordResetRequestSerializer(data=request.data)
@@ -467,37 +473,19 @@ class PasswordResetRequestView(APIView):
         cache.set(cache_key, recovery_code,
                   timeout=timedelta(minutes=10).total_seconds())
 
-        # Configurar o cliente SES
-        ses_client = boto3.client(
-            'ses',
-            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-            region_name=settings.AWS_DEFAULT_REGION
-        )
-
         try:
-            ses_client.send_email(
-                Source=settings.AWS_SES_SOURCE_EMAIL,
-                Destination={"ToAddresses": [email]},
-                Message={
-                    "Subject": {"Data": "Recuperação de Senha"},
-                    "Body": {
-                        "Text": {
-                            "Data": f"Olá {user.name},\n\nSeu código de recuperação de senha é: {recovery_code}\n\nEste código é válido por 10 minutos."
-                        }
-                    }
-                }
+            send_password_reset_email(
+                to_email=user.email,
+                user_name=user.name,
+                recovery_code=recovery_code
             )
-        except (BotoCoreError, ClientError) as e:
+        except Exception as e:
             return Response({"error": f"Erro ao enviar o e-mail: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response({"message": "Código de recuperação enviado com sucesso."}, status=status.HTTP_200_OK)
 
 
 class PasswordResetConfirmView(APIView):
-    """
-    Endpoint para confirmar o código de recuperação e redefinir a senha.
-    """
     @password_reset_confirm_schema
     def post(self, request):
         serializer = PasswordResetConfirmSerializer(data=request.data)
