@@ -2,6 +2,7 @@ from .base import PaymentGatewayBase
 from custom_admin.models import Configuration
 from payments.models import UserSubscription, SubscriptionPayment
 from django.utils.timezone import now, timedelta
+from decimal import Decimal, ROUND_HALF_UP
 import requests
 import hashlib
 import uuid
@@ -40,6 +41,10 @@ class ZeroOneGateway(PaymentGatewayBase):
                 f"Erro ao comunicar com o gateway ZeroOne: {str(e)}")
 
     def create_subscription_and_payment(self, user, plan, payment_method, idempotency_key=None):
+        config = Configuration.objects.first()
+        late_interest = config.late_payment_interest or 0
+        daily_late_interest = config.daily_late_payment_interest or 0
+
         subscription, created = UserSubscription.objects.get_or_create(
             user=user,
             defaults={
@@ -47,23 +52,46 @@ class ZeroOneGateway(PaymentGatewayBase):
                 "is_active": False
             }
         )
-        
+
         if not created:
             # Atualiza a assinatura existente
             subscription.plan = plan
             subscription.is_active = False
             subscription.save()
-            
+
+        # Valor base do plano
+        price = Decimal(str(plan.price))
+
+        # Cálculo de juros por atraso, se ativado
+        if not created and subscription.expiration:
+            expiration_date = subscription.expiration.date() if hasattr(
+                subscription.expiration, 'date') else subscription.expiration
+            today = now().date()
+            if expiration_date < today and (late_interest > 0 or daily_late_interest > 0):
+                juros = Decimal('0.00')
+                if late_interest > 0:
+                    juros = (Decimal(str(late_interest)) /
+                             Decimal('100')) * price
+                dias_atraso = (today - expiration_date).days
+                juros_diario = Decimal('0.00')
+                if daily_late_interest > 0:
+                    juros_diario = (Decimal(str(daily_late_interest)) /
+                                    Decimal('100')) * price * dias_atraso
+                price += juros + juros_diario
+
+        # Arredonda para 2 casas decimais
+        price = price.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
         payload = {
             "name": user.name,
             "email": user.email,
             "cpf": user.cpf,
             "phone": getattr(user, 'phone', "00000000000"),
             "paymentMethod": payment_method,
-            "amount": int(plan.price * 100),
+            "amount": int(price * 100),  # valor final em centavos
             "items": [
                 {
-                    "unitPrice": int(plan.price * 100),
+                    "unitPrice": int(price * 100),
                     "title": str(plan.uid),
                     "quantity": 1,
                     "tangible": False
@@ -86,20 +114,20 @@ class ZeroOneGateway(PaymentGatewayBase):
                 "uid": uuid.uuid4(),
                 "idempotency": idempotency_key,
                 "token": gateway_response.get('id', 'zeroone'),
-                "price": plan.price,
+                "price": price,  # Usa Decimal!
                 "gateway_response": gateway_response,
             }
         )
-        
+
         if not created:
             # Atualiza o pagamento existente
             payment.idempotency = idempotency_key
             payment.token = gateway_response.get('id', 'zeroone')
-            payment.price = plan.price
+            payment.price = price  # Usa Decimal!
             payment.gateway_response = gateway_response
             payment.created_at = now()
             payment.save()
-        
+
         return payment
 
     def update_payment_status(self, payment_uid, status):
