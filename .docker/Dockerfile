@@ -2,7 +2,7 @@ FROM python:3.13-alpine
 
 COPY app /app
 COPY cronjobs /etc/crontabs/root
-
+ENV TZ=America/Sao_Paulo
 WORKDIR /app
 
 EXPOSE 8000
@@ -19,6 +19,9 @@ RUN apk update && \
 ENV PATH="/scripts:/venv/bin:$PATH"
 
 
+RUN apk add --no-cache tzdata && \
+    cp /usr/share/zoneinfo/America/Sao_Paulo /etc/localtime && \
+    echo "America/Sao_Paulo" > /etc/timezone
 
 CMD sh -c "crond && echo APP_AMBIENT in Django is set to: \$APP_AMBIENT && \
     if [ \"\$APP_AMBIENT\" = \"production\" ]; then \
