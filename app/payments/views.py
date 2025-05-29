@@ -308,9 +308,12 @@ class PaymentWebhookView(APIView):
 
         # Dispara o e-mail se o pagamento foi concluído
         if payment_status == "APPROVED":
-            send_subscription_paid_email(
-                to_email=payment.user.email,
-                user_name=payment.user.name
-            )
+            total_paid = data.get('totalValue', 0)
+            if total_paid:
+                send_subscription_paid_email(
+                    total_paid=total_paid / 100,
+                    to_email=payment.user.email,
+                    user_name=payment.user.name
+                )
 
         return Response(payment_data, status=status.HTTP_200_OK)
