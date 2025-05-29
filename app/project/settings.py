@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
+from corsheaders.defaults import default_headers
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -53,6 +54,13 @@ ALLOWED_HOSTS = [
 # Permitir todos as origens
 CORS_ALLOW_ALL_ORIGINS = True if os.getenv(
     'CORS_ALLOW_ALL_ORIGINS', "false") == 'true' else False
+
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    "Cache-Control",
+    "Pragma",
+    "Expires",
+]
 
 INSTALLED_APPS = [
     'corsheaders',
