@@ -1,6 +1,7 @@
 import boto3
 from django.conf import settings
 from custom_admin.models import Configuration
+from datetime import datetime
 
 
 def get_ses_client():
@@ -31,11 +32,16 @@ def send_register_email(to_email, user_name=None):
     return response
 
 
-def send_password_reset_email(to_email, user_name, recovery_code):
+def send_password_reset_email(to_email, user_name, recovery_code, reset_link, expiration_hours):
+
     config = Configuration.objects.first()
-    email_body = config.email_recovery_subject if config and config.email_recovery_subject else "Olá {{user_name}}, seu código de recuperação é: {{recovery_code}}"
-    email_body = email_body.replace("{{user_name}}", user_name).replace(
-        "{{recovery_code}}", recovery_code)
+    email_body = config.email_recovery
+    email_body = email_body.replace("{{user_name}}", user_name)
+    email_body = email_body.replace("{{recovery_code}}", recovery_code)
+    email_body = email_body.replace("{{reset_link}}", reset_link)
+    email_body = email_body.replace(
+        "{{expiration_hours}}", str(expiration_hours))
+    email_body = email_body.replace("{{ano_atual}}", str(datetime.now().year))
     ses_client = get_ses_client()
     subject = "Recuperação de Senha"
     source_email = settings.AWS_SES_SOURCE_EMAIL
@@ -44,7 +50,7 @@ def send_password_reset_email(to_email, user_name, recovery_code):
         Destination={'ToAddresses': [to_email]},
         Message={
             'Subject': {'Data': subject},
-            'Body': {'Text': {'Data': email_body}}
+            'Body': {'Html': {'Data': email_body}}
         }
     )
     return response

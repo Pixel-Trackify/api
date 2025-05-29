@@ -327,13 +327,14 @@ DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 # Carregar o domínio do webhook
 WEBHOOK_BASE_URL = os.getenv('WEBHOOK_BASE_URL', 'http://localhost')
 
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:80")
 # Configuração do gateway de pagamento ZeroOne
 ZEROONE_SECRET_KEY = os.getenv('ZEROONE_SECRET_KEY', 'default-secret-key')
 ZEROONE_API_URL = os.getenv('ZEROONE_API_URL', 'https://default-url.com')
 
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'unique-snowflake',
+        'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
+        'LOCATION': '/tmp/django_cache',
     }
 }

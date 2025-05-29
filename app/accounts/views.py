@@ -12,6 +12,7 @@ from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
 from custom_admin.models import Configuration
 import logging
+from django.urls import reverse
 from .models import Usuario, LoginLog
 from .email_utils import send_register_email, send_password_reset_email
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -322,8 +323,6 @@ class LoginView(APIView):
             token=token
         )
 
-        logger.info(f"Usuário {user.email} logado com sucesso.")
-
         return Response({
             "refresh": str(refresh),
             "access": str(refresh.access_token),
@@ -340,7 +339,7 @@ class LogoutView(APIView):
             # Obtém o token de refresh do corpo da requisição
             refresh_token = request.data.get('refresh')
             if not refresh_token:
-                logger.warning("Tentativa de logout sem token de refresh.")
+
                 return Response(
                     {"error": "O campo 'refresh' é obrigatório."},
                     status=status.HTTP_400_BAD_REQUEST
@@ -360,14 +359,14 @@ class LogoutView(APIView):
             )
         except TokenError as e:
             # Captura erros relacionados ao token (ex.: token inválido ou expirado)
-            logger.error(f"Erro durante o logout: {str(e)}")
+
             return Response(
                 {"error": str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
         except Exception as e:
             # Captura outros erros inesperados
-            logger.error(f"Erro inesperado durante o logout: {str(e)}")
+
             return Response(
                 {"error": "Ocorreu um erro durante o logout."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -469,15 +468,26 @@ class PasswordResetRequestView(APIView):
             return Response({"error": "Usuário não encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
         recovery_code = get_random_string(length=6, allowed_chars="0123456789")
-        cache_key = f"password_reset_{user.uid}"
-        cache.set(cache_key, recovery_code,
-                  timeout=timedelta(minutes=10).total_seconds())
+        user.password_reset_code = recovery_code
+        user.password_reset_expires = timezone.now() + timedelta(minutes=10)
+        user.save()
+
+        reset_path = reverse('password-reset-confirm', args=[recovery_code])
+        if bool(int(os.getenv('DEBUG', 0))):
+            frontend_url = "http://localhost:80"
+        else:
+            frontend_url = f"{settings.FRONTEND_URL}"
+
+        reset_link = f"{frontend_url}{reset_path}"
+        expiration_hours = 1
 
         try:
             send_password_reset_email(
                 to_email=user.email,
                 user_name=user.name,
-                recovery_code=recovery_code
+                recovery_code=recovery_code,
+                reset_link=reset_link,
+                expiration_hours=expiration_hours
             )
         except Exception as e:
             return Response({"error": f"Erro ao enviar o e-mail: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -487,11 +497,11 @@ class PasswordResetRequestView(APIView):
 
 class PasswordResetConfirmView(APIView):
     @password_reset_confirm_schema
-    def post(self, request):
+    def post(self, request, recovery_code):
+
         serializer = PasswordResetConfirmSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         email = serializer.validated_data['email']
-        recovery_code = serializer.validated_data['recovery_code']
         new_password = serializer.validated_data['new_password']
 
         try:
@@ -499,14 +509,18 @@ class PasswordResetConfirmView(APIView):
         except Usuario.DoesNotExist:
             return Response({"error": "Usuário não encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
-        cache_key = f"password_reset_{user.uid}"
-        cached_code = cache.get(cache_key)
+        if (
+            not user.password_reset_code or
+            user.password_reset_code != recovery_code or
+            not user.password_reset_expires or
+            user.password_reset_expires < timezone.now()
+        ):
 
-        if not cached_code or cached_code != recovery_code:
             return Response({"error": "Código de recuperação inválido ou expirado."}, status=status.HTTP_400_BAD_REQUEST)
 
         user.set_password(new_password)
+        user.password_reset_code = None
+        user.password_reset_expires = None
         user.save()
-        cache.delete(cache_key)
 
         return Response({"message": "Senha redefinida com sucesso."}, status=status.HTTP_200_OK)

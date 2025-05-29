@@ -16,7 +16,7 @@ urlpatterns = [
          views.ChangePasswordView.as_view(), name='change_password'),
     path('password-reset/', views.PasswordResetRequestView.as_view(),
          name='password-reset-request'),
-    path('password-reset/confirm/', views.PasswordResetConfirmView.as_view(),
+    path('password-reset/confirm/<str:recovery_code>/', views.PasswordResetConfirmView.as_view(),
          name='password-reset-confirm'),
 
 ] + router.urls

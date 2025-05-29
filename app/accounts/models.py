@@ -38,6 +38,9 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     subscription_active = models.BooleanField(default=False)
     subscription_expiration = models.DateTimeField(null=True, blank=True)
     profit = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
+    password_reset_code = models.CharField(
+        max_length=10, null=True, blank=True)
+    password_reset_expires = models.DateTimeField(null=True, blank=True)
 
     def recalculate_profit(self):
         """
