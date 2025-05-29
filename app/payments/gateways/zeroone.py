@@ -161,4 +161,5 @@ class ZeroOneGateway(PaymentGatewayBase):
                 ).exclude(pk=subscription.pk).update(is_active=False)
 
                 subscription.is_active = True
+                subscription.status = 'active'
                 subscription.save()
