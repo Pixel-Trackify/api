@@ -315,12 +315,17 @@ class PaymentWebhookView(APIView):
             # RENOVAÇÃO DE ASSINATURA APÓS PAGAMENTO APROVADO
             signature = payment.subscription
             if signature:
-                if signature.expiration and signature.expiration > now():
-
-                    signature.start_date = signature.expiration
+                current_time = now()
+                if signature.expiration and signature.expiration > current_time:
+                    # Renovação antecipada: soma a partir do expiration atual
+                    base_date = signature.expiration
                 else:
+                    # Nova assinatura ou expirada: soma a partir de agora
+                    base_date = current_time
 
-                    signature.start_date = now()
-                signature.expiration = signature.calculate_end_date()
+                signature.expiration = signature.calculate_end_date_from(
+                    base_date)
+                signature.is_active = True
+                signature.status = 'active'
                 signature.save()
         return Response(payment_data, status=status.HTTP_200_OK)

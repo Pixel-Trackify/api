@@ -54,7 +54,7 @@ class UserSubscription(models.Model):
 
     def calculate_end_date(self):
         """
-        Calcula a data de expiração com base na duração do plano.
+        Calcula a data de expiração com base na duração do plano, a partir do start_date.
         """
         if self.plan.duration == 'day':
             return self.start_date + timedelta(days=self.plan.duration_value)
@@ -64,6 +64,20 @@ class UserSubscription(models.Model):
             return self.start_date + relativedelta(years=self.plan.duration_value)
         else:
             return self.start_date
+
+    def calculate_end_date_from(self, base_date):
+        """
+        Calcula a data de expiração com base na duração do plano, a partir de uma data base.
+        Útil para renovações e upgrades.
+        """
+        if self.plan.duration == 'day':
+            return base_date + timedelta(days=self.plan.duration_value)
+        elif self.plan.duration == 'month':
+            return base_date + relativedelta(months=self.plan.duration_value)
+        elif self.plan.duration == 'year':
+            return base_date + relativedelta(years=self.plan.duration_value)
+        else:
+            return base_date
 
     class Meta:
         db_table = 'subscription'

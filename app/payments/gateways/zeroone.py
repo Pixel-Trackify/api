@@ -147,11 +147,13 @@ class ZeroOneGateway(PaymentGatewayBase):
             if subscription:
                 current_time = now()
                 if subscription.expiration and subscription.expiration > current_time:
-                    subscription.expiration += timedelta(
-                        days=30 * subscription.plan.duration_value)
+                    base_date = subscription.expiration
                 else:
-                    subscription.expiration = current_time + \
-                        timedelta(days=30 * subscription.plan.duration_value)
+                    base_date = current_time
+
+                # Usa o método centralizado do model
+                subscription.expiration = subscription.calculate_end_date_from(
+                    base_date)
 
                 # Desativa todas as outras assinaturas ativas do usuário
                 UserSubscription.objects.filter(
