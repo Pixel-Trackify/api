@@ -408,6 +408,16 @@ class MultipleDeleteSerializer(serializers.Serializer):
 
 class PasswordResetRequestSerializer(serializers.Serializer):
     email = serializers.EmailField()
+    captcha = serializers.CharField(
+        required=False, allow_blank=True)
+
+    def validate(self, data):
+        config = Configuration.objects.first()
+        if config and config.recaptchar_enable and not data.get('captcha'):
+            raise serializers.ValidationError(
+                {'captcha': 'Este campo é obrigatório.'}
+            )
+        return data
 
 
 class PasswordResetConfirmSerializer(serializers.Serializer):
