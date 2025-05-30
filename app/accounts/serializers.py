@@ -36,8 +36,11 @@ class RegisterSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"cpf": "CPF inválido."})
 
         # Valida o captcha se necessário
+        request = self.context.get('request')
+        is_admin_request = request and getattr(
+            request.user, 'is_superuser', False)
         config = Configuration.objects.first()
-        if config and config.recaptchar_enable and not data.get('captcha'):
+        if config and config.recaptchar_enable and not is_admin_request and not data.get('captcha'):
             raise serializers.ValidationError(
                 {'captcha': 'Este campo é obrigatório.'})
         return data

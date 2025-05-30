@@ -157,7 +157,8 @@ class UserViewSet(viewsets.ModelViewSet):
             raise PermissionDenied(
                 "Apenas administradores podem criar usuários.")
 
-        serializer = self.get_serializer(data=request.data)
+        serializer = self.get_serializer(
+            data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
 
         password = serializer.validated_data.get("password")
