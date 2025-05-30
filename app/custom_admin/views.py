@@ -8,12 +8,12 @@ from django.db.models import Sum, Count, Q, Value
 from django.db.models.functions import TruncDate
 from .permissions import IsSuperUser
 from accounts.models import Usuario
-from payments.models import UserSubscription
+from payments.models import UserSubscription, SubscriptionPayment
 from campaigns.models import FinanceLogs
 from .serializers import DashboardSerializer, UsuarioSerializer, ConfigurationSerializer, CaptchaSerializer
 from .models import Configuration
 from rest_framework.views import APIView
-from .schemas import admin_dashboard_schema, configuration_view_get_schema, configuration_view_post_schema, captcha_view_get_schema, captcha_view_post_schema
+from .schemas import admin_dashboard_schema, configuration_view_get_schema, configuration_view_post_schema, captcha_view_get_schema, captcha_view_post_schema, admin_subscription_report_schema
 from django.db import models
 import requests
 from django.urls import reverse
@@ -134,7 +134,6 @@ class ConfigurationView(APIView):
 
 
 class CaptchaView(APIView):
-    permission_classes = [IsSuperUser]
 
     @captcha_view_get_schema
     def get(self, request):
@@ -225,7 +224,7 @@ class AdminDashboardViewSet(ViewSet):
         ).annotate(
             value=Count('uid')  # Conta as assinaturas por data
         ).order_by('date')
-        
+
         return stats
 
     def fill_missing_days(self, users, start_date, end_date):
@@ -312,3 +311,59 @@ class AdminDashboardViewSet(ViewSet):
 
         serializer = DashboardSerializer(response_data)
         return Response(serializer.data)
+
+
+class AdminSubscriptionReportView(APIView):
+    permission_classes = [IsSuperUser]
+
+    @admin_subscription_report_schema
+    def get(self, request):
+        start = request.query_params.get('start')
+        end = request.query_params.get('end')
+
+        today = now().date()
+        if not start and not end:
+            end_date = today
+            start_date = end_date - timedelta(days=30)
+        elif start and not end:
+            start_date = datetime.strptime(start, '%Y-%m-%d').date()
+            end_date = start_date
+        elif start and end:
+            start_date = datetime.strptime(start, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end, '%Y-%m-%d').date()
+        else:
+            end_date = datetime.strptime(end, '%Y-%m-%d').date()
+            start_date = end_date
+
+        payments = SubscriptionPayment.objects.filter(
+            created_at__date__gte=start_date,
+            created_at__date__lte=end_date,
+            status=True
+        )
+
+        total_users = Usuario.objects.filter(
+            date_joined__date__gte=start_date,
+            date_joined__date__lte=end_date
+        ).count()
+
+        total_subscriptions = payments.count()
+        amount_subscriptions = float(payments.aggregate(
+            total=models.Sum('price'))['total'] or 0)
+
+        # Overview diário
+        overviews = []
+        for single_date in (start_date + timedelta(n) for n in range((end_date - start_date).days + 1)):
+            daily_value = payments.filter(created_at__date=single_date).aggregate(
+                total=models.Sum('price'))['total'] or 0
+            overviews.append({
+                "date": single_date.strftime('%Y-%m-%d'),
+                "value": float(daily_value)
+            })
+
+        response = {
+            "total_users": total_users,
+            "total_subscriptions": total_subscriptions,
+            "amount_subscriptions": amount_subscriptions,
+            "overviews": overviews
+        }
+        return Response(response)

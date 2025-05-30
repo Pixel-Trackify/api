@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse, NoReverseMatch
 from rest_framework import status
 from rest_framework.test import APITestCase
+from custom_admin.models import Configuration
 from uuid import UUID
 import os
 
@@ -147,7 +148,8 @@ class TestAccountRegistration(APITestCase):
         self.assertIsNone(user_block.get('avatar'))
 
         # flags e tokens
-        self.assertIs(data['require_email_confirmation'], os.getenv("REQUIRE_EMAIL_CONFIRMATION", "True") == "False")
+        config = Configuration.objects.first()
+        self.assertIs(data['require_email_confirmation'], config.require_email_confirmation if config else False)
         self.assertIsInstance(data['refresh'], str)
         self.assertTrue(len(data['refresh']) > 0)
         self.assertIsInstance(data['access'], str)

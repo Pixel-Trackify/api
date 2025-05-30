@@ -227,3 +227,42 @@ admin_dashboard_schema = extend_schema(
         )
     ]
 )
+
+admin_subscription_report_schema = extend_schema(
+    summary="Relatório de assinaturas (admin)",
+    description="Retorna estatísticas de assinaturas e usuários em um intervalo de datas.",
+    parameters=[
+        OpenApiParameter(
+            name="start",
+            type=OpenApiTypes.DATE,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            description="Data inicial no formato YYYY-MM-DD (opcional, padrão: 30 dias atrás)"
+        ),
+        OpenApiParameter(
+            name="end",
+            type=OpenApiTypes.DATE,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            description="Data final no formato YYYY-MM-DD (opcional, padrão: hoje)"
+        ),
+    ],
+    responses={
+        200: OpenApiTypes.OBJECT,
+
+    },
+    examples=[
+        OpenApiExample(
+            'Exemplo de resposta',
+            value={
+                "total_users": 10,
+                "total_subscriptions": 8,
+                "amount_subscriptions": 1682.80,
+                "overviews": [
+                    {"date": "2025-04-20", "value": 265.50},
+                    {"date": "2025-04-21", "value": 0.0}
+                ]
+            }
+        )
+    ]
+)

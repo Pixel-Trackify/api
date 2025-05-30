@@ -2,6 +2,7 @@ from .base import PaymentGatewayBase
 from custom_admin.models import Configuration
 from payments.models import UserSubscription, SubscriptionPayment
 from django.utils.timezone import now, timedelta
+from decimal import Decimal, ROUND_HALF_UP
 import requests
 import hashlib
 import uuid
@@ -12,11 +13,11 @@ logger = logging.getLogger('django')
 
 
 class ZeroOneGateway(PaymentGatewayBase):
-    def generate_payment(self, user, plan, payment_method):
+    def generate_payment(self, user, plan, payment_method, idempotency_key=None):
         """
         Compatível com o seletor dinâmico de gateways.
         """
-        return self.create_subscription_and_payment(user, plan, payment_method)
+        return self.create_subscription_and_payment(user, plan, payment_method, idempotency_key)
 
     def generate_pix_payment(self, payload):
         config = Configuration.objects.first()
@@ -31,7 +32,7 @@ class ZeroOneGateway(PaymentGatewayBase):
 
         try:
             response = requests.post(
-                settings.ZEROONE_API_URL, json=payload, headers=headers)
+                f"{settings.ZEROONE_API_URL}transaction.purchase", json=payload, headers=headers)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
@@ -39,12 +40,47 @@ class ZeroOneGateway(PaymentGatewayBase):
             raise Exception(
                 f"Erro ao comunicar com o gateway ZeroOne: {str(e)}")
 
-    def create_subscription_and_payment(self, user, plan, payment_method):
-        subscription = UserSubscription.objects.create(
+    def create_subscription_and_payment(self, user, plan, payment_method, idempotency_key=None):
+        config = Configuration.objects.first()
+        late_interest = config.late_payment_interest or 0
+        daily_late_interest = config.daily_late_payment_interest or 0
+
+        subscription, created = UserSubscription.objects.get_or_create(
             user=user,
-            plan=plan,
-            is_active=False
+            defaults={
+                "plan": plan,
+                "is_active": False
+            }
         )
+
+        if not created:
+            # Atualiza a assinatura existente
+            subscription.plan = plan
+            subscription.is_active = False
+            subscription.save()
+
+        # Valor base do plano
+        price = Decimal(str(plan.price))
+
+        # Cálculo de juros por atraso, se ativado
+        if not created and subscription.expiration:
+            expiration_date = subscription.expiration.date() if hasattr(
+                subscription.expiration, 'date') else subscription.expiration
+            today = now().date()
+            if expiration_date < today and (late_interest > 0 or daily_late_interest > 0):
+                juros = Decimal('0.00')
+                if late_interest > 0:
+                    juros = (Decimal(str(late_interest)) /
+                             Decimal('100')) * price
+                dias_atraso = (today - expiration_date).days
+                juros_diario = Decimal('0.00')
+                if daily_late_interest > 0:
+                    juros_diario = (Decimal(str(daily_late_interest)) /
+                                    Decimal('100')) * price * dias_atraso
+                price += juros + juros_diario
+
+        # Arredonda para 2 casas decimais
+        price = price.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
         payload = {
             "name": user.name,
@@ -52,10 +88,10 @@ class ZeroOneGateway(PaymentGatewayBase):
             "cpf": user.cpf,
             "phone": getattr(user, 'phone', "00000000000"),
             "paymentMethod": payment_method,
-            "amount": int(plan.price * 100),
+            "amount": int(price * 100),  # valor final em centavos
             "items": [
                 {
-                    "unitPrice": int(plan.price * 100),
+                    "unitPrice": int(price * 100),
                     "title": str(plan.uid),
                     "quantity": 1,
                     "tangible": False
@@ -64,19 +100,34 @@ class ZeroOneGateway(PaymentGatewayBase):
         }
 
         gateway_response = self.generate_pix_payment(payload)
-        raw_key = f"{user.pk}-{plan.uid}-{payment_method}-{uuid.uuid4()}"
-        idempotency_key = hashlib.sha256(raw_key.encode()).hexdigest()[:100]
+        if not idempotency_key:
+            raw_key = f"{user.pk}-{plan.uid}-{payment_method}-{uuid.uuid4()}"
+            idempotency_key = hashlib.sha256(
+                raw_key.encode()).hexdigest()[:100]
 
-        payment = SubscriptionPayment.objects.create(
-            uid=uuid.uuid4(),
-            idempotency=idempotency_key,
+        # Busca ou cria o pagamento
+        payment, created = SubscriptionPayment.objects.get_or_create(
+            subscription=subscription,
             payment_method=payment_method,
-            token=gateway_response.get('id', 'unknown'),
-            price=plan.price,
-            gateway_response=gateway_response,
             status=False,
-            subscription=subscription
+            defaults={
+                "uid": uuid.uuid4(),
+                "idempotency": idempotency_key,
+                "token": gateway_response.get('id', 'zeroone'),
+                "price": price,  # Usa Decimal!
+                "gateway_response": gateway_response,
+            }
         )
+
+        if not created:
+            # Atualiza o pagamento existente
+            payment.idempotency = idempotency_key
+            payment.token = gateway_response.get('id', 'zeroone')
+            payment.price = price  # Usa Decimal!
+            payment.gateway_response = gateway_response
+            payment.created_at = now()
+            payment.save()
+
         return payment
 
     def update_payment_status(self, payment_uid, status):
@@ -96,11 +147,13 @@ class ZeroOneGateway(PaymentGatewayBase):
             if subscription:
                 current_time = now()
                 if subscription.expiration and subscription.expiration > current_time:
-                    subscription.expiration += timedelta(
-                        days=30 * subscription.plan.duration_value)
+                    base_date = subscription.expiration
                 else:
-                    subscription.expiration = current_time + \
-                        timedelta(days=30 * subscription.plan.duration_value)
+                    base_date = current_time
+
+                # Usa o método centralizado do model
+                subscription.expiration = subscription.calculate_end_date_from(
+                    base_date)
 
                 # Desativa todas as outras assinaturas ativas do usuário
                 UserSubscription.objects.filter(
@@ -108,4 +161,5 @@ class ZeroOneGateway(PaymentGatewayBase):
                 ).exclude(pk=subscription.pk).update(is_active=False)
 
                 subscription.is_active = True
+                subscription.status = 'active'
                 subscription.save()

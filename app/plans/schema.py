@@ -70,6 +70,9 @@ plan_viewset_schema = extend_schema_view(
                     "is_current": {"type": "boolean", "example": False},
                     "description": {"type": "string", "example": "Plano mensal básico"},
                     "created_at": {"type": "string", "format": "date-time", "example": "2025-04-25T12:00:00Z"},
+                    "integration_limit": {"type": "integer", "example": 0},
+                    "campaign_limit": {"type": "integer", "example": 0},
+                    "kwai_limit": {"type": "integer", "example": 0},
                     "features_response": {
                         "type": "array",
                         "items": {
@@ -81,7 +84,7 @@ plan_viewset_schema = extend_schema_view(
                         },
                     },
                 },
-            }
+            },
         },
         examples=[
             OpenApiExample(
@@ -92,6 +95,9 @@ plan_viewset_schema = extend_schema_view(
                     "price": 29.99,
                     "duration": "month",
                     "duration_value": 1,
+                    "integration_limit": 0,
+                    "campaign_limit": 0,
+                    "kwai_limit": 0,
                     "features": [
                         {"text": "Acesso básico", "active": True},
                         {"text": "Suporte 24 horas", "active": True}
@@ -110,6 +116,9 @@ plan_viewset_schema = extend_schema_view(
                     "is_current": False,
                     "description": "Plano mensal básico",
                     "created_at": "2025-04-25T12:00:00Z",
+                    "integration_limit": 0,
+                    "campaign_limit": 0,
+                    "kwai_limit": 0,
                     "features_response": [
                         {"text": "Acesso básico", "active": True},
                         {"text": "Suporte 24 horas", "active": True}

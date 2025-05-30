@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from datetime import timedelta
 from plans.models import Plan
 from django.conf import settings
+from dateutil.relativedelta import relativedelta
 
 import uuid
 
@@ -53,16 +54,30 @@ class UserSubscription(models.Model):
 
     def calculate_end_date(self):
         """
-        Calcula a data de expiração com base na duração do plano.
+        Calcula a data de expiração com base na duração do plano, a partir do start_date.
         """
         if self.plan.duration == 'day':
             return self.start_date + timedelta(days=self.plan.duration_value)
-        if self.plan.duration == 'month':
-            return self.start_date + timedelta(days=30 * self.plan.duration_value)
+        elif self.plan.duration == 'month':
+            return self.start_date + relativedelta(months=self.plan.duration_value)
         elif self.plan.duration == 'year':
-            return self.start_date + timedelta(days=365 * self.plan.duration_value)
+            return self.start_date + relativedelta(years=self.plan.duration_value)
         else:
             return self.start_date
+
+    def calculate_end_date_from(self, base_date):
+        """
+        Calcula a data de expiração com base na duração do plano, a partir de uma data base.
+        Útil para renovações e upgrades.
+        """
+        if self.plan.duration == 'day':
+            return base_date + timedelta(days=self.plan.duration_value)
+        elif self.plan.duration == 'month':
+            return base_date + relativedelta(months=self.plan.duration_value)
+        elif self.plan.duration == 'year':
+            return base_date + relativedelta(years=self.plan.duration_value)
+        else:
+            return base_date
 
     class Meta:
         db_table = 'subscription'
@@ -74,6 +89,11 @@ class UserSubscription(models.Model):
 class SubscriptionPayment(models.Model):
     id = models.AutoField(primary_key=True)
     uid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='payments',
+        null=True, blank=True)
     idempotency = models.CharField(max_length=100, unique=True)
     payment_method = models.CharField(max_length=20, choices=[
         ('PIX', 'PIX'),
@@ -115,3 +135,18 @@ class NotificationSend(models.Model):
 
     class Meta:
         db_table = 'subscription_notification_send'
+
+
+class PaymentReminderLock(models.Model):
+    date = models.DateField(unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+            db_table = 'payments_payment_reminder_lock'
+            
+class PaymentExpireLock(models.Model):
+    date = models.DateField(unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+            db_table = 'payments_payment_expire_lock'

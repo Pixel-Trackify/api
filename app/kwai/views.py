@@ -35,7 +35,6 @@ logger = logging.getLogger('django')
 
 
 class KwaiViewSet(ModelViewSet):
-    queryset = Kwai.objects.filter(deleted=False)
     serializer_class = KwaiSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [SearchFilter, OrderingFilter]
@@ -44,6 +43,9 @@ class KwaiViewSet(ModelViewSet):
     ordering = ['-created_at']
     lookup_field = 'uid'
     http_method_names = ['get', 'post', 'put', 'delete']
+
+    def get_queryset(self):
+        return Kwai.objects.filter(user=self.request.user, deleted=False)
 
     def filter_queryset(self, queryset):
         queryset = super().filter_queryset(queryset)
@@ -192,7 +194,13 @@ class KwaiViewSet(ModelViewSet):
             )
 
         with transaction.atomic():
-            KwaiCampaign.objects.filter(kwai=kwai).delete()
+            kwai_campaigns = KwaiCampaign.objects.filter(kwai=kwai)
+            for kwai_campaign in kwai_campaigns:
+                campaign = kwai_campaign.campaign
+                campaign.in_use = False
+                campaign.save()
+
+            kwai_campaigns.delete()
             kwai.deleted = True
             kwai.save()
 
@@ -258,7 +266,8 @@ class CampaignsNotInUseView(APIView):
     @campaigns_not_in_use_view_get_schema
     def get(self, request):
         try:
-            campaigns = Campaign.objects.filter(in_use=False, deleted=False)
+            campaigns = Campaign.objects.filter(
+                in_use=False, deleted=False).order_by('-created_at')
 
             valid_campaigns = []
             for campaign in campaigns:

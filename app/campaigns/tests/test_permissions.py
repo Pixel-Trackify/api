@@ -2,6 +2,11 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse, NoReverseMatch
 from rest_framework import status
 from rest_framework.test import APITestCase
+from datetime import timedelta
+from django.utils import timezone
+from plans.models import Plan
+from payments.models import UserSubscription, SubscriptionPayment
+import uuid
 
 User = get_user_model()
 
@@ -31,6 +36,46 @@ class testCampaignDeleteFromAnotherUser(APITestCase):
             reg_response_user1 = self.client.post(self.register_url, payload_user1, format="json")
             self.assertEqual(reg_response_user1.status_code, status.HTTP_201_CREATED)
 
+            # Adicionar uma assinatura para o usuário
+            user = User.objects.get(email=email)
+            user.subscription_active = True
+            user.subscription_expiration = timezone.now() + timedelta(days=30)
+            user.save()
+            
+            # Crie um plano de teste
+            plan = Plan.objects.create(
+                name="Plano Teste",
+                price=49.99,
+                duration="month",
+                duration_value=1,
+                is_current=True,
+                campaign_limit=5,
+                integration_limit=5,
+                kwai_limit=5,
+                description="Plano de teste para integração"
+            )
+
+            # Crie uma assinatura ativa para o usuário
+            subscription = UserSubscription.objects.create(
+                user=user,
+                plan=plan,
+                start_date=timezone.now(),
+                expiration=timezone.now() + timedelta(days=30),
+                is_active=True,
+                status="active"
+            )
+
+            # Crie um pagamento para a assinatura
+            SubscriptionPayment.objects.create(
+                uid=uuid.uuid4(),
+                idempotency=f"{user.pk}-{plan.uid}-PIX",
+                payment_method="PIX",
+                gateway="zeroone",
+                price=plan.price,
+                status=True,
+                subscription=subscription
+            )
+            
             # Autenticar o primeiro usuário
             login_payload_user1 = {"identifier": email, "password": password}
             login_response_user1 = self.client.post(self.login_url, login_payload_user1, format="json")
@@ -92,7 +137,47 @@ class testCampaignBulkDeleteFromAnotherUser(APITestCase):
                              "password": password, "confirm_password": password}
             reg_response_user1 = self.client.post(self.register_url, payload_user1, format="json")
             self.assertEqual(reg_response_user1.status_code, status.HTTP_201_CREATED)
+            
+            # Adicionar uma assinatura para o usuário
+            user = User.objects.get(email=email)
+            user.subscription_active = True
+            user.subscription_expiration = timezone.now() + timedelta(days=30)
+            user.save()
+            
+            # Crie um plano de teste
+            plan = Plan.objects.create(
+                name="Plano Teste",
+                price=49.99,
+                duration="month",
+                duration_value=1,
+                is_current=True,
+                campaign_limit=5,
+                integration_limit=5,
+                kwai_limit=5,
+                description="Plano de teste para integração"
+            )
 
+            # Crie uma assinatura ativa para o usuário
+            subscription = UserSubscription.objects.create(
+                user=user,
+                plan=plan,
+                start_date=timezone.now(),
+                expiration=timezone.now() + timedelta(days=30),
+                is_active=True,
+                status="active"
+            )
+
+            # Crie um pagamento para a assinatura
+            SubscriptionPayment.objects.create(
+                uid=uuid.uuid4(),
+                idempotency=f"{user.pk}-{plan.uid}-PIX",
+                payment_method="PIX",
+                gateway="zeroone",
+                price=plan.price,
+                status=True,
+                subscription=subscription
+            )
+            
             # Autenticar o primeiro usuário
             login_payload_user1 = {"identifier": email, "password": password}
             login_response_user1 = self.client.post(self.login_url, login_payload_user1, format="json")
@@ -156,6 +241,46 @@ class testCampaignEditFromAnotherUser(APITestCase):
             reg_response_user1 = self.client.post(self.register_url, payload_user1, format="json")
             self.assertEqual(reg_response_user1.status_code, status.HTTP_201_CREATED)
 
+            # Adicionar uma assinatura para o usuário
+            user = User.objects.get(email=email)
+            user.subscription_active = True
+            user.subscription_expiration = timezone.now() + timedelta(days=30)
+            user.save()
+            
+            # Crie um plano de teste
+            plan = Plan.objects.create(
+                name="Plano Teste",
+                price=49.99,
+                duration="month",
+                duration_value=1,
+                is_current=True,
+                campaign_limit=5,
+                integration_limit=5,
+                kwai_limit=5,
+                description="Plano de teste para integração"
+            )
+
+            # Crie uma assinatura ativa para o usuário
+            subscription = UserSubscription.objects.create(
+                user=user,
+                plan=plan,
+                start_date=timezone.now(),
+                expiration=timezone.now() + timedelta(days=30),
+                is_active=True,
+                status="active"
+            )
+
+            # Crie um pagamento para a assinatura
+            SubscriptionPayment.objects.create(
+                uid=uuid.uuid4(),
+                idempotency=f"{user.pk}-{plan.uid}-PIX",
+                payment_method="PIX",
+                gateway="zeroone",
+                price=plan.price,
+                status=True,
+                subscription=subscription
+            )
+            
             # Autenticar o primeiro usuário
             login_payload_user1 = {"identifier": email, "password": password}
             login_response_user1 = self.client.post(self.login_url, login_payload_user1, format="json")
@@ -224,6 +349,46 @@ class testCampaignDetailFromAnotherUser(APITestCase):
             reg_response_user1 = self.client.post(self.register_url, payload_user1, format="json")
             self.assertEqual(reg_response_user1.status_code, status.HTTP_201_CREATED)
 
+            # Adicionar uma assinatura para o usuário
+            user = User.objects.get(email=email)
+            user.subscription_active = True
+            user.subscription_expiration = timezone.now() + timedelta(days=30)
+            user.save()
+            
+            # Crie um plano de teste
+            plan = Plan.objects.create(
+                name="Plano Teste",
+                price=49.99,
+                duration="month",
+                duration_value=1,
+                is_current=True,
+                campaign_limit=5,
+                integration_limit=5,
+                kwai_limit=5,
+                description="Plano de teste para integração"
+            )
+
+            # Crie uma assinatura ativa para o usuário
+            subscription = UserSubscription.objects.create(
+                user=user,
+                plan=plan,
+                start_date=timezone.now(),
+                expiration=timezone.now() + timedelta(days=30),
+                is_active=True,
+                status="active"
+            )
+
+            # Crie um pagamento para a assinatura
+            SubscriptionPayment.objects.create(
+                uid=uuid.uuid4(),
+                idempotency=f"{user.pk}-{plan.uid}-PIX",
+                payment_method="PIX",
+                gateway="zeroone",
+                price=plan.price,
+                status=True,
+                subscription=subscription
+            )
+            
             # Autenticar o primeiro usuário
             login_payload_user1 = {"identifier": email, "password": password}
             login_response_user1 = self.client.post(self.login_url, login_payload_user1, format="json")

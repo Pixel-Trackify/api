@@ -6,6 +6,8 @@ urlpatterns = [
          name='payments'),
     path('payments/change/<uuid:uid>/', views.PaymentChangePlanView.as_view(),
          name='payment-change-plan'),
+    path('subscription/', views.SubscriptionInfoView.as_view(),
+         name='subscription-info'),
     path('payments/<uuid:uid>/status/',
          views.PaymentStatusView.as_view(), name='payment-status'),
     path('webhook/zeroone/',

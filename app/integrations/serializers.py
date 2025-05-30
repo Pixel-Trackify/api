@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Integration, Transaction, IntegrationRequest
+from payments.models import UserSubscription
 from django.conf import settings
 import logging
 from django.utils.html import strip_tags
@@ -14,10 +15,27 @@ class IntegrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Integration
-        fields = ['id', 'uid', 'user', 'name', 'gateway',
+        fields = ['uid', 'user', 'name', 'gateway',
                   'deleted', 'status', 'created_at', 'updated_at', 'webhook_url', 'in_use']
-        read_only_fields = ['id', 'uid', 'user', 'deleted',
+        read_only_fields = ['uid', 'user',
                             'status', 'created_at', 'updated_at']
+
+    def validate(self, data):
+        user = self.context['request'].user
+
+        # Busca assinatura ativa
+        subscription = UserSubscription.objects.filter(
+            user=user, is_active=True).first()
+        if not subscription or not subscription.is_active:
+            raise serializers.ValidationError({"error":"Assinatura inativa. Não é possível cadastrar integrações."})
+
+        plan = subscription.plan
+        integration_count = Integration.objects.filter(
+            user=user, deleted=False).count()
+        if integration_count >= plan.integration_limit:
+            raise serializers.ValidationError({"error": "Limite de integrações atingido para seu plano."})
+
+        return data
 
     def validate_name(self, value):
         try:

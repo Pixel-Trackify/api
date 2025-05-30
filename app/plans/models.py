@@ -25,6 +25,9 @@ class Plan(models.Model):
     is_current = models.BooleanField(default=False, verbose_name="active-plan")
     description = models.TextField(
         blank=True, verbose_name="description-adm")  # Visível apenas no admin
+    integration_limit = models.IntegerField(default=0)
+    campaign_limit = models.IntegerField(default=0)
+    kwai_limit = models.IntegerField(default=0)
     created_at = models.DateTimeField(
         auto_now_add=True, verbose_name="creation-date")
 

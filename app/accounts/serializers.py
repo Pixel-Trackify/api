@@ -7,28 +7,19 @@ from django.core.exceptions import ValidationError
 from rest_framework import serializers
 from django.utils.html import strip_tags
 import html
-
-
 from accounts.models import Usuario
 from django.conf import settings
-from plans.models import Plan
-from payments.models import UserSubscription
-from django.utils import timezone
-from datetime import timedelta
-import uuid
 
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     confirm_password = serializers.CharField(write_only=True, required=True)
-    plan_uid = serializers.UUIDField(
-        write_only=True, required=False)  # Usar UID em vez de ID
     captcha = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = Usuario
         fields = ['uid', 'email', 'cpf', 'name', 'password',
-                  'confirm_password', 'date_joined', 'plan_uid', 'avatar', 'captcha']
+                  'confirm_password', 'date_joined', 'avatar', 'captcha']
         read_only_fields = ['date_joined']
 
     def validate(self, data):
@@ -44,12 +35,6 @@ class RegisterSerializer(serializers.ModelSerializer):
         if cpf and not CPFValidator.validar_cpf(cpf):
             raise serializers.ValidationError({"cpf": "CPF inválido."})
 
-        # Valida se o plano existe, se fornecido
-        plan_uid = data.get('plan_uid')
-        if plan_uid and not Plan.objects.filter(uid=plan_uid).exists():
-            raise serializers.ValidationError(
-                {"plan_uid": "Plano não encontrado."})
-
         # Valida o captcha se necessário
         config = Configuration.objects.first()
         if config and config.recaptchar_enable and not data.get('captcha'):
@@ -60,8 +45,6 @@ class RegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         # Remove o campo extra antes de criar o usuário
         validated_data.pop('confirm_password')
-        # Obtém o UID do plano se fornecido
-        plan_uid = validated_data.pop('plan_uid', None)
 
         user = Usuario.objects.create_user(**validated_data)
         avatar = validated_data.pop('avatar', None)
@@ -71,22 +54,12 @@ class RegisterSerializer(serializers.ModelSerializer):
 
         config = Configuration.objects.first()
         if config and config.require_email_confirmation:
-            user.is_active = False
+            user.is_active = True
             user.save()
 
         else:
             user.is_active = True
             user.save()
-
-        if plan_uid:
-            plan = Plan.objects.get(uid=plan_uid)
-            UserSubscription.objects.create(
-                user=user,
-                plan=plan,
-                start_date=timezone.now(),
-                end_date=timezone.now() + timedelta(days=30),
-                is_active=True
-            )
 
         return user
 
@@ -290,28 +263,12 @@ class LoginSerializer(serializers.Serializer):
         return attrs
 
 
-class PlanSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Plan
-        fields = ['id', 'uid', 'name', 'description',
-                  'price', 'duration', 'duration_value']
-
-
-class UserSubscriptionSerializer(serializers.ModelSerializer):
-    plan = PlanSerializer()
-
-    class Meta:
-        model = UserSubscription
-        fields = ['plan', 'start_date', 'expiration', 'is_active']
-
-
 class UserProfileSerializer(serializers.ModelSerializer):
-    active_plan = serializers.SerializerMethodField()
 
     class Meta:
         model = Usuario
         fields = ['uid', 'name', 'email', 'cpf',
-                  'avatar', 'date_joined', 'active_plan', 'profit']
+                  'avatar', 'date_joined', 'profit']
 
     def validate_name(self, value):
 
@@ -344,38 +301,6 @@ class UserProfileSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({"cpf": "CPF inválido."})
 
         return data
-
-    def get_active_plan(self, obj):
-        active_subscription = obj.subscriptions.filter(is_active=True).first()
-        if active_subscription:
-            return PlanSerializer(active_subscription.plan).data
-        return None
-
-
-class UpdateUserPlanSerializer(serializers.Serializer):
-    plan_uid = serializers.UUIDField(write_only=True)
-
-    def validate_plan_uid(self, plan_uid):
-        if not Plan.objects.filter(uid=plan_uid).exists():
-            raise serializers.ValidationError("Plano não encontrado.")
-        return plan_uid
-
-    def update(self, instance, validated_data):
-        plan = Plan.objects.get(uid=validated_data['plan_uid'])
-
-        # Desativar a assinatura anterior
-        UserSubscription.objects.filter(
-            user=instance, is_active=True).update(is_active=False)
-
-        # Criar nova assinatura
-        UserSubscription.objects.create(user=instance, plan=plan, start_date=timezone.now(
-        ), expiration=timezone.now() + timedelta(days=30), is_active=True)
-
-        # Atualizar o tipo de conta do usuário
-        instance.account_type = plan
-        instance.save()
-
-        return instance
 
 
 class ChangePasswordSerializer(serializers.Serializer):
@@ -479,3 +404,33 @@ class MultipleDeleteSerializer(serializers.Serializer):
         child=serializers.UUIDField(),
         help_text="Lista de UIDs dos usuários a serem excluídos."
     )
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    captcha = serializers.CharField(
+        required=False, allow_blank=True)
+
+    def validate(self, data):
+        config = Configuration.objects.first()
+        if config and config.recaptchar_enable and not data.get('captcha'):
+            raise serializers.ValidationError(
+                {'captcha': 'Este campo é obrigatório.'}
+            )
+        return data
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    recovery_code = serializers.CharField()
+    new_password = serializers.CharField()
+    confirm_password = serializers.CharField()
+
+    def validate(self, data):
+        if data['new_password'] != data['confirm_password']:
+            raise serializers.ValidationError("As senhas não coincidem.")
+
+        password_validator = PasswordValidator()
+        password_validator(data['new_password'])
+
+        return data

@@ -1,33 +1,26 @@
-
 from rest_framework.views import APIView
 from rest_framework import viewsets, status, filters
-from rest_framework.exceptions import NotFound
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import RegisterSerializer, LoginSerializer, UserUpdateSerializer, UpdateUserPlanSerializer, UserProfileSerializer, ChangePasswordSerializer, UserSubscriptionSerializer, PlanSerializer, MultipleDeleteSerializer, AdminUserUpdateSerializer
-from rest_framework.filters import SearchFilter, OrderingFilter
+from .serializers import RegisterSerializer, LoginSerializer, UserProfileSerializer, ChangePasswordSerializer, MultipleDeleteSerializer, AdminUserUpdateSerializer, PasswordResetRequestSerializer, PasswordResetConfirmSerializer
 from rest_framework.decorators import action
-from django_filters.rest_framework import DjangoFilterBackend
 from django.utils.crypto import get_random_string
 from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
-from rest_framework.exceptions import NotFound
-from rest_framework import generics
+from custom_admin.models import Configuration
 import logging
+from django.urls import reverse
 from .models import Usuario, LoginLog
-from plans.models import Plan
-from payments.models import UserSubscription
+from .email_utils import send_register_email, send_password_reset_email
 from rest_framework_simplejwt.tokens import RefreshToken
-from .filters import UsuarioFilter
 import user_agents
 import uuid
 from django.utils import timezone
 from django.conf import settings
 from .permissions import IsAdminUserForList
-from project.pagination import DefaultPagination
 import os
 import boto3
 from datetime import timedelta
@@ -36,7 +29,7 @@ from botocore.exceptions import NoCredentialsError, PartialCredentialsError, Bot
 from .schema import (
     register_view_schema, user_profile_view_schema, change_password_view_schema,
     login_view_schema, logout_view_schema,
-    update_user_plan_view_schema, user_plan_view_schema, user_subscription_history_view_schema, upload_avatar_view_schema, create_user_view_schema, multiple_delete_schema
+    upload_avatar_view_schema, create_user_view_schema, multiple_delete_schema, password_reset_request_schema, password_reset_confirm_schema
 )
 
 logger = logging.getLogger('django')
@@ -53,15 +46,23 @@ class RegisterView(APIView):
         if serializer.is_valid():
             user = serializer.save()
 
-            # Verificar se a confirmação de e-mail é necessária
-            require_email_confirmation = os.getenv(
-                "REQUIRE_EMAIL_CONFIRMATION", "True") == "False"
+            # configuração de confirmação de e-mail
+            config = Configuration.objects.first()
+            require_email_confirmation = config.require_email_confirmation if config else False
+
+            # Dispara e-mail
+            try:
+                send_register_email(
+                    to_email=user.email,
+                    user_name=user.name
+                )
+            except Exception as e:
+                pass
 
             # Gerar tokens JWT
             refresh = RefreshToken.for_user(user)
             access_token = str(refresh.access_token)
 
-            # Adicionar todas as chaves esperadas na resposta
             response_data = {
                 "message": "Usuário registrado com sucesso!",
                 "user": {
@@ -322,8 +323,6 @@ class LoginView(APIView):
             token=token
         )
 
-        logger.info(f"Usuário {user.email} logado com sucesso.")
-
         return Response({
             "refresh": str(refresh),
             "access": str(refresh.access_token),
@@ -340,7 +339,7 @@ class LogoutView(APIView):
             # Obtém o token de refresh do corpo da requisição
             refresh_token = request.data.get('refresh')
             if not refresh_token:
-                logger.warning("Tentativa de logout sem token de refresh.")
+
                 return Response(
                     {"error": "O campo 'refresh' é obrigatório."},
                     status=status.HTTP_400_BAD_REQUEST
@@ -360,60 +359,18 @@ class LogoutView(APIView):
             )
         except TokenError as e:
             # Captura erros relacionados ao token (ex.: token inválido ou expirado)
-            logger.error(f"Erro durante o logout: {str(e)}")
+
             return Response(
                 {"error": str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
         except Exception as e:
             # Captura outros erros inesperados
-            logger.error(f"Erro inesperado durante o logout: {str(e)}")
+
             return Response(
                 {"error": "Ocorreu um erro durante o logout."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
-
-@update_user_plan_view_schema
-class UpdateUserPlanView(APIView):
-    """
-    Endpoint para atualizar o plano do usuário autenticado.
-    """
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, *args, **kwargs):
-        serializer = UpdateUserPlanSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.update(request.user, serializer.validated_data)
-        return Response({"message": "Plano atualizado com sucesso."}, status=status.HTTP_200_OK)
-
-
-@user_plan_view_schema
-class UserPlanView(APIView):
-    """Retorna o plano do usuário autenticado"""
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        subscription = request.user.subscriptions.filter(
-            is_active=True).first()
-        if not subscription:
-            return Response({"message": "Nenhum plano ativo encontrado."}, status=404)
-
-        plan_data = PlanSerializer(subscription.plan).data
-        return Response(plan_data)
-
-
-@user_subscription_history_view_schema
-class UserSubscriptionHistoryView(APIView):
-    """
-    Retorna o histórico de assinaturas do usuário autenticado.
-    """
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        subscriptions = UserSubscription.objects.filter(user=request.user)
-        serializer = UserSubscriptionSerializer(subscriptions, many=True)
-        return Response(serializer.data)
 
 
 @upload_avatar_view_schema
@@ -499,89 +456,71 @@ class UploadAvatarView(APIView):
 
 
 class PasswordResetRequestView(APIView):
-    """
-    Endpoint para solicitar a recuperação de senha.
-    Envia um código de recuperação por e-mail usando AWS SES.
-    """
-
+    @password_reset_request_schema
     def post(self, request):
-        email = request.data.get("email")
-        if not email:
-            return Response({"error": "O campo 'email' é obrigatório."}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email']
 
-        # Verificar se o e-mail está associado a um usuário
         try:
             user = Usuario.objects.get(email=email)
         except Usuario.DoesNotExist:
             return Response({"error": "Usuário não encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Gerar um código de recuperação
         recovery_code = get_random_string(length=6, allowed_chars="0123456789")
+        user.password_reset_code = recovery_code
+        user.password_reset_expires = timezone.now() + timedelta(minutes=10)
+        user.save()
 
-        # Salvar o código no cache com validade de X minutos
-        cache_key = f"password_reset_{user.uid}"
-        cache.set(cache_key, recovery_code, timeout=timedelta(
-            minutes=10).total_seconds())  # Código válido por 10 minutos
+        reset_path = reverse('password-reset-confirm', args=[recovery_code])
+        if bool(int(os.getenv('DEBUG', 0))):
+            frontend_url = "http://localhost:80"
+        else:
+            frontend_url = f"{settings.FRONTEND_URL}"
 
-        # Configurar o cliente SES
-        ses_client = boto3.client(
-            'ses',
-            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-            region_name=settings.AWS_DEFAULT_REGION
-        )
+        reset_link = f"{frontend_url}{reset_path}"
+        expiration_hours = 1
 
-        # Enviar o e-mail com o código de recuperação
         try:
-            ses_client.send_email(
-                Source=settings.AWS_SES_SOURCE_EMAIL,
-                Destination={"ToAddresses": [email]},
-                Message={
-                    "Subject": {"Data": "Recuperação de Senha"},
-                    "Body": {
-                        "Text": {
-                            "Data": f"Olá {user.name},\n\nSeu código de recuperação de senha é: {recovery_code}\n\nEste código é válido por 10 minutos."
-                        }
-                    }
-                }
+            send_password_reset_email(
+                to_email=user.email,
+                user_name=user.name,
+                recovery_code=recovery_code,
+                reset_link=reset_link,
+                expiration_hours=expiration_hours
             )
-        except (BotoCoreError, ClientError) as e:
+        except Exception as e:
             return Response({"error": f"Erro ao enviar o e-mail: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response({"message": "Código de recuperação enviado com sucesso."}, status=status.HTTP_200_OK)
 
 
 class PasswordResetConfirmView(APIView):
-    """
-    Endpoint para confirmar o código de recuperação e redefinir a senha.
-    """
+    @password_reset_confirm_schema
+    def post(self, request, recovery_code):
 
-    def post(self, request):
-        email = request.data.get("email")
-        recovery_code = request.data.get("recovery_code")
-        new_password = request.data.get("new_password")
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email']
+        new_password = serializer.validated_data['new_password']
 
-        if not email or not recovery_code or not new_password:
-            return Response({"error": "Os campos 'email', 'recovery_code' e 'new_password' são obrigatórios."}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Verificar se o e-mail está associado a um usuário
         try:
             user = Usuario.objects.get(email=email)
         except Usuario.DoesNotExist:
             return Response({"error": "Usuário não encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Verificar o código de recuperação no cache
-        cache_key = f"password_reset_{user.uid}"
-        cached_code = cache.get(cache_key)
+        if (
+            not user.password_reset_code or
+            user.password_reset_code != recovery_code or
+            not user.password_reset_expires or
+            user.password_reset_expires < timezone.now()
+        ):
 
-        if not cached_code or cached_code != recovery_code:
             return Response({"error": "Código de recuperação inválido ou expirado."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Atualizar a senha do usuário
         user.set_password(new_password)
+        user.password_reset_code = None
+        user.password_reset_expires = None
         user.save()
-
-        # Remover o código do cache
-        cache.delete(cache_key)
 
         return Response({"message": "Senha redefinida com sucesso."}, status=status.HTTP_200_OK)
