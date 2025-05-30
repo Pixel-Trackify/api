@@ -54,7 +54,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
         config = Configuration.objects.first()
         if config and config.require_email_confirmation:
-            user.is_active = False
+            user.is_active = True
             user.save()
 
         else:
