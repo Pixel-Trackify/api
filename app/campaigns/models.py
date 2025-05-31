@@ -138,6 +138,7 @@ class FinanceLogs(models.Model):
     campaign = models.ForeignKey(
         'Campaign', on_delete=models.CASCADE, related_name='finance_logs', default=0
     )
+    user_paid = models.BooleanField(default=False)
     profit = models.DecimalField(max_digits=15, decimal_places=5, default=0)
     ROI = models.DecimalField(max_digits=15, decimal_places=5, default=0)
     total_views = models.IntegerField(default=0)

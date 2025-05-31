@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.utils.timezone import now
 from plans.models import Plan, PlanFeature
+from payments.utils import calculate_amount_sales_aditional
 from .models import SubscriptionPayment, UserSubscription
 from custom_admin.models import Configuration
 from decimal import Decimal
@@ -102,10 +103,12 @@ class PaymentOpenedSerializer(serializers.ModelSerializer):
     amount = serializers.FloatField(source="price")
     tax = serializers.SerializerMethodField()
     total = serializers.SerializerMethodField()
+    amount_sales_aditional = serializers.SerializerMethodField()
 
     class Meta:
         model = SubscriptionPayment
-        fields = ["uid", "amount", "date", "tax", "total"]
+        fields = ["uid", "amount", "date", "tax",
+                  "total", "amount_sales_aditional"]
 
     def get_tax(self, obj):
         config = Configuration.objects.first()
@@ -138,6 +141,13 @@ class PaymentOpenedSerializer(serializers.ModelSerializer):
         price = Decimal(obj.price)
         tax = Decimal(self.get_tax(obj))
         return str((price + tax).quantize(Decimal('0.01')))
+
+    def get_amount_sales_aditional(self, obj):
+        user = obj.subscription.user if obj.subscription else None
+        plan = obj.subscription.plan if obj.subscription else None
+        if not user or not plan:
+            return 0
+        return float(calculate_amount_sales_aditional(user, plan))
 
 
 class PaymentHistoricSerializer(serializers.ModelSerializer):

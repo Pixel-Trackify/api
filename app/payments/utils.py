@@ -1,7 +1,9 @@
 import uuid
 from payments.models import SubscriptionPayment
+from campaigns.models import FinanceLogs
 from .models import SubscriptionPayment
 from django.utils.timezone import now, timedelta
+from django.db.models import Sum
 
 
 def get_idempotent_payment(user, plan, payment_method, interval_minutes=60):
@@ -38,3 +40,22 @@ def create_subscription_payment(user, subscription, payment_method, price, statu
         price=price,
         gateway_response=gateway_response
     )
+
+
+def calculate_amount_sales_aditional(user, plan):
+    today = now().date()
+    # Soma todas as vendas aprovadas do usuário, não pagas, exceto do dia atual
+    total_sales = FinanceLogs.objects.filter(
+        campaign__user=user,
+        user_paid=False,
+        date__lt=today
+    ).aggregate(total=Sum('total_approved'))['total'] or 0
+
+    limit = plan.total_sales_month or 0
+    additional_value = plan.amount_sales_aditional or 0
+
+    if total_sales <= limit:
+        return 0
+
+    difference = total_sales - limit
+    return difference * additional_value

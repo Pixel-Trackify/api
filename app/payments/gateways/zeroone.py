@@ -1,6 +1,8 @@
 from .base import PaymentGatewayBase
 from custom_admin.models import Configuration
+from campaigns.models import FinanceLogs
 from payments.models import UserSubscription, SubscriptionPayment
+from payments.utils import calculate_amount_sales_aditional
 from django.utils.timezone import now, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 import requests
@@ -39,6 +41,8 @@ class ZeroOneGateway(PaymentGatewayBase):
             logger.error(f"Erro ao comunicar com o gateway ZeroOne: {str(e)}")
             raise Exception(
                 f"Erro ao comunicar com o gateway ZeroOne: {str(e)}")
+
+    # ajuste o import conforme sua estrutura
 
     def create_subscription_and_payment(self, user, plan, payment_method, idempotency_key=None):
         config = Configuration.objects.first()
@@ -79,8 +83,17 @@ class ZeroOneGateway(PaymentGatewayBase):
                                     Decimal('100')) * price * dias_atraso
                 price += juros + juros_diario
 
+        # Cálculo do valor adicional (amount_sales_aditional)
+        amount_sales_aditional = Decimal(
+            calculate_amount_sales_aditional(user, plan)
+        )
+
+        # Soma o valor adicional ao preço final
+        price_total = price + amount_sales_aditional
+
         # Arredonda para 2 casas decimais
-        price = price.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        price_total = price_total.quantize(
+            Decimal('0.01'), rounding=ROUND_HALF_UP)
 
         payload = {
             "name": user.name,
@@ -88,7 +101,7 @@ class ZeroOneGateway(PaymentGatewayBase):
             "cpf": user.cpf,
             "phone": getattr(user, 'phone', "00000000000"),
             "paymentMethod": payment_method,
-            "amount": int(price * 100),  # valor final em centavos
+            "amount": int(price_total * 100),  # valor final em centavos
             "items": [
                 {
                     "unitPrice": int(price * 100),
@@ -114,7 +127,7 @@ class ZeroOneGateway(PaymentGatewayBase):
                 "uid": uuid.uuid4(),
                 "idempotency": idempotency_key,
                 "token": gateway_response.get('id', 'zeroone'),
-                "price": price,  # Usa Decimal!
+                "price": price_total,  
                 "gateway_response": gateway_response,
             }
         )
@@ -123,7 +136,7 @@ class ZeroOneGateway(PaymentGatewayBase):
             # Atualiza o pagamento existente
             payment.idempotency = idempotency_key
             payment.token = gateway_response.get('id', 'zeroone')
-            payment.price = price  # Usa Decimal!
+            payment.price = price_total  
             payment.gateway_response = gateway_response
             payment.created_at = now()
             payment.save()
@@ -142,6 +155,14 @@ class ZeroOneGateway(PaymentGatewayBase):
         if status == "APPROVED":
             payment.status = True
             payment.save()
+
+            # Marca os FinanceLogs do usuário como pagos (exceto do dia atual)
+            today = now().date()
+            FinanceLogs.objects.filter(
+                campaign__user=payment.user,
+                user_paid=False,
+                date__lt=today  
+            ).update(user_paid=True)
 
             subscription = payment.subscription
             if subscription:

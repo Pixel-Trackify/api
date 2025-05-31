@@ -9,7 +9,7 @@ from .models import SubscriptionPayment, UserSubscription
 from custom_admin.models import Configuration
 from .serializers import PaymentSerializer, SubscriptionPlanSerializer, PlanInfoSerializer, PaymentOpenedSerializer, PaymentHistoricSerializer
 from django.utils.timezone import now, timedelta
-from .utils import get_idempotent_payment
+from .utils import get_idempotent_payment, calculate_amount_sales_aditional
 from drf_spectacular.utils import extend_schema
 from .email_utils import send_subscription_paid_email
 from .gateways import get_gateway
@@ -233,6 +233,15 @@ class SubscriptionInfoView(APIView):
         ).order_by('-created_at')
         payments_opened_list = PaymentOpenedSerializer(
             payment_opened, many=True).data
+
+        amount_sales_aditional = 0
+        if subscription and subscription.plan:
+            amount_sales_aditional = calculate_amount_sales_aditional(
+                user, subscription.plan)
+
+        # Adiciona o valor adicional em cada pagamento aberto
+        for payment in payments_opened_list:
+            payment['amount_sales_aditional'] = float(amount_sales_aditional)
 
         # Histórico de pagamentos pagos
         payments_historic = SubscriptionPayment.objects.filter(

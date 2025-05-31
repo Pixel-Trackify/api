@@ -10,8 +10,12 @@ class PlanFeatureSerializer(serializers.ModelSerializer):
 
 class PlanSerializer(serializers.ModelSerializer):
     features = PlanFeatureSerializer(many=True, write_only=True)
-    # Campo para exibir as features na resposta
     features_response = serializers.SerializerMethodField()
+    integration_limit = serializers.IntegerField()
+    campaign_limit = serializers.IntegerField()
+    kwai_limit = serializers.IntegerField()
+    total_sales_month = serializers.IntegerField()
+    amount_sales_aditional = serializers.FloatField()
 
     class Meta:
         model = Plan
