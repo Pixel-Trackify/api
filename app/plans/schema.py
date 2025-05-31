@@ -73,6 +73,8 @@ plan_viewset_schema = extend_schema_view(
                     "integration_limit": {"type": "integer", "example": 0},
                     "campaign_limit": {"type": "integer", "example": 0},
                     "kwai_limit": {"type": "integer", "example": 0},
+                    "total_sales_month": {"type": "integer", "example": 0},
+                    "amount_sales_aditional": {"type": "number", "format": "float", "example": 0.00},
                     "features_response": {
                         "type": "array",
                         "items": {
@@ -98,6 +100,8 @@ plan_viewset_schema = extend_schema_view(
                     "integration_limit": 0,
                     "campaign_limit": 0,
                     "kwai_limit": 0,
+                    "total_sales_month": 0,
+                    "amount_sales_aditional": 0.00,
                     "features": [
                         {"text": "Acesso básico", "active": True},
                         {"text": "Suporte 24 horas", "active": True}
@@ -119,6 +123,8 @@ plan_viewset_schema = extend_schema_view(
                     "integration_limit": 0,
                     "campaign_limit": 0,
                     "kwai_limit": 0,
+                    "total_sales_month": 0,
+                    "amount_sales_aditional": 0.00,
                     "features_response": [
                         {"text": "Acesso básico", "active": True},
                         {"text": "Suporte 24 horas", "active": True}
