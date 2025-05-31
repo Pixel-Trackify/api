@@ -14,7 +14,7 @@ class CaptchaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Configuration
         fields = [
-          'recaptchar_enable', 'recaptchar_site_key']
+            'recaptchar_enable', 'recaptchar_site_key']
 
 
 class UsuarioSerializer(serializers.ModelSerializer):
@@ -49,7 +49,7 @@ class DashboardSerializer(serializers.Serializer):
     total_rejected = serializers.IntegerField()
     amount_rejected = serializers.DecimalField(max_digits=10, decimal_places=2)
 
-    total_ads = serializers.IntegerField()
+    total_ads = serializers.DecimalField(max_digits=10, decimal_places=2)
     profit = serializers.DecimalField(max_digits=10, decimal_places=2)
 
     total_views = serializers.IntegerField()
