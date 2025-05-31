@@ -28,6 +28,12 @@ class Plan(models.Model):
     integration_limit = models.IntegerField(default=0)
     campaign_limit = models.IntegerField(default=0)
     kwai_limit = models.IntegerField(default=0)
+    total_sales_month = models.IntegerField(
+        default=0, verbose_name="total_sales_month"
+    )
+    amount_sales_aditional = models.FloatField(
+        default=0.0, verbose_name="amount_sales"
+    )
     created_at = models.DateTimeField(
         auto_now_add=True, verbose_name="creation-date")
 

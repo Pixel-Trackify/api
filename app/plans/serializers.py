@@ -17,8 +17,8 @@ class PlanSerializer(serializers.ModelSerializer):
         model = Plan
         fields = [
             'uid', 'name', 'price', 'duration', 'duration_value',
-            'is_current', 'description', 'created_at', 'features', 'features_response', 'integration_limit', 'campaign_limit', 'kwai_limit'
-        ]  
+            'is_current', 'description', 'created_at', 'features', 'features_response', 'integration_limit', 'campaign_limit', 'kwai_limit', 'total_sales_month', 'amount_sales_aditional'
+        ]
         read_only_fields = ['uid', 'created_at']
 
     def get_features_response(self, instance):
@@ -31,9 +31,9 @@ class PlanSerializer(serializers.ModelSerializer):
     def validate(self, data):
         """Valida os dados do plano"""
         price = data.get('price')
-        if price is not None and price <= 0:
+        if price is not None and price < 0:
             raise serializers.ValidationError(
-                {"price": "O preço deve ser maior que 0."})
+                {"price": "O preço não pode ser negativo."})
         return data
 
     def create(self, validated_data):
