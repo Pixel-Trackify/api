@@ -83,7 +83,7 @@ class SubscriptionPayment(models.Model):
         ('DEBIT_CARD', 'Debit Card'),
         ('BOLETO', 'Boleto')
     ])
-    token = models.CharField(max_length=255)
+    token = models.CharField(max_length=255, null=True, blank=True)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     gateway_response = models.JSONField(null=True, blank=True)
     status = models.BooleanField(default=False)
