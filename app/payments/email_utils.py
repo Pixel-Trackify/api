@@ -57,19 +57,36 @@ def send_subscription_paid_email(to_email, total_paid=None, user_name=None):
     
 
 
-def send_subscription_reminder_email(to_email, user_name=None):
+def send_subscription_reminder_email(to_email, expiration=None, user_name=None):
     config = Configuration.objects.first()
-    email_body = config.email_reminder if config else "Sua assinatura está prestes a expirar."
+    email_subject = config.email_reminder_subject if config else None
+    email_body = config.email_reminder if config else None
+     
+    if not email_subject or not email_body:
+        logger.error("Email subject or body not configured in Configuration model.")
+        return None
+    
+    # Substituições no template
+    now = datetime.now()
+    email_body = (
+        email_body
+        .replace("{{ano_atual}}", str(now.year))
+        .replace("{{link_pagamento}}",
+                 os.environ.get('PAINEL_URL', 'https://painel.onetracking.io/') + "pagamentos")
+        .replace("{{data_gerado}}", now.strftime("%d/%m/%Y"))
+        .replace("{{data_expiracao}}", expiration.strftime("%d/%m/%Y") if expiration else "N/A")
+    )
+    
     if user_name:
         email_body = email_body.replace("{{user_name}}", user_name)
+        
     ses_client = get_ses_client()
-    subject = "Lembrete: sua assinatura vai expirar"
     source_email = settings.AWS_SES_SOURCE_EMAIL
     response = ses_client.send_email(
         Source=source_email,
         Destination={'ToAddresses': [to_email]},
         Message={
-            'Subject': {'Data': subject},
+            'Subject': {'Data': email_subject},
             'Body': {'Html': {'Data': email_body}}
         }
     )

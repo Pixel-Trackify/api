@@ -135,3 +135,11 @@ class NotificationSend(models.Model):
 
     class Meta:
         db_table = 'subscription_notification_send'
+
+
+class PaymentReminderLock(models.Model):
+    date = models.DateField(unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+            db_table = 'payments_payment_reminder_lock'
