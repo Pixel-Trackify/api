@@ -4,6 +4,7 @@ from custom_admin.models import Configuration
 from datetime import datetime
 import os
 import logging
+from django.utils import timezone
 
 logger = logging.getLogger('django')
 
@@ -37,6 +38,11 @@ def send_subscription_paid_email(to_email, total_paid=None, user_name=None):
     if total_paid is not None:
         email_body = email_body.replace("{{valor_pago}}", f"{total_paid:.2f}")
             
+    if bool(int(os.getenv('DEBUG', 0))):
+        logger.error(f"DEBUG MODE: Enviando lembrete para {to_email}")
+        logger.error(f"{email_subject}")
+        logger.error(f"{email_body}")
+        
     ses_client = get_ses_client()
     source_email = settings.AWS_SES_SOURCE_EMAIL
     
@@ -68,26 +74,43 @@ def send_subscription_reminder_email(to_email, expiration=None, user_name=None):
     
     # Substituições no template
     now = datetime.now()
+    if expiration:
+        if timezone.is_naive(expiration):
+            expiration = timezone.make_aware(expiration, timezone.get_default_timezone())
+        expiration_local = timezone.localtime(expiration, timezone.get_default_timezone())
+        expiration_str = expiration_local.strftime("%d/%m/%Y")
+    else:
+        expiration_str = "N/A"
+        
     email_body = (
         email_body
         .replace("{{ano_atual}}", str(now.year))
         .replace("{{link_pagamento}}",
                  os.environ.get('PAINEL_URL', 'https://painel.onetracking.io/') + "pagamentos")
         .replace("{{data_gerado}}", now.strftime("%d/%m/%Y"))
-        .replace("{{data_expiracao}}", expiration.strftime("%d/%m/%Y") if expiration else "N/A")
+        .replace("{{data_expiracao}}", expiration_str)
     )
     
     if user_name:
         email_body = email_body.replace("{{user_name}}", user_name)
         
-    ses_client = get_ses_client()
-    source_email = settings.AWS_SES_SOURCE_EMAIL
-    response = ses_client.send_email(
-        Source=source_email,
-        Destination={'ToAddresses': [to_email]},
-        Message={
-            'Subject': {'Data': email_subject},
-            'Body': {'Html': {'Data': email_body}}
-        }
-    )
-    return response
+    if bool(int(os.getenv('DEBUG', 0))):
+        logger.error(f"DEBUG MODE: Enviando lembrete para {to_email}")
+        logger.error(f"{email_subject}")
+        logger.error(f"{email_body}")
+    try:
+        ses_client = get_ses_client()
+        source_email = settings.AWS_SES_SOURCE_EMAIL
+        response = ses_client.send_email(
+            Source=source_email,
+            Destination={'ToAddresses': [to_email]},
+            Message={
+                'Subject': {'Data': email_subject},
+                'Body': {'Html': {'Data': email_body}}
+            }
+        )
+        return response
+    except Exception as e:
+        logger.exception(f"[send_subscription_paid_email] falha ao enviar email para {to_email}")
+        logger.error(f"Erro ao enviar email: {e}")
+        return None
