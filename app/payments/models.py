@@ -143,3 +143,10 @@ class PaymentReminderLock(models.Model):
     
     class Meta:
             db_table = 'payments_payment_reminder_lock'
+            
+class PaymentExpireLock(models.Model):
+    date = models.DateField(unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+            db_table = 'payments_payment_expire_lock'
