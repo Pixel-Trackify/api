@@ -16,7 +16,7 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         tz = timezone.get_default_timezone()
         today = timezone.localtime(timezone.now(), tz).date()
-        
+        logger.info(f"Marcar assinaturas expiradas para {today}")
         try:
             PaymentExpireLock.objects.create(date=today)
         except IntegrityError:
@@ -28,7 +28,7 @@ class Command(BaseCommand):
                 expired = UserSubscription.objects.filter(
                     is_active=True,
                     expiration__isnull=False,
-                    expiration__date=today  # Busca por data de expiração igual a hoje
+                    expiration__date__lte=today
                 )
                 user_ids = list(expired.values_list(
                     'user_id', flat=True).distinct())
