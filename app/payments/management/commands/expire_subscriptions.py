@@ -4,6 +4,7 @@ from payments.models import UserSubscription
 from accounts.utils import sync_user_subscription
 from accounts.models import Usuario
 from payments.models import PaymentExpireLock
+from payments.email_utils import send_subscription_expired_email
 from django.utils import timezone
 from django.db import transaction, DatabaseError, IntegrityError
 import logging
@@ -42,7 +43,15 @@ class Command(BaseCommand):
                     user.refresh_from_db()
                     
                     logger.info(f"Usuário {user.pk} | ") 
-
+                    user_subscription = UserSubscription.objects.filter(
+                        user_id=user_id
+                    ).order_by('-expiration').first()
+                    
+                    send_subscription_expired_email(
+                        user.email,
+                        expiration=user_subscription.expiration if user_subscription else None,
+                        user_name=getattr(user_subscription.user, "name", user_subscription.user.email)
+                    )
                 logger.info(f"{len(user_ids)} usuários sincronizados após expiração de assinaturas.") 
         except DatabaseError:
             logger.error("Outro processo já está executando o expirar assinatura.")
